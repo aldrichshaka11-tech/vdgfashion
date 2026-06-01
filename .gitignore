@@ -1,0 +1,27 @@
+# Node.js build outputs
+**/node_modules/
+**/.next/
+**/out/
+.next/
+node_modules/
+
+# Python / Django
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache/
+.venv/
+venv/
+ENV/
+env/
+
+# IDE / System files
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

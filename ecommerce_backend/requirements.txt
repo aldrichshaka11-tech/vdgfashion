@@ -1,0 +1,12 @@
+Django
+djangorestframework
+django-cors-headers
+pymysql
+Pillow
+django-filter
+django-environ
+django-redis
+redis
+djangorestframework-simplejwt
+django-jazzmin
+

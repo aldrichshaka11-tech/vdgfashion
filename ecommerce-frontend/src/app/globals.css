@@ -1,0 +1,250 @@
+@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #fdfdfd;
+  --foreground: #09090b;
+  
+  /* vdgfashion primary colors */
+  --primary-pink: #e11d48; /* vdgfashion deep pink */
+  --primary-pink-bg: #fff1f2; /* Active tab light pink background */
+  
+  --border: #f1f3f5;
+  --muted: #868e96;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary-pink: var(--primary-pink);
+  --color-primary-pink-bg: var(--primary-pink-bg);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --font-serif: var(--font-serif);
+  
+  /* Guarantee that all custom design classes compile perfectly into HSL-optimized sleek colors */
+  --color-zinc-50: #fafafa;
+  --color-zinc-150: #f1f3f5;
+  --color-zinc-250: #e9ecef;
+  --color-zinc-350: #dee2e6;
+  --color-zinc-450: #868e96;
+  --color-zinc-505: #6c757d;
+  --color-zinc-550: #495057;
+  --color-zinc-650: #343a40;
+  --color-zinc-850: #212529;
+
+  /* Admin CMS Panel Theme Colors */
+  --color-base: #0a0c10;
+  --color-base-light: #f8fafc;
+  --color-card: #10141c;
+  --color-card-light: #ffffff;
+  --color-elevated: #161b26;
+  --color-elevated-light: #f1f5f9;
+  --color-input: #1e2535;
+  --color-input-light: #e2e8f0;
+  --color-border-hover: #3a4560;
+  --color-border-light: #e2e8f0;
+  --color-border-hover-light: #cbd5e1;
+  --color-text-primary: #e8eaf0;
+  --color-text-primary-light: #0f172a;
+  --color-text-secondary: #8892a8;
+  --color-text-secondary-light: #64748b;
+  --color-text-muted: #5a637a;
+  --color-text-muted-light: #94a3b8;
+  --color-accent: #4f7fff;
+  --color-accentGlow: rgba(79,127,255,0.15);
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-purple: #a78bfa;
+  --color-cyan: #22d3ee;
+  --color-pink: #f472b6;
+}
+
+/* Structural presets */
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #fafafa;
+  color: #3f3f46; /* Clean elegant charcoal color for soft, readable body text */
+  overflow-x: hidden;
+  font-family: var(--font-sans), sans-serif;
+  line-height: 1.5;
+  font-weight: 400; /* Regular normal font weight for standard body text */
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+/* Tone down heavy Tailwind font utilities globally */
+.font-black {
+  font-weight: 900 !important;
+}
+
+.font-extrabold {
+  font-weight: 800 !important;
+}
+
+.font-semibold {
+  font-weight: 600 !important;
+}
+
+.font-bold {
+  font-weight: 700 !important;
+}
+
+/* Custom Scrollbar for Right Content Panel */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e9ecef;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #dee2e6;
+}
+
+/* Hide scrollbar for horizontal trackers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Micro-animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Range input customization */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #e9ecef;
+  height: 4px;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--primary-pink);
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  margin-top: -5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: transform 0.1s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Premium micro-interactions */
+.vdgfashion-button-active {
+  background-color: var(--primary-pink);
+  color: white;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2);
+}
+
+.vdgfashion-card-shadow {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.02);
+}
+
+.vdgfashion-transition {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Admin scrollbar and icon presets */
+.ti {
+  font-size: 1.25rem;
+  vertical-align: middle;
+}
+.stock-bar-green { background-color: #22c55e; }
+.stock-bar-amber { background-color: #f59e0b; }
+.stock-bar-red { background-color: #ef4444; }
+
+/* Custom global font sizing scale-up utility for Trendify Admin Panel */
+.admin-portal-font-boost .text-\[8px\] {
+  font-size: 11px !important;
+}
+.admin-portal-font-boost .text-\[9px\] {
+  font-size: 12px !important;
+}
+.admin-portal-font-boost .text-\[10px\] {
+  font-size: 13px !important;
+}
+.admin-portal-font-boost .text-\[11px\] {
+  font-size: 14px !important;
+}
+.admin-portal-font-boost .text-xs {
+  font-size: 0.95rem !important; /* ~15px instead of 12px */
+}
+.admin-portal-font-boost .text-sm {
+  font-size: 1.0625rem !important; /* 17px instead of 14px */
+}
+.admin-portal-font-boost .text-base {
+  font-size: 1.2rem !important; /* ~19px instead of 16px */
+}
+.admin-portal-font-boost .text-lg {
+  font-size: 1.35rem !important; /* ~22px instead of 18px */
+}
+.admin-portal-font-boost .text-xl {
+  font-size: 1.55rem !important; /* ~25px instead of 20px */
+}
+.admin-portal-font-boost .text-2xl {
+  font-size: 1.9rem !important; /* ~30px instead of 24px */
+}
+.admin-portal-font-boost .text-3xl {
+  font-size: 2.45rem !important; /* ~39px instead of 30px */
+}
+
+
