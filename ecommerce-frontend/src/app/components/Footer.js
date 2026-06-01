@@ -151,7 +151,7 @@ export default function Footer() {
           {/* Logo Description & Social column */}
           <div className="lg:col-span-4 space-y-5 lg:pr-4">
             
-            {/* Colorful custom Trendify logo */}
+            {/* Colorful custom vdgfashion logo */}
             <div className="flex items-center gap-2.5 lg:gap-3">
               <div className="h-10 w-10 bg-gradient-to-tr from-[#e11d48] to-[#c026d3] rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm relative">
                 <span className="text-xl font-sans tracking-tighter">V</span>

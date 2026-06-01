@@ -230,3 +230,24 @@ class MarketingBanner(models.Model):
     def delete(self, *args, **kwargs):
         self.is_active = False
         self.save()
+
+
+class Review(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user_name = models.CharField(max_length=255)
+    user_email = models.EmailField()
+    rating = models.IntegerField(default=5)
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('product', 'user_email')
+
+    def __str__(self):
+        return f"Review by {self.user_name} on {self.product.name}"
+
+    def delete(self, *args, **kwargs):
+        self.is_active = False
+        self.save()

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner, Review
 
 class ProductColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -118,6 +118,7 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'parent_category', 'image', 'image_url', 'order', 'is_active']
+        extra_kwargs = {'image': {'required': False, 'allow_null': True}}
     
     def get_image_url(self, obj):
         if obj.image:
@@ -126,6 +127,17 @@ class CategorySerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'product_name', 'quantity', 'selected_color', 'selected_size', 'price']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['price'] = float(instance.price)
+        return data
 
 
 class OrderItemCreateSerializer(serializers.Serializer):
@@ -141,11 +153,23 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'order_id', 'customer_name', 'email', 'phone', 
+            'id', 'order_id', 'customer_name', 'email', 'phone', 
             'street_address', 'city', 'state', 'pin_code', 
             'payment_method', 'subtotal', 'discount_amount', 
-            'shipping_fee', 'total_amount', 'items'
+            'shipping_fee', 'total_amount', 'items', 'created_at'
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['subtotal'] = float(instance.subtotal)
+        data['discount_amount'] = float(instance.discount_amount)
+        data['shipping_fee'] = float(instance.shipping_fee)
+        data['total_amount'] = float(instance.total_amount)
+        
+        # Include serialized order items
+        items = instance.items.all()
+        data['items'] = OrderItemSerializer(items, many=True).data
+        return data
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
@@ -232,3 +256,11 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = ['id', 'order', 'order_id', 'transaction_id', 'payment_method', 'amount', 'status', 'is_active', 'created_at']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ['id', 'product', 'product_name', 'user_name', 'user_email', 'rating', 'comment', 'created_at', 'is_active']

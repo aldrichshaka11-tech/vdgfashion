@@ -122,25 +122,57 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Redis Caching
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': env.str('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+# Redis Caching with LocMemCache fallback
+import socket
+
+def _check_redis_port(host, port):
+    try:
+        with socket.create_connection((host, port), timeout=1.0) as sock:
+            return True
+    except Exception:
+        return False
+
+redis_url = env.str('REDIS_URL', 'redis://127.0.0.1:6379/1')
+redis_host = '127.0.0.1'
+redis_port = 6379
+
+if redis_url.startswith('redis://'):
+    try:
+        parts = redis_url[8:].split('/')[0].split(':')
+        redis_host = parts[0]
+        if len(parts) > 1:
+            redis_port = int(parts[1])
+    except Exception:
+        pass
+
+if _check_redis_port(redis_host, redis_port):
+    print("[OK] Redis is running on {}:{}. Using Redis Cache...".format(redis_host, redis_port))
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': redis_url,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
         }
     }
-}
+else:
+    print("[WARNING] Redis is NOT running on {}:{}. Falling back to In-Memory Cache (LocMemCache)...".format(redis_host, redis_port))
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
 
 # Jazzmin Dashboard configurations
 JAZZMIN_SETTINGS = {
-    "site_title": "Trendify Admin Portal",
-    "site_header": "Trendify Admin",
-    "site_brand": "Trendify Admin",
+    "site_title": "vdgfashion Admin Portal",
+    "site_header": "vdgfashion Admin",
+    "site_brand": "vdgfashion Admin",
     "site_logo_classes": "img-circle",
-    "welcome_sign": "Welcome back! Sign in to Trendify Admin Panel",
-    "copyright": "Trendify Ltd",
+    "welcome_sign": "Welcome back! Sign in to vdgfashion Admin Panel",
+    "copyright": "vdgfashion Ltd",
     "search_model": ["shop.Product"],
     "show_sidebar": True,
     "navigation_expanded": True,

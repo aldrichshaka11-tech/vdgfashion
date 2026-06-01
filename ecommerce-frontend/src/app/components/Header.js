@@ -138,65 +138,6 @@ export default function Header({ onMobileMenuToggle }) {
 
       </div>
 
-      {/* Desktop Mega-Menu Nav Bar */}
-      <div 
-        className="hidden lg:flex items-center justify-center gap-10 mt-3.5 border-t border-zinc-100 pt-3.5 relative"
-        onMouseLeave={() => setHoveredMenu(null)}
-      >
-        {MEGA_MENU_STRUCTURE.map((menu) => (
-          <div
-            key={menu.id}
-            className="relative py-1"
-            onMouseEnter={() => setHoveredMenu(menu.id)}
-          >
-            <button
-              onClick={() => handleCategorySelect(menu.name)}
-              className={`text-[12.5px] font-extrabold uppercase tracking-wider transition-colors cursor-pointer pb-1.5 border-b-2 ${
-                hoveredMenu === menu.id 
-                  ? 'text-[#e11d48] border-[#e11d48]' 
-                  : 'text-zinc-700 border-transparent hover:text-[#e11d48]'
-              }`}
-            >
-              {menu.name}
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Mega-menu dropdown panel */}
-      {hoveredMenu && (
-        <div 
-          className="absolute top-full left-0 right-0 w-full bg-white border-t border-zinc-150 border-b border-zinc-200 shadow-2xl z-50 animate-fade-in"
-          onMouseEnter={() => setHoveredMenu(hoveredMenu)}
-          onMouseLeave={() => setHoveredMenu(null)}
-        >
-          <div className="max-w-[1300px] mx-auto px-8 py-8 grid grid-cols-6 gap-6">
-            {MEGA_MENU_STRUCTURE.find(m => m.id === hoveredMenu)?.groups.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-3">
-                <h4 className="text-[13px] font-black text-zinc-950 uppercase tracking-wider pb-1.5 border-b border-zinc-150">
-                  {group.title}
-                </h4>
-                <ul className="space-y-2">
-                  {group.items.map((item, iIdx) => (
-                    <li key={iIdx}>
-                      <button
-                        onClick={() => {
-                          handleCategorySelect(item);
-                          setHoveredMenu(null);
-                        }}
-                        className="text-[13.5px] text-zinc-650 hover:text-[#e11d48] transition-colors text-left block font-medium"
-                      >
-                        {item}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
     </header>
   );
 }

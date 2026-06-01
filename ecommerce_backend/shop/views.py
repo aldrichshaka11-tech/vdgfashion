@@ -2,11 +2,11 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.core.cache import cache
-from .models import Category, Product, Order, Payment, HeroBanner, CategoryItem, MarketingBanner
+from .models import Category, Product, Order, Payment, HeroBanner, CategoryItem, MarketingBanner, Review
 from .serializers import (
     CategorySerializer, ProductSerializer, OrderCreateSerializer, 
     HeroBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
-    PaymentSerializer
+    PaymentSerializer, ReviewSerializer
 )
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -28,6 +28,71 @@ class CategoryViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"[Cache Warning] Redis offline on set: {e}")
         return response
+
+    def create(self, request, *args, **kwargs):
+        try:
+            cache.delete("categories_list_cache")
+        except Exception:
+            pass
+        image_path = request.data.get('image')
+        data = {k: v for k, v in request.data.items() if k != 'image'}
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        if image_path and isinstance(image_path, str):
+            instance.image = image_path
+            instance.save()
+        out = self.get_serializer(instance, context={'request': request})
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            cache.delete("categories_list_cache")
+        except Exception:
+            pass
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        try:
+            cache.delete("categories_list_cache")
+        except Exception:
+            pass
+        instance = self.get_object()
+        # Handle image path string directly (already uploaded via upload-image endpoint)
+        image_path = request.data.get('image')
+        if image_path and isinstance(image_path, str):
+            instance.image = image_path
+        instance.name = request.data.get('name', instance.name)
+        instance.parent_category = request.data.get('parent_category', instance.parent_category)
+        instance.save()
+        serializer = self.get_serializer(instance, context={'request': request})
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            cache.delete("categories_list_cache")
+        except Exception:
+            pass
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=False, methods=['POST'], url_path='upload-image')
+    def upload_image(self, request):
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.conf import settings
+        
+        filename = file_obj.name
+        path = default_storage.save(f'categories/{filename}', ContentFile(file_obj.read()))
+        
+        return Response({
+            "success": True,
+            "path": path,
+            "url": request.build_absolute_uri(settings.MEDIA_URL + path)
+        }, status=status.HTTP_201_CREATED)
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).prefetch_related('colors', 'sizes', 'features', 'details').order_by('-created_at')
@@ -231,4 +296,9 @@ class MarketingBannerViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"[Cache Warning] Redis offline on set: {e}")
         return response
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.filter(is_active=True).order_by('-created_at')
+    serializer_class = ReviewSerializer
 

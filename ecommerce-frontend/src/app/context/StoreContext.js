@@ -10,14 +10,14 @@ const DEFAULT_HERO_BANNERS = [
 ];
 
 const DEFAULT_CATEGORY_ITEMS = [
-  { id: 1, name: 'New Born', bg: '#e6fcf5', img: '/products/tshirt_green.png', categoryRef: 'New Born (0–3 Months)' },
-  { id: 2, name: 'Baby Essentials', bg: '#fff0f6', img: '/products/hoodie_pink.png', categoryRef: 'Baby Essentials' },
-  { id: 3, name: 'Toys', bg: '#fcf8f2', img: '/products/cargo_pants_khaki.png', categoryRef: 'Toys' },
-  { id: 4, name: 'Books', bg: '#e9ecef', img: '/products/oversized_tshirt_black.png', categoryRef: 'Books' },
-  { id: 5, name: 'Stationery', bg: '#f3f0ff', img: '/products/backpack_black.png', categoryRef: 'Stationery' },
-  { id: 6, name: 'Bags', bg: '#f3f0ff', img: '/products/backpack_black.png', categoryRef: 'Bags' },
-  { id: 7, name: 'Jeans', bg: '#e8f4fd', img: '/products/jeans_blue.png', categoryRef: 'Jeans' },
-  { id: 8, name: 'Frocks', bg: '#fff9db', img: '/products/shirt_striped.png', categoryRef: 'Frocks' },
+  { id: 1, name: 'New Born', bg: '#b2f2e0', img: '/products/tshirt_green.png', categoryRef: 'New Born (0–3 Months)' },
+  { id: 2, name: 'Baby Essentials', bg: '#ffc6e0', img: '/products/hoodie_pink.png', categoryRef: 'Baby Essentials' },
+  { id: 3, name: 'Toys', bg: '#ffd8a8', img: '/products/cargo_pants_khaki.png', categoryRef: 'Toys' },
+  { id: 4, name: 'Books', bg: '#d0bfff', img: '/products/oversized_tshirt_black.png', categoryRef: 'Books' },
+  { id: 5, name: 'Stationery', bg: '#ffb3d1', img: '/products/backpack_black.png', categoryRef: 'Stationery' },
+  { id: 6, name: 'Bags', bg: '#c4b5fd', img: '/products/backpack_black.png', categoryRef: 'Bags' },
+  { id: 7, name: 'Jeans', bg: '#93c5fd', img: '/products/jeans_blue.png', categoryRef: 'Jeans' },
+  { id: 8, name: 'Frocks', bg: '#fde68a', img: '/products/shirt_striped.png', categoryRef: 'Frocks' },
 ];
 
 const DEFAULT_MARKETING_BANNERS = [
@@ -46,6 +46,78 @@ const StoreContext = createContext();
 export function StoreProvider({ children }) {
   // Products state (dynamic from Django, falls back to static PRODUCTS)
   const [products, setProducts] = useState(PRODUCTS);
+
+  // User state
+  const [user, setUser] = useState(null);
+
+  // Initialize storefront user session
+  useEffect(() => {
+    const token = localStorage.getItem('vgd_user_token');
+    const savedUser = localStorage.getItem('vgd_user_profile');
+    if (token && savedUser) {
+      try {
+        setUser({ ...JSON.parse(savedUser), token });
+      } catch (e) {
+        localStorage.removeItem('vgd_user_token');
+        localStorage.removeItem('vgd_user_profile');
+      }
+    }
+  }, []);
+
+  const loginUser = async (username, password) => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('vgd_user_token', data.access);
+        const profileRes = await fetch('http://127.0.0.1:8000/api/auth/profile/', {
+          headers: { 'Authorization': `Bearer ${data.access}` }
+        });
+        const profileData = await profileRes.json();
+        if (profileRes.ok) {
+          localStorage.setItem('vgd_user_profile', JSON.stringify(profileData));
+          setUser({ ...profileData, token: data.access });
+          return { success: true };
+        }
+      }
+      return { success: false, message: data.detail || 'Invalid login credentials!' };
+    } catch (e) {
+      return { success: false, message: 'Server connection failed!' };
+    }
+  };
+
+  const registerUser = async (username, email, password, firstName = '', lastName = '') => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/auth/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, first_name: firstName, last_name: lastName })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        localStorage.setItem('vgd_user_token', data.tokens.access);
+        localStorage.setItem('vgd_user_profile', JSON.stringify(data.user));
+        setUser({ ...data.user, token: data.tokens.access });
+        return { success: true };
+      }
+      const errorMsg = Object.entries(data)
+        .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+        .join(' | ');
+      return { success: false, message: errorMsg || 'Registration failed!' };
+    } catch (e) {
+      return { success: false, message: 'Server connection failed!' };
+    }
+  };
+
+  const logoutUser = () => {
+    localStorage.removeItem('vgd_user_token');
+    localStorage.removeItem('vgd_user_profile');
+    setUser(null);
+  };
 
   // Storefront dynamic layouts (CMS components)
   const [heroBanners, setHeroBanners] = useState(DEFAULT_HERO_BANNERS);
@@ -123,15 +195,16 @@ export function StoreProvider({ children }) {
         if (data && data.length > 0) {
           const getPastelBg = (name) => {
             const n = name.toLowerCase();
-            if (n.includes('born') || n.includes('jabla') || n.includes('jab')) return '#e6fcf5';
-            if (n.includes('essential') || n.includes('romper')) return '#fff0f6';
-            if (n.includes('toy') || n.includes('wood')) return '#fcf8f2';
-            if (n.includes('book') || n.includes('learn') || n.includes('activity')) return '#e9ecef';
-            if (n.includes('station') || n.includes('bag') || n.includes('school')) return '#f3f0ff';
-            if (n.includes('jean')) return '#e8f4fd';
-            if (n.includes('frock') || n.includes('dress')) return '#fff9db';
-            if (n.includes('shoe') || n.includes('trainer')) return '#f1f3f5';
-            return '#f8fafc';
+            if (n.includes('born') || n.includes('jabla') || n.includes('jab')) return '#b2f2e0';
+            if (n.includes('essential') || n.includes('romper')) return '#ffc6e0';
+            if (n.includes('toy') || n.includes('wood')) return '#ffd8a8';
+            if (n.includes('book') || n.includes('learn') || n.includes('activity')) return '#d0bfff';
+            if (n.includes('station')) return '#ffb3d1';
+            if (n.includes('bag') || n.includes('school')) return '#c4b5fd';
+            if (n.includes('jean')) return '#93c5fd';
+            if (n.includes('frock') || n.includes('dress')) return '#fde68a';
+            if (n.includes('shoe') || n.includes('trainer')) return '#99f6e4';
+            return '#bfdbfe';
           };
 
           const mapped = data.map((c) => {
@@ -363,6 +436,12 @@ export function StoreProvider({ children }) {
         // Routing / Active Product Detail View
         selectedProduct,
         setSelectedProduct,
+
+        // Customer Authentication State & Methods
+        user,
+        loginUser,
+        registerUser,
+        logoutUser,
       }}
     >
       {children}
