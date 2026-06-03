@@ -38,17 +38,6 @@ export default function AccountPage() {
     joined: 'October 2025'
   });
 
-  useEffect(() => {
-    if (user) {
-      setProfile({
-        name: user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username,
-        email: user.email,
-        phone: user.phone || '+91 98765 43210',
-        joined: user.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'October 2025'
-      });
-    }
-  }, [user]);
-
   const [savedAddresses, setSavedAddresses] = useState([
     {
       id: 1,
@@ -67,6 +56,67 @@ export default function AccountPage() {
   ]);
 
   const [mockOrders, setMockOrders] = useState([]);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/orders/');
+      if (res.ok) {
+        const data = await res.json();
+        const filtered = user 
+          ? data.filter(o => o.email === user.email || o.customer_name === user.username)
+          : data;
+
+        const mapped = filtered.map(o => ({
+          id: o.id,
+          orderId: o.order_id,
+          date: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+          total: parseFloat(o.total_amount),
+          status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Pending',
+          items: (o.items || []).map(item => ({
+            name: item.product_name,
+            qty: item.quantity,
+            price: parseFloat(item.price),
+            size: item.selected_size || 'M',
+            img: '/products/accessories_category.png'
+          }))
+        }));
+        setMockOrders(mapped);
+      }
+    } catch (e) {
+      console.error('Failed to fetch orders', e);
+    }
+  };
+
+  const handleDeleteOrder = async (id) => {
+    if (!confirm('Are you sure you want to delete/cancel this order?')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('Order deleted/cancelled successfully!');
+        fetchOrders();
+      } else {
+        alert('Failed to delete order');
+      }
+    } catch (err) {
+      alert('Network error deleting order');
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username,
+        email: user.email,
+        phone: user.phone || '+91 98765 43210',
+        joined: user.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'October 2025'
+      });
+      fetchOrders();
+    } else {
+      setMockOrders([]);
+    }
+  }, [user]);
 
   useEffect(() => {
     AOS.init({ duration: 700, once: true });
@@ -323,7 +373,7 @@ export default function AccountPage() {
                                 </div>
                                 <div>
                                   <span className="block text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Order ID</span>
-                                  <span className="font-mono">{order.id}</span>
+                                  <span className="font-mono">{order.orderId}</span>
                                 </div>
                               </div>
                               <span className={`px-2.5 py-1 rounded-full border text-[11px] font-bold ${getStatusBadgeClass(order.status)}`}>

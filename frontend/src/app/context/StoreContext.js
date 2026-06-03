@@ -112,6 +112,33 @@ export function StoreProvider({ children }) {
   // Wishlist state (array of product IDs)
   const [wishlist, setWishlist] = useState([]);
 
+  const [settings, setSettings] = useState({
+    contactPhone: '+91 98765 43210',
+    contactEmail: 'gouthamraj@vdgfashion.com',
+    storeAddress: 'Express Avenue Mall, 1st Floor, No. 2, Club House Rd, India, TN - 600002',
+    freeShippingThreshold: 3000,
+    shippingFee: 99,
+    activePromoCode: 'TREND10',
+    activePromoDiscount: 10,
+    isStoreOpen: true
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('vdgfashion_settings');
+    if (saved) {
+      try {
+        setSettings(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse settings', e);
+      }
+    }
+  }, []);
+
+  const saveStoreSettings = (newSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('vdgfashion_settings', JSON.stringify(newSettings));
+  };
+
   const getPastelBg = (name) => {
     const n = name.toLowerCase();
     if (n.includes('born') || n.includes('jabla') || n.includes('jab')) return '#b2f2e0';
@@ -344,15 +371,16 @@ export function StoreProvider({ children }) {
   // Cart count and totals calculations
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
   const cartSubtotal = cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
-  const shippingFee = cartSubtotal > 3000 || cartSubtotal === 0 ? 0 : 99; // Free shipping over ₹3000
-  const couponDiscount = appliedCoupon === 'TREND10' ? Math.round(cartSubtotal * 0.10) : 0;
+  const shippingFee = cartSubtotal > parseFloat(settings.freeShippingThreshold || 3000) || cartSubtotal === 0 ? 0 : parseFloat(settings.shippingFee || 99);
+  const couponDiscount = appliedCoupon === settings.activePromoCode ? Math.round(cartSubtotal * (parseFloat(settings.activePromoDiscount || 10) / 100)) : 0;
   const cartTotal = Math.max(0, cartSubtotal - couponDiscount + shippingFee);
 
   // Coupon operations
   const applyCoupon = (code) => {
-    if (code.trim().toUpperCase() === 'TREND10') {
-      setAppliedCoupon('TREND10');
-      return { success: true, message: 'Coupon applied successfully! 10% discount added.' };
+    const promoCode = (settings.activePromoCode || 'TREND10').trim().toUpperCase();
+    if (code.trim().toUpperCase() === promoCode) {
+      setAppliedCoupon(promoCode);
+      return { success: true, message: `Coupon applied successfully! ${settings.activePromoDiscount || 10}% discount added.` };
     }
     return { success: false, message: 'Invalid coupon code!' };
   };
@@ -425,6 +453,10 @@ export function StoreProvider({ children }) {
         loginUser,
         registerUser,
         logoutUser,
+
+        // Settings configurations
+        settings,
+        saveStoreSettings,
       }}
     >
       {children}

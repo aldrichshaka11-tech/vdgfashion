@@ -101,7 +101,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             'id', 'order_id', 'customer_name', 'email', 'phone',
             'street_address', 'city', 'state', 'pin_code',
             'payment_method', 'subtotal', 'discount_amount',
-            'shipping_fee', 'total_amount', 'items', 'created_at'
+            'shipping_fee', 'total_amount', 'status', 'items', 'created_at'
         ]
 
     def to_representation(self, instance):

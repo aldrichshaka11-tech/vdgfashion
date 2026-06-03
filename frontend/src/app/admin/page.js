@@ -5,10 +5,24 @@ import {
   Lock, Mail, Loader2, AlertCircle, Eye, EyeOff,
   LayoutDashboard, Package, Folders, ShoppingCart, Users, 
   Ticket, Star, BarChart3, Megaphone, Landmark, Settings, 
-  UserCheck, ClipboardList, Search, Bell, Moon, Sun, ChevronRight, 
+  UserCheck, ClipboardList, Search, Bell, Moon, Sun, ChevronRight, ChevronDown,
   ArrowUpRight, RefreshCcw, CheckCircle, Database, Trash2, Edit, Plus, Upload, X,
-  ShoppingBag, Wallet, Menu, LogOut, Filter
+  ShoppingBag, Wallet, Menu, LogOut, Filter,
+  Clock, Truck, MapPin, XCircle
 } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
+
+const STATUS_CONFIG = {
+  pending: { label: 'Pending', bg: 'bg-amber-500 text-white border-amber-600', dot: 'bg-amber-500', icon: Clock },
+  confirmed: { label: 'Confirmed', bg: 'bg-indigo-500 text-white border-indigo-650', dot: 'bg-indigo-500', icon: CheckCircle },
+  packed: { label: 'Packed', bg: 'bg-violet-500 text-white border-violet-650', dot: 'bg-violet-500', icon: Package },
+  shipped: { label: 'Shipped', bg: 'bg-blue-500 text-white border-blue-600', dot: 'bg-blue-500', icon: Truck },
+  out_for_delivery: { label: 'Out for Delivery', bg: 'bg-teal-500 text-white border-teal-600', dot: 'bg-teal-500', icon: MapPin },
+  delivered: { label: 'Delivered', bg: 'bg-emerald-500 text-white border-emerald-600', dot: 'bg-emerald-500', icon: CheckCircle },
+  cancelled: { label: 'Cancelled', bg: 'bg-rose-500 text-white border-rose-600', dot: 'bg-rose-500', icon: XCircle },
+  returned: { label: 'Returned', bg: 'bg-zinc-500 text-white border-zinc-600', dot: 'bg-zinc-500', icon: RefreshCcw },
+  refunded: { label: 'Refunded', bg: 'bg-red-500 text-white border-red-600', dot: 'bg-red-500', icon: Wallet },
+};
 
 export default function AdminRoute() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -171,6 +185,7 @@ export default function AdminRoute() {
 }
 
 function DashboardPortal({ onLogout, adminUser }) {
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [activePage, setActivePage] = useState('dashboard');
   const [productPage, setProductPage] = useState(1);
   const [analyticsPage, setAnalyticsPage] = useState(1);
@@ -204,6 +219,148 @@ function DashboardPortal({ onLogout, adminUser }) {
   });
   
   const [loadingData, setLoadingData] = useState(false);
+
+  // Store context settings and forms
+  const { settings, saveStoreSettings } = useStore();
+  const [settingsTab, setSettingsTab] = useState('general');
+  const [settingsForm, setSettingsForm] = useState({
+    contactPhone: '',
+    contactEmail: '',
+    storeAddress: '',
+    freeShippingThreshold: 3000,
+    shippingFee: 99,
+    activePromoCode: 'TREND10',
+    activePromoDiscount: 10,
+    isStoreOpen: true
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setSettingsForm({
+        contactPhone: settings.contactPhone || '+91 98765 43210',
+        contactEmail: settings.contactEmail || 'gouthamraj@vdgfashion.com',
+        storeAddress: settings.storeAddress || 'Express Avenue Mall, 1st Floor, No. 2, Club House Rd, India, TN - 600002',
+        freeShippingThreshold: settings.freeShippingThreshold !== undefined ? settings.freeShippingThreshold : 3000,
+        shippingFee: settings.shippingFee !== undefined ? settings.shippingFee : 99,
+        activePromoCode: settings.activePromoCode || 'TREND10',
+        activePromoDiscount: settings.activePromoDiscount !== undefined ? settings.activePromoDiscount : 10,
+        isStoreOpen: settings.isStoreOpen !== undefined ? settings.isStoreOpen : true
+      });
+    }
+  }, [settings]);
+
+  const handleSaveSettings = (e) => {
+    if (e) e.preventDefault();
+    saveStoreSettings(settingsForm);
+    showToast('Store settings saved successfully', 'success');
+  };
+
+  // Analytics states
+  const [analyticsChartMetric, setAnalyticsChartMetric] = useState('revenue');
+  const [hoveredPointIndex, setHoveredPointIndex] = useState(null);
+
+  // 14 days dynamic analytics calculation
+  const analytics14Days = useMemo(() => {
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push({
+        dateStr: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+        dateKey: d.toDateString(),
+        ordersCount: 0,
+        revenue: 0
+      });
+    }
+
+    orders.forEach(o => {
+      if (!o.created_at) return;
+      const oDate = new Date(o.created_at);
+      const oDateKey = oDate.toDateString();
+      const matchDay = days.find(d => d.dateKey === oDateKey);
+      if (matchDay) {
+        matchDay.ordersCount += 1;
+        matchDay.revenue += parseFloat(o.total_amount || 0);
+      }
+    });
+
+    return days;
+  }, [orders]);
+
+  const maxChartVal = useMemo(() => {
+    const vals = analytics14Days.map(d => analyticsChartMetric === 'revenue' ? d.revenue : d.ordersCount);
+    const max = Math.max(...vals);
+    return max === 0 ? 10 : max;
+  }, [analytics14Days, analyticsChartMetric]);
+
+  const points = useMemo(() => {
+    return analytics14Days.map((d, i) => {
+      const val = analyticsChartMetric === 'revenue' ? d.revenue : d.ordersCount;
+      const x = 40 + (i / 13) * 420;
+      const y = 160 - (val / maxChartVal) * 120;
+      return { x, y, val, date: d.dateStr };
+    });
+  }, [analytics14Days, analyticsChartMetric, maxChartVal]);
+
+  const pathD = useMemo(() => {
+    return points.length > 0 
+      ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
+      : '';
+  }, [points]);
+
+  const areaD = useMemo(() => {
+    return points.length > 0
+      ? `${pathD} L ${points[points.length-1].x} 160 L ${points[0].x} 160 Z`
+      : '';
+  }, [points, pathD]);
+
+  // Order status distribution
+  const orderStatusShares = useMemo(() => {
+    const statusCounts = {};
+    orders.forEach(o => {
+      const status = o.status || 'pending';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    const total = orders.length || 1;
+    const colorsList = {
+      pending: '#f59e0b',
+      confirmed: '#6366f1',
+      packed: '#8b5cf6',
+      shipped: '#3b82f6',
+      out_for_delivery: '#14b8a6',
+      delivered: '#10b981',
+      cancelled: '#ef4444',
+      returned: '#71717a',
+      refunded: '#ef4444'
+    };
+
+    return Object.entries(statusCounts).map(([status, count]) => {
+      const percentage = Math.round((count / total) * 100);
+      return {
+        status,
+        label: STATUS_CONFIG[status]?.label || status,
+        count,
+        percentage,
+        color: colorsList[status] || '#a855f7'
+      };
+    }).sort((a, b) => b.count - a.count);
+  }, [orders]);
+
+  const statusDonutSlices = useMemo(() => {
+    let currentOffset = 100;
+    return orderStatusShares.map((share) => {
+      const pct = share.percentage;
+      const strokeDasharray = `${pct} ${100 - pct}`;
+      const strokeDashoffset = currentOffset;
+      currentOffset -= pct;
+      return {
+        ...share,
+        strokeDasharray,
+        strokeDashoffset
+      };
+    });
+  }, [orderStatusShares]);
 
   useEffect(() => {
     setProductPage(1);
@@ -433,7 +590,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   useEffect(() => {
     syncData();
-    const interval = setInterval(syncData, 3000);
+    const interval = setInterval(syncData, 30000);
     return () => clearInterval(interval);
   }, [syncData]);
 
@@ -760,6 +917,64 @@ function DashboardPortal({ onLogout, adminUser }) {
   };
 
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [inlineStockEdit, setInlineStockEdit] = useState({}); // { productId: tempValue }
+  const [orderSearch, setOrderSearch] = useState('');
+
+  const handleInlineStockSave = async (productId, newStock) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/products/${productId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: parseInt(newStock) })
+      });
+      if (res.ok) {
+        showToast('Stock updated!', 'success');
+        setInlineStockEdit(prev => { const n = {...prev}; delete n[productId]; return n; });
+        syncData();
+      }
+    } catch { showToast('Failed to update stock', 'warning'); }
+  };
+
+  const handleOrderStatusChange = async (orderId, newStatus) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/orders/${orderId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        showToast('Order status updated!', 'success');
+        syncData();
+      }
+    } catch { showToast('Failed to update order status', 'warning'); }
+  };
+
+  const handleDeleteOrder = async (id) => {
+    if (!confirm('Are you sure you want to delete this order?')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast('Order deleted successfully', 'success');
+        syncData();
+      } else {
+        showToast('Failed to delete order', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error deleting order', 'warning');
+    }
+  };
+
+  const filteredOrders = useMemo(() => {
+    if (!orderSearch.trim()) return orders;
+    const q = orderSearch.toLowerCase();
+    return orders.filter(o =>
+      (o.order_id || '').toLowerCase().includes(q) ||
+      (o.customer_name || '').toLowerCase().includes(q) ||
+      (o.phone || '').toLowerCase().includes(q)
+    );
+  }, [orders, orderSearch]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -1170,6 +1385,109 @@ function DashboardPortal({ onLogout, adminUser }) {
                 />
               </div>
 
+              {/* Quick Actions Row */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleOpenProductModal('add')}
+                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
+                    theme === 'dark' 
+                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-purple-500/50 text-white' 
+                      : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-purple-500/50 shadow-3xs'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform">
+                    <Plus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs">Add Product</h4>
+                    <p className="text-[10px] text-zinc-500 font-medium">Create new inventory item</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenCategoryModal('add')}
+                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
+                    theme === 'dark' 
+                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-pink-500/50 text-white' 
+                      : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-pink-500/50 shadow-3xs'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 group-hover:scale-105 transition-transform">
+                    <Folders className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs">Add Category</h4>
+                    <p className="text-[10px] text-zinc-500 font-medium">Add category or subcategory</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(orders, null, 2));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", `orders_report_${new Date().toISOString().split('T')[0]}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                    showToast('Orders report exported successfully', 'success');
+                  }}
+                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
+                    theme === 'dark' 
+                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-blue-500/50 text-white' 
+                      : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-blue-500/50 shadow-3xs'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs">Export Orders</h4>
+                    <p className="text-[10px] text-zinc-500 font-medium">Download JSON data sheet</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
+                    setLoadingData(true);
+                    try {
+                      const res = await fetch('http://127.0.0.1:8000/api/products/clear-all/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                      });
+                      if (res.ok) {
+                        showToast('Database wiped clean!', 'success');
+                        syncData();
+                      } else {
+                        showToast('Failed to clear database.', 'warning');
+                      }
+                    } catch (e) {
+                      showToast('Network error clearing database.', 'warning');
+                    } finally {
+                      setLoadingData(false);
+                    }
+                  }}
+                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
+                    theme === 'dark' 
+                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-red-500/50 text-white' 
+                      : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-red-500/50 shadow-3xs'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-xl bg-red-500/10 text-red-655 dark:text-red-400 group-hover:scale-105 transition-transform">
+                    <Database className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-red-600 dark:text-red-400">Database Reset</h4>
+                    <p className="text-[10px] text-zinc-500 font-medium">Erase all dynamic data</p>
+                  </div>
+                </button>
+              </div>
+
               {/* Charts cockpit section */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
@@ -1477,13 +1795,35 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <td className="p-4 font-semibold text-zinc-400">{p.category_name || 'Unassigned'}</td>
                         <td className={`p-4 font-bold text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
                         <td className="p-4 text-right">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-semibold border transition-all ${
-                            p.stock === 0
-                              ? 'bg-red-600 text-white border-transparent'
-                              : p.stock < 15
-                              ? 'bg-amber-500 text-white border-transparent'
-                              : 'bg-emerald-600 text-white border-transparent'
-                          }`}>{p.stock} units</span>
+                          {inlineStockEdit[p.id] !== undefined ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={inlineStockEdit[p.id]}
+                                onChange={(e) => setInlineStockEdit(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); if (e.key === 'Escape') setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; }); }}
+                                className={`w-16 px-2 py-1 rounded-lg border text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                                  theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white' : 'bg-white border-zinc-300 text-zinc-800'
+                                }`}
+                                autoFocus
+                              />
+                              <button onClick={() => handleInlineStockSave(p.id, inlineStockEdit[p.id])} className="p-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95">
+                                <CheckCircle size={12} />
+                              </button>
+                              <button onClick={() => setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; })} className="p-1 rounded-lg bg-zinc-300 text-zinc-700 hover:bg-zinc-400 active:scale-95">
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span
+                              onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))}
+                              title="Click to edit stock"
+                              className={`px-3 py-1 rounded-full text-[9px] font-semibold border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${
+                                p.stock === 0 ? 'bg-red-600 text-white border-transparent'
+                                : p.stock < 15 ? 'bg-amber-500 text-white border-transparent'
+                                : 'bg-emerald-600 text-white border-transparent'
+                              }`}>{p.stock} units ✏️</span>
+                          )}
                         </td>
                         <td className="p-4">
                           <div className="flex items-center justify-center gap-2">
@@ -1874,31 +2214,130 @@ function DashboardPortal({ onLogout, adminUser }) {
 
           {activePage === 'orders' && (
             <div className="space-y-4 text-left">
-              <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Checkout Orders</h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Checkout Orders</h3>
+                <div className="relative w-full max-w-[300px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    placeholder="Search by order ID, name, phone..."
+                    className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
+                      theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                    }`}
+                  />
+                </div>
+              </div>
 
-              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
-                <table className="w-full min-w-[750px] text-left text-xs">
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[['All', orders.length, 'bg-indigo-600'], ['Pending', orders.filter(o=>o.status==='pending'||(!o.status&&o.payment_method==='cod')).length, 'bg-amber-500'], ['Delivered', orders.filter(o=>o.status==='delivered').length, 'bg-emerald-600'], ['Cancelled', orders.filter(o=>o.status==='cancelled').length, 'bg-red-600']].map(([label, count, color]) => (
+                  <div key={label} className={`p-4 rounded-2xl border flex items-center gap-3 ${
+                    theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
+                    <div className={`w-9 h-9 rounded-xl ${color} text-white flex items-center justify-center font-black text-sm`}>{count}</div>
+                    <span className={`text-xs font-bold ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`border rounded-2xl overflow-x-auto min-h-[420px] ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
+                <table className="w-full min-w-[850px] text-left text-xs">
                   <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Order ID</th>
-                      <th className="p-4">Customer Name</th>
-                      <th className="p-4">Payment Method</th>
-                      <th className="p-4 text-right">Total Price</th>
-                      <th className="p-4 text-center">Checkout Date</th>
+                      <th className="p-4">Customer</th>
+                      <th className="p-4">Phone</th>
+                      <th className="p-4">Payment</th>
+                      <th className="p-4 text-right">Total</th>
+                      <th className="p-4 text-center">Status</th>
+                      <th className="p-4 text-center">Date</th>
+                      <th className="p-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
-                    {orders.map((o) => (
-                      <tr key={o.order_id} className="hover:bg-white/2 transition-colors">
-                        <td className="p-4 font-bold text-indigo-400">{o.order_id}</td>
-                        <td className={`p-4 font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
-                        <td className="p-4 uppercase text-zinc-500 font-bold">{o.payment_method}</td>
-                        <td className={`p-4 font-extrabold text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
-                        <td className="p-4 text-center text-zinc-500 font-semibold">
-                          {new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredOrders.length === 0 ? (
+                      <tr><td colSpan="8" className="p-8 text-center text-zinc-400 font-semibold">No orders found.</td></tr>
+                    ) : (
+                      filteredOrders.map((o) => {
+                        const StatusIcon = STATUS_CONFIG[o.status || 'pending']?.icon || Clock;
+                        return (
+                          <tr key={o.order_id} className="hover:bg-white/2 transition-colors">
+                            <td className="p-4 font-bold text-indigo-400">{o.order_id}</td>
+                            <td className={`p-4 font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
+                            <td className="p-4 text-zinc-400 font-semibold">{o.phone || '---'}</td>
+                            <td className="p-4 uppercase text-zinc-500 font-bold">{o.payment_method}</td>
+                            <td className={`p-4 font-extrabold text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
+                            <td className="p-4 text-center relative">
+                              <div className="inline-block text-left">
+                                {/* Custom Dropdown Toggle Button */}
+                                 <button
+                                   onClick={() => setActiveDropdownId(activeDropdownId === o.id ? null : o.id)}
+                                   className={`text-xs font-black px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${
+                                     STATUS_CONFIG[o.status || 'pending']?.bg || 'bg-zinc-500/10 text-zinc-650 border-zinc-500/20'
+                                   }`}
+                                 >
+                                   <StatusIcon size={14} className="shrink-0" />
+                                   <span className="tracking-wider">{STATUS_CONFIG[o.status || 'pending']?.label || 'Pending'}</span>
+                                   <ChevronDown size={12} className="shrink-0" />
+                                 </button>
+ 
+                                 {/* Dropdown Menu Overlay Backdrop & Menu */}
+                                 {activeDropdownId === o.id && (
+                                   <>
+                                     <div 
+                                       className="fixed inset-0 z-30" 
+                                       onClick={() => setActiveDropdownId(null)} 
+                                     />
+                                     <div className={`absolute left-1/2 -translate-x-1/2 mt-1.5 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${
+                                       theme === 'dark' 
+                                         ? 'bg-[#141a24] border-[#2a3145] text-white shadow-black/85' 
+                                         : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
+                                     }`}>
+                                       <div className="max-h-[220px] overflow-y-auto no-scrollbar py-0.5 space-y-0.5">
+                                        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+                                          const ItemIcon = cfg.icon || Clock;
+                                          return (
+                                            <button
+                                              key={key}
+                                              onClick={() => {
+                                                handleOrderStatusChange(o.id, key);
+                                                setActiveDropdownId(null);
+                                              }}
+                                              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-black transition-all cursor-pointer select-none active:scale-97 ${
+                                                (o.status || 'pending') === key 
+                                                  ? cfg.bg 
+                                                  : (theme === 'dark' ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-zinc-50 text-zinc-650 hover:text-zinc-900')
+                                              }`}
+                                            >
+                                              <ItemIcon size={14} className="shrink-0" />
+                                              <span className="tracking-wide">{cfg.label}</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4 text-center text-zinc-500 font-semibold">
+                              {new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => handleDeleteOrder(o.id)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
+                                title="Delete Order"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1961,7 +2400,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <Trash2 size={13} />
                             </button>
                           </td>
-                        </tr>
+</tr>
                       ))
                     )}
                   </tbody>
@@ -1971,166 +2410,729 @@ function DashboardPortal({ onLogout, adminUser }) {
           )}
 
           {activePage === 'analytics' && (
-            <div className="space-y-6 text-left">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Inventory Stock Management</h3>
-                  <p className="text-[10px] text-zinc-500 font-semibold mt-1">Real-time tracking of item stocks, supply states, and automatic refills.</p>
-                </div>
-                <button 
-                  onClick={() => window.print()}
-                  className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <ClipboardList size={14} /> Export Stock Report
-                </button>
+            <div className="space-y-6 text-left animate-fade-in">
+              <div>
+                <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Business Intelligence & Analytics</h2>
+                <p className="text-xs text-zinc-500 font-medium mt-1">Real-time charts, order distributions, and warehousing stock tracking.</p>
               </div>
 
+              {/* Statistics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard icon={<Package className="text-indigo-400" />} label="Registry Products" value={products.length} desc="Active SKU variants" theme={theme} />
-                <StatCard icon={<ArrowUpRight className="text-green-400" />} label="Total Stock Units" value={products.reduce((acc, p) => acc + (p.stock || 0), 0)} desc="Items in warehouse" theme={theme} />
-                <StatCard icon={<AlertCircle className="text-red-400" />} label="Low Stock Alerts" value={products.filter(p => (p.stock || 0) < 15).length} desc="SKUs below 15 units" theme={theme} />
+                <StatCard icon={<Package className="text-indigo-500" />} label="Registry Products" value={products.length} desc="Active SKU variants" theme={theme} />
+                <StatCard icon={<ArrowUpRight className="text-green-500" />} label="Total Stock Units" value={products.reduce((acc, p) => acc + (p.stock || 0), 0)} desc="Items in warehouse" theme={theme} />
+                <StatCard icon={<AlertCircle className="text-red-500" />} label="Low Stock Alerts" value={products.filter(p => (p.stock || 0) < 15).length} desc="SKUs below 15 units" theme={theme} />
               </div>
 
-              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
-                <table className="w-full min-w-[750px] text-left text-xs">
-                  <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
-                    <tr>
-                      <th className="p-4">SKU / Item</th>
-                      <th className="p-4">Category</th>
-                      <th className="p-4 text-right">Current Stock</th>
-                      <th className="p-4 text-center">Status</th>
-                      <th className="p-4 text-center">Quick Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
-                    {paginatedAnalyticsProducts.map((p) => (
-                      <tr key={p.id} className="hover:bg-white/2 transition-colors">
-                        <td className="p-4 font-bold flex items-center gap-2.5">
-                          {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#2a3145]" />}
-                          <div>
-                            <p className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</p>
-                            <p className="text-[10px] text-zinc-500">PROD-00{p.id}</p>
-                          </div>
-                        </td>
-                        <td className="p-4 font-semibold text-zinc-400">{p.category_name || 'Unassigned'}</td>
-                        <td className={`p-4 font-extrabold text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{p.stock} units</td>
-                        <td className="p-4 text-center">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider border transition-all ${
-                            p.stock === 0
-                              ? 'bg-red-600 text-white border-transparent'
-                              : p.stock < 15
-                              ? 'bg-amber-500 text-white border-transparent'
-                              : 'bg-emerald-600 text-white border-transparent'
-                          }`}>{p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'Good Stock'}</span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <button 
-                            onClick={async () => {
-                              try {
-                                const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ stock: 100 })
-                                });
-                                if (res.ok) {
-                                  showToast(`${p.name} restocked to 100 units`, 'success');
-                                  syncData();
-                                }
-                              } catch (e) {
-                                showToast('Network error during restock', 'warning');
-                              }
-                            }}
-                            className="py-2 px-4 bg-zinc-50 border border-zinc-200/60 text-zinc-750 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-150/60 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-400 dark:hover:border-emerald-900/30 font-black rounded-xl text-[10px] transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs"
-                          >
-                            Refill to 100
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Charts grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Sales & Orders Trend Card */}
+                <div className={`p-6 rounded-3xl border transition-all lg:col-span-2 relative flex flex-col justify-between ${
+                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                      <h4 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
+                        {analyticsChartMetric === 'revenue' ? 'Revenue Growth Trend' : 'Order Volume Trend'}
+                      </h4>
+                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Daily performance tracking over the last 14 days.</p>
+                    </div>
+                    <div className={`flex rounded-xl p-0.5 border ${
+                      theme === 'dark' ? 'bg-zinc-900 border-[#2a3145]' : 'bg-zinc-150 border-zinc-200'
+                    }`}>
+                      <button
+                        type="button"
+                        onClick={() => setAnalyticsChartMetric('revenue')}
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wide transition-all cursor-pointer ${
+                          analyticsChartMetric === 'revenue'
+                            ? 'bg-[#8b5cf6] text-white shadow-xs'
+                            : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                        }`}
+                      >
+                        Revenue
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAnalyticsChartMetric('orders')}
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wide transition-all cursor-pointer ${
+                          analyticsChartMetric === 'orders'
+                            ? 'bg-[#8b5cf6] text-white shadow-xs'
+                            : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                        }`}
+                      >
+                        Orders
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Analytics Pagination Controls */}
-              {totalAnalyticsPages > 1 && (
-                <div className="flex items-center justify-between pt-4 pb-2 text-xs font-semibold select-none leading-none">
-                  <span className="text-zinc-400">
-                    Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredAnalyticsProducts.length, (analyticsPage - 1) * 8 + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredAnalyticsProducts.length, analyticsPage * 8)}</span> of <span className="font-extrabold text-zinc-650 dark:text-zinc-300">{filteredAnalyticsProducts.length}</span> items
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <button 
-                      disabled={analyticsPage === 1}
-                      onClick={() => setAnalyticsPage(prev => Math.max(1, prev - 1))}
-                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-black active:scale-95"
-                    >
-                      ◀ Prev
-                    </button>
-                    {[...Array(totalAnalyticsPages)].map((_, idx) => {
-                      const pageNum = idx + 1;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setAnalyticsPage(pageNum)}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-black transition-all cursor-pointer active:scale-90 ${
-                            analyticsPage === pageNum
-                              ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
-                              : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                          }`}
+                  <div className="relative h-56 w-full flex select-none flex-grow">
+                    {/* Y-axis Labels */}
+                    <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-bold h-[85%] pb-2 select-none w-10 text-left leading-none">
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal).toLocaleString('en-IN')}` : Math.round(maxChartVal)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.75).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.75)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.5).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.5)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.25).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.25)}</span>
+                      <span>₹0</span>
+                    </div>
+
+                    {/* Chart Canvas */}
+                    <div className="flex-grow h-full relative">
+                      {/* Gridlines */}
+                      <div className="absolute inset-0 flex flex-col justify-between h-[85%] pointer-events-none">
+                        <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
+                        <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
+                        <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
+                        <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
+                        <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
+                      </div>
+
+                      {/* SVG Line / Area */}
+                      <svg className="w-full h-[85%] absolute inset-0 overflow-visible" viewBox="0 0 500 200" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="analyticsTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Area Polygon */}
+                        {points.length > 0 && (
+                          <polygon 
+                            points={`${points[0].x},160 ${points.map(p => `${p.x},${p.y}`).join(' ')} ${points[points.length-1].x},160`}
+                            fill="url(#analyticsTrendGrad)"
+                          />
+                        )}
+
+                        {/* Trend Line */}
+                        {points.length > 0 && (
+                          <polyline 
+                            fill="none" 
+                            stroke="#8b5cf6" 
+                            strokeWidth="3" 
+                            points={points.map(p => `${p.x},${p.y}`).join(' ')}
+                          />
+                        )}
+
+                        {/* Hover line and dot */}
+                        {hoveredPointIndex !== null && (
+                          <>
+                            <line 
+                              x1={points[hoveredPointIndex].x} 
+                              y1="40" 
+                              x2={points[hoveredPointIndex].x} 
+                              y2="160" 
+                              stroke="#8b5cf6" 
+                              strokeWidth="1" 
+                              strokeDasharray="4 4" 
+                            />
+                            <circle 
+                              cx={points[hoveredPointIndex].x} 
+                              cy={points[hoveredPointIndex].y} 
+                              r="6" 
+                              fill="#8b5cf6" 
+                              stroke={theme === 'dark' ? '#10141c' : '#ffffff'} 
+                              strokeWidth="2" 
+                            />
+                          </>
+                        )}
+
+                        {/* Tooltip triggers (hotspots) */}
+                        {points.map((p, idx) => (
+                          <rect
+                            key={idx}
+                            x={p.x - 15}
+                            y="40"
+                            width="30"
+                            height="120"
+                            fill="transparent"
+                            className="cursor-pointer"
+                            onMouseEnter={() => setHoveredPointIndex(idx)}
+                            onMouseLeave={() => setHoveredPointIndex(null)}
+                          />
+                        ))}
+                      </svg>
+
+                      {/* X-axis Labels */}
+                      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] font-bold text-zinc-400 px-1 pointer-events-none">
+                        {points.map((p, idx) => {
+                          if (idx % 2 !== 0 && idx !== points.length - 1) return <span key={idx} className="w-6 text-center opacity-0" />;
+                          return (
+                            <span key={idx} className="w-6 text-center">{p.date}</span>
+                          );
+                        })}
+                      </div>
+
+                      {/* Dynamic Tooltip */}
+                      {hoveredPointIndex !== null && (
+                        <div 
+                          className="absolute p-3 bg-zinc-950/95 text-white rounded-xl text-[10px] space-y-1 shadow-xl border border-zinc-800 pointer-events-none transition-all duration-100 z-10"
+                          style={{
+                            left: `${(points[hoveredPointIndex].x / 500) * 100}%`,
+                            top: `${(points[hoveredPointIndex].y / 200) * 100 - 15}%`,
+                            transform: 'translate(-50%, -100%)',
+                          }}
                         >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    <button 
-                      disabled={analyticsPage === totalAnalyticsPages}
-                      onClick={() => setAnalyticsPage(prev => Math.min(totalAnalyticsPages, prev + 1))}
-                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-black active:scale-95"
-                    >
-                      Next ▶
-                    </button>
+                          <p className="font-bold text-zinc-400">{points[hoveredPointIndex].date}</p>
+                          <p className="font-black text-xs text-white">
+                            {analyticsChartMetric === 'revenue' 
+                              ? `₹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
+                              : `${points[hoveredPointIndex].val} Orders`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Status Distribution Donut Card */}
+                <div className={`p-6 rounded-3xl border transition-all flex flex-col justify-between ${
+                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div>
+                    <h4 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Order Statuses</h4>
+                    <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Distribution of active workflow statuses.</p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mt-4 flex-grow">
+                    <div className="w-32 h-32 relative flex-shrink-0">
+                      <svg width="100%" height="100%" viewBox="0 0 42 42" className="donut">
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" />
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="transparent" strokeWidth="4" />
+                        {statusDonutSlices.length === 0 ? (
+                          <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#cbd5e1" strokeWidth="4.2" strokeDasharray="100 0" strokeDashoffset="100" />
+                        ) : (
+                          statusDonutSlices.map((slice, idx) => (
+                            <circle 
+                              key={idx}
+                              cx="21" 
+                              cy="21" 
+                              r="15.915" 
+                              fill="transparent" 
+                              stroke={slice.color} 
+                              strokeWidth="4.2" 
+                              strokeDasharray={slice.strokeDasharray} 
+                              strokeDashoffset={slice.strokeDashoffset} 
+                            />
+                          ))
+                        )}
+                      </svg>
+                    </div>
+
+                    <div className="flex-grow w-full space-y-2 text-left flex flex-col justify-center max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                      {statusDonutSlices.length === 0 ? (
+                        <span className="text-[10px] font-semibold text-zinc-400 text-center">No orders recorded yet.</span>
+                      ) : (
+                        statusDonutSlices.map((slice, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-[10px] font-bold text-zinc-550 dark:text-zinc-455">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
+                              <span className="capitalize">{slice.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-zinc-400 font-medium">{slice.percentage}%</span>
+                              <span className="text-zinc-800 dark:text-white font-extrabold">{slice.count}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Stock Inventory Section */}
+              <div className={`p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+              }`}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Inventory Stock Registry</h3>
+                    <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Real-time tracking of item stocks, supply states, and automatic refills.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => window.print()}
+                    className="py-2 px-3 bg-[#8b5cf6] hover:bg-purple-650 text-white text-[10px] font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <ClipboardList size={12} /> Export Stock Report
+                  </button>
+                </div>
+
+                <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-zinc-950/20' : 'border-zinc-150 bg-white'}`}>
+                  <table className="w-full min-w-[700px] text-left text-xs">
+                    <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                      <tr>
+                        <th className="p-4">SKU / Item</th>
+                        <th className="p-4">Category</th>
+                        <th className="p-4 text-right">Current Stock</th>
+                        <th className="p-4 text-center">Status</th>
+                        <th className="p-4 text-center">Quick Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                      {paginatedAnalyticsProducts.map((p) => (
+                        <tr key={p.id} className="hover:bg-white/2 transition-colors">
+                          <td className="p-4 font-bold flex items-center gap-2.5">
+                            {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#2a3145]" />}
+                            <div>
+                              <p className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</p>
+                              <p className="text-[10px] text-zinc-500">PROD-00{p.id}</p>
+                            </div>
+                          </td>
+                          <td className="p-4 font-semibold text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <input 
+                                type="number"
+                                min="0"
+                                key={p.stock}
+                                defaultValue={p.stock}
+                                onBlur={async (e) => {
+                                  const val = parseInt(e.target.value);
+                                  if (isNaN(val) || val < 0) return;
+                                  if (val === p.stock) return;
+                                  try {
+                                    const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ stock: val })
+                                    });
+                                    if (res.ok) {
+                                      showToast(`${p.name} stock updated to ${val} units`, 'success');
+                                      syncData();
+                                    } else {
+                                      showToast('Failed to update stock', 'warning');
+                                    }
+                                  } catch (err) {
+                                    showToast('Network error during stock update', 'warning');
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.target.blur();
+                                  }
+                                }}
+                                className={`w-16 p-1.5 text-center rounded-lg border outline-none text-xs font-black transition-all ${
+                                  theme === 'dark' 
+                                    ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                                    : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                                }`}
+                              />
+                              <span className="text-[10px] text-zinc-500 font-semibold">pcs</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-col items-center gap-1.5">
+                              {/* Stock Warning Badge */}
+                              <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider border transition-all ${
+                                p.stock === 0
+                                  ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                  : p.stock < 15
+                                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              }`}>{p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock'}</span>
+
+                              {/* Publication Status Dropdown */}
+                              <select
+                                value={p.status || 'published'}
+                                onChange={async (e) => {
+                                  const newStatus = e.target.value;
+                                  try {
+                                    const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ status: newStatus })
+                                    });
+                                    if (res.ok) {
+                                      showToast(`${p.name} status updated to ${newStatus}`, 'success');
+                                      syncData();
+                                    } else {
+                                      showToast('Failed to update status', 'warning');
+                                    }
+                                  } catch (err) {
+                                    showToast('Network error during status update', 'warning');
+                                  }
+                                }}
+                                className={`text-[9px] font-black p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
+                                  theme === 'dark' 
+                                    ? 'border-[#2a3145] text-zinc-300 bg-zinc-950' 
+                                    : 'border-zinc-200 text-zinc-750 bg-white'
+                                }`}
+                              >
+                                <option value="published" className={theme === 'dark' ? 'bg-[#10141c] text-white font-bold' : 'bg-white text-zinc-950 font-semibold'}>Published</option>
+                                <option value="draft" className={theme === 'dark' ? 'bg-[#10141c] text-white font-bold' : 'bg-white text-zinc-950 font-semibold'}>Draft</option>
+                              </select>
+                            </div>
+                          </td>
+                          <td className="p-4 text-center">
+                            <button 
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ stock: 100 })
+                                  });
+                                  if (res.ok) {
+                                    showToast(`${p.name} restocked to 100 units`, 'success');
+                                    syncData();
+                                  }
+                                } catch (e) {
+                                  showToast('Network error during restock', 'warning');
+                                }
+                              }}
+                              className="py-2 px-4 bg-zinc-50 border border-zinc-200 text-zinc-750 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-450 dark:hover:border-emerald-900/30 font-black rounded-xl text-[10px] transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs"
+                            >
+                              Refill to 100
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Analytics Pagination Controls */}
+                {totalAnalyticsPages > 1 && (
+                  <div className="flex items-center justify-between pt-6 text-xs font-semibold select-none leading-none">
+                    <span className="text-zinc-400">
+                      Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredAnalyticsProducts.length, (analyticsPage - 1) * 8 + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredAnalyticsProducts.length, analyticsPage * 8)}</span> of <span className="font-extrabold text-zinc-650 dark:text-zinc-300">{filteredAnalyticsProducts.length}</span> items
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        type="button"
+                        disabled={analyticsPage === 1}
+                        onClick={() => setAnalyticsPage(prev => Math.max(1, prev - 1))}
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-black active:scale-95"
+                      >
+                        ◀ Prev
+                      </button>
+                      {[...Array(totalAnalyticsPages)].map((_, idx) => {
+                        const pageNum = idx + 1;
+                        return (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setAnalyticsPage(pageNum)}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-black transition-all cursor-pointer active:scale-90 ${
+                              analyticsPage === pageNum
+                                ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
+                                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-650 dark:text-zinc-400'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      <button 
+                        type="button"
+                        disabled={analyticsPage === totalAnalyticsPages}
+                        onClick={() => setAnalyticsPage(prev => Math.min(totalAnalyticsPages, prev + 1))}
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-black active:scale-95"
+                      >
+                        Next ▶
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
           {activePage === 'settings' && (
-            <div className="space-y-6 text-left">
+            <div className="space-y-6 text-left animate-fade-in">
               <div>
-                <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>System Settings</h3>
-                <p className="text-[10px] text-zinc-500 font-semibold mt-1">Manage global preferences, configurations, and core database maintenance.</p>
+                <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Configurations</h2>
+                <p className="text-xs text-zinc-500 font-medium mt-1">Manage public details, checkout configurations, and store accessibility settings.</p>
               </div>
 
-              <div className={`p-6 rounded-3xl border ${theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200'}`}>
-                <h4 className="text-sm font-black text-red-500 mb-2">Danger Zone</h4>
-                <p className="text-xs text-zinc-500 leading-relaxed mb-4">Wipe your database clean by deleting all catalog products, categories, active checkout orders, and banners in one click.</p>
-                
-                <button 
-                  onClick={async () => {
-                    if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
-                    setLoadingData(true);
-                    try {
-                      const res = await fetch('http://127.0.0.1:8000/api/products/clear-all/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                      });
-                      if (res.ok) {
-                        showToast('Database wiped clean!', 'success');
-                        syncData();
-                      } else {
-                        showToast('Failed to clear database.', 'warning');
-                      }
-                    } catch (e) {
-                      showToast('Network error clearing database.', 'warning');
-                    } finally {
-                      setLoadingData(false);
-                    }
-                  }}
-                  className="py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              {/* Tab Header Navigation */}
+              <div className={`flex flex-wrap border rounded-2xl p-1 gap-2 ${
+                theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('general')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    settingsTab === 'general'
+                      ? 'bg-[#8b5cf6] text-white shadow-xs'
+                      : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
+                  }`}
                 >
-                  Reset / Clear Database
+                  General Settings
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('checkout')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    settingsTab === 'checkout'
+                      ? 'bg-[#8b5cf6] text-white shadow-xs'
+                      : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
+                  }`}
+                >
+                  Checkout Config
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('status')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    settingsTab === 'status'
+                      ? 'bg-[#8b5cf6] text-white shadow-xs'
+                      : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
+                  }`}
+                >
+                  Store Operations
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('danger')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    settingsTab === 'danger'
+                      ? 'bg-red-600 text-white shadow-xs'
+                      : 'text-red-500 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-500/10'
+                  }`}
+                >
+                  Danger Zone
                 </button>
               </div>
+
+              {/* Tab Contents */}
+              <form onSubmit={handleSaveSettings} className={`p-6 rounded-3xl border transition-all ${
+                theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+              }`}>
+                {settingsTab === 'general' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <h3 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>General Settings</h3>
+                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Edit public contact parameters shown on the storefront.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Public Support Phone</label>
+                        <input
+                          type="text"
+                          value={settingsForm.contactPhone}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, contactPhone: e.target.value }))}
+                          placeholder="+91 XXXXX XXXXX"
+                          required
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Contact Email Address</label>
+                        <input
+                          type="email"
+                          value={settingsForm.contactEmail}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, contactEmail: e.target.value }))}
+                          placeholder="support@vdgfashion.com"
+                          required
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Boutique Physical Address</label>
+                      <textarea
+                        rows={3}
+                        value={settingsForm.storeAddress}
+                        onChange={e => setSettingsForm(prev => ({ ...prev, storeAddress: e.target.value }))}
+                        placeholder="Full physical address..."
+                        required
+                        className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                          theme === 'dark' 
+                            ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                            : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'checkout' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <h3 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Checkout Configurations</h3>
+                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Control pricing, active promotional code discounts, and shipping rules.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Active Promo Code Name</label>
+                        <input
+                          type="text"
+                          value={settingsForm.activePromoCode}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, activePromoCode: e.target.value.toUpperCase() }))}
+                          placeholder="e.g. SUMMER20"
+                          required
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Promo Discount Percentage (%)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={settingsForm.activePromoDiscount}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, activePromoDiscount: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                          required
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={settingsForm.freeShippingThreshold}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, freeShippingThreshold: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          required
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={settingsForm.shippingFee}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, shippingFee: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          required
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'status' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <h3 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Boutique Operations</h3>
+                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Toggle store operation between fully active and maintenance modes.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setSettingsForm(prev => ({ ...prev, isStoreOpen: true }))}
+                        className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${
+                          settingsForm.isStoreOpen
+                            ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400'
+                            : theme === 'dark' ? 'border-[#2a3145] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <CheckCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-black text-sm">Active Storefront (Open)</h4>
+                          <p className="text-[10px] text-zinc-500 font-semibold mt-1">Customers can browse collections, modify shopping carts, and submit orders.</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSettingsForm(prev => ({ ...prev, isStoreOpen: false }))}
+                        className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${
+                          !settingsForm.isStoreOpen
+                            ? 'border-rose-500 bg-rose-500/5 text-rose-600 dark:text-rose-400'
+                            : theme === 'dark' ? 'border-[#2a3145] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <XCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-black text-sm">Maintenance Mode (Closed)</h4>
+                          <p className="text-[10px] text-zinc-500 font-semibold mt-1">Order submissions are blocked with a clean visual notice. Admins can still access dashboards.</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'danger' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <h3 className="text-base font-black text-red-505 text-red-500 uppercase tracking-wider">Danger Zone</h3>
+                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Database maintenance, reset scripts, and system wipe controls.</p>
+                    </div>
+
+                    <div className={`p-5 rounded-2xl border ${
+                      theme === 'dark' ? 'border-red-900/30 bg-red-950/10' : 'border-red-150 bg-red-50/20'
+                    }`}>
+                      <h4 className="text-xs font-black text-red-500 uppercase tracking-wider mb-1">Erase Registry Data</h4>
+                      <p className="text-[10px] text-zinc-500 font-medium mb-4 leading-relaxed">
+                        Warning: Clicking the button below will clear all registered products, categories, subcategories, customer orders, and reviews. This action is irreversible.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
+                          setLoadingData(true);
+                          try {
+                            const res = await fetch('http://127.0.0.1:8000/api/products/clear-all/', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' }
+                            });
+                            if (res.ok) {
+                              showToast('Database wiped clean!', 'success');
+                              syncData();
+                            } else {
+                              showToast('Failed to clear database.', 'warning');
+                            }
+                          } catch (e) {
+                            showToast('Network error clearing database.', 'warning');
+                          } finally {
+                            setLoadingData(false);
+                          }
+                        }}
+                        className="py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                      >
+                        Reset / Clear Database
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Save Button for active config tabs */}
+                {settingsTab !== 'danger' && (
+                  <div className="mt-6 pt-4 border-t border-zinc-150 dark:border-[#2a3145] flex justify-end">
+                    <button
+                      type="submit"
+                      className="py-2.5 px-5 bg-[#8b5cf6] hover:bg-purple-650 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer active:scale-95 shadow-md shadow-purple-500/10"
+                    >
+                      Save Configuration
+                    </button>
+                  </div>
+                )}
+              </form>
             </div>
           )}
 
@@ -2389,6 +3391,18 @@ function DashboardPortal({ onLogout, adminUser }) {
         </div>
       </main>
 
+
+      {/* Loading overlay */}
+      {loadingData && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-bold border ${
+            theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+          }`}>
+            <Loader2 size={14} className="animate-spin text-indigo-500" />
+            Syncing data...
+          </div>
+        </div>
+      )}
 
       {/* Floating CRUD Modals */}
       {modalType && (

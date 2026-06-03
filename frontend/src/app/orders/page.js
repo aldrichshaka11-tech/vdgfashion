@@ -32,6 +32,7 @@ import { formatINR } from '../utils/currency';
 
 export default function MyOrdersPage() {
   const router = useRouter();
+  const { user, products } = useStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('All'); // 'All', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'
   const [orders, setOrders] = useState([]);
@@ -41,6 +42,66 @@ export default function MyOrdersPage() {
   
   const itemsPerPage = 3; // Limit items per page as requested to demonstrate pagination clearly
 
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/orders/');
+      if (res.ok) {
+        const data = await res.json();
+        // Filter by user email or username if logged in
+        const filtered = user 
+          ? data.filter(o => o.email === user.email || o.customer_name === user.username)
+          : data;
+
+        const mapped = filtered.map(o => ({
+          id: o.id,
+          orderId: o.order_id,
+          date: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+          totalAmount: parseFloat(o.total_amount),
+          paymentMethod: o.payment_method === 'card' ? 'Credit Card' : o.payment_method === 'upi' ? 'UPI Transfer' : 'Cash on Delivery',
+          cardLast4: o.payment_method === 'card' ? 'CARD' : o.payment_method === 'upi' ? 'UPI' : 'COD',
+          status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Pending',
+          statusDate: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+          shippingAddress: `${o.street_address}, ${o.city}, ${o.state} - ${o.pin_code}`,
+          subtotal: parseFloat(o.subtotal),
+          discount: parseFloat(o.discount_amount),
+          shippingFee: parseFloat(o.shipping_fee),
+          items: (o.items || []).map(item => {
+            const productObj = products.find(p => p.id === item.product_id);
+            const resolvedImage = productObj && productObj.image ? productObj.image : '/products/accessories_category.png';
+            return {
+              name: item.product_name,
+              qty: item.quantity,
+              price: parseFloat(item.price),
+              size: item.selected_size || 'M',
+              colorHex: item.selected_color || '#e6fcf5',
+              image: resolvedImage
+            };
+          })
+        }));
+        setOrders(mapped);
+      }
+    } catch (e) {
+      console.error('Failed to fetch orders', e);
+    }
+  };
+
+  const handleDeleteOrder = async (id) => {
+    if (!confirm('Are you sure you want to delete/cancel this order?')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('Order deleted/cancelled successfully!');
+        fetchOrders();
+      } else {
+        alert('Failed to delete order');
+      }
+    } catch (err) {
+      alert('Network error deleting order');
+    }
+  };
+
   useEffect(() => {
     AOS.init({
       duration: 700,
@@ -48,8 +109,8 @@ export default function MyOrdersPage() {
       easing: 'ease-out-cubic',
     });
 
-    setOrders([]);
-  }, []);
+    fetchOrders();
+  }, [user, products]);
 
   // Filter orders based on Tab selection and search query
   const filteredOrders = useMemo(() => {

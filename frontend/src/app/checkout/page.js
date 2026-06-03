@@ -22,7 +22,8 @@ export default function CheckoutPage() {
     appliedCoupon,
     couponDiscount,
     shippingFee,
-    cartTotal 
+    cartTotal,
+    settings
   } = useStore();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -211,6 +212,25 @@ export default function CheckoutPage() {
                   <p className="text-sm sm:text-base text-zinc-500 font-normal">{processStep}</p>
                 </div>
                 <p className="text-xs text-zinc-400 font-normal">Please do not refresh the page or click back button.</p>
+              </div>
+            ) : settings && !settings.isStoreOpen ? (
+              <div className="bg-white border border-zinc-150 rounded-[2rem] p-12 shadow-xs text-center flex flex-col items-center justify-center min-h-[350px] space-y-4 animate-fade-in">
+                <div className="h-16 w-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto">
+                  <ShieldCheck className="h-8 w-8" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-black text-zinc-950">Store Under Maintenance</h3>
+                  <p className="text-sm text-zinc-500 font-normal max-w-md mx-auto leading-relaxed">
+                    Our boutique is currently undergoing scheduled maintenance or database updates. Please check back shortly to complete your checkout. We apologize for any inconvenience!
+                  </p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => router.push('/')}
+                  className="rounded-xl bg-zinc-950 hover:bg-zinc-800 px-6 py-3 text-sm font-semibold text-white transition-colors cursor-pointer"
+                >
+                  Return to Storefront
+                </button>
               </div>
             ) : cart.length === 0 ? (
               <div className="bg-white border border-zinc-150 rounded-[2rem] p-12 shadow-xs text-center flex flex-col items-center justify-center min-h-[350px] space-y-4" data-aos="fade-up">
