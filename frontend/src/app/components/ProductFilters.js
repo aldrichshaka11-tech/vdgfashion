@@ -133,21 +133,42 @@ export default function ProductFilters() {
         <div className="space-y-3.5">
           <h4 className="font-black text-[13.5px] text-zinc-900 tracking-tight">Price Range</h4>
           
-          <div className="pt-2 px-1 relative">
+          <div className="pt-2 px-1 relative space-y-4">
             <input
               type="range"
-              min="500"
+              min="100"
               max="5000"
               step="100"
               value={priceRange}
               onChange={(e) => setPriceRange(Number(e.target.value))}
               className="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-[#e11d48]"
             />
-            {/* Displaying current price above or on hover is nice, but to match screenshot: */}
-            <div className="mt-3 flex justify-between text-xs sm:text-sm text-zinc-450 font-normal">
-              <span>{formatINR(500)}</span>
+            <div className="flex justify-between text-xs sm:text-sm text-zinc-450 font-normal">
+              <span>{formatINR(100)}</span>
               <span className="bg-rose-50 text-[#e11d48] px-2.5 py-0.5 rounded-md font-semibold">{formatINR(priceRange)}</span>
               <span>{formatINR(5000)}</span>
+            </div>
+
+            {/* Quick Filter Buttons */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[100, 500, 1000, 5000].map((val) => {
+                const isActive = priceRange === val;
+                const label = val === 5000 ? 'All' : formatINR(val);
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setPriceRange(val)}
+                    className={`px-3 py-1.5 text-xs font-black rounded-lg border transition-all active:scale-95 ${
+                      isActive
+                        ? 'bg-[#e11d48] text-white border-[#e11d48]'
+                        : 'border-zinc-200 text-zinc-650 hover:border-zinc-800 hover:text-zinc-950 bg-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

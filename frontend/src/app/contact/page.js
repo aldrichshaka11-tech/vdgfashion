@@ -12,7 +12,7 @@ import CartDrawer from '../components/CartDrawer';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle2, ChevronRight, X } from 'lucide-react';
 
 export default function ContactPage() {
-  const { setSelectedProduct, setSelectedCategory } = useStore();
+  const { settings, setSelectedProduct, setSelectedCategory } = useStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -56,24 +56,24 @@ export default function ContactPage() {
   const contactDetails = [
     {
       title: 'Call Us Directly',
-      info: '+91 98765 43210',
+      info: settings?.contactPhone || '083001 12996',
       description: 'Mon - Sat, 9:00 AM to 7:00 PM IST',
       icon: Phone,
       color: 'bg-[#e11d48] text-white border-transparent',
-      action: 'tel:+919876543210'
+      action: `tel:${settings?.contactPhone || '083001 12996'}`
     },
     {
       title: 'Email Our Support Team',
-      info: 'support@vdgfashion.com',
+      info: settings?.contactEmail || 'support@vdgfashion.com',
       description: 'We reply within 24 business hours',
       icon: Mail,
       color: 'bg-indigo-600 text-white border-transparent',
-      action: 'mailto:support@vdgfashion.com'
+      action: `mailto:${settings?.contactEmail || 'support@vdgfashion.com'}`
     },
     {
       title: 'Visit Our HQ Store',
-      info: 'Express Avenue Mall, Chennai',
-      description: '1st Floor, No. 2, Club House Rd, India',
+      info: 'VDG Fashion Narayana complex',
+      description: settings?.storeAddress || '61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001',
       icon: MapPin,
       color: 'bg-amber-600 text-white border-transparent',
       action: 'https://maps.google.com'
@@ -87,6 +87,7 @@ export default function ContactPage() {
       action: null
     }
   ];
+
 
   return (
     <div className="flex bg-[#fafafa] min-h-screen text-black overflow-hidden relative">
@@ -289,11 +290,11 @@ export default function ContactPage() {
             <section className="w-full bg-white border border-zinc-150 rounded-[2rem] p-6 sm:p-8 shadow-xs space-y-4" data-aos="fade-up">
               <div className="space-y-1.5">
                 <h3 className="text-xl sm:text-2xl font-black text-zinc-950 tracking-tight">Find Us on the Map</h3>
-                <p className="text-sm sm:text-base text-zinc-500 font-normal">Our boutique store is located inside Express Avenue Mall, Chennai. Drop by for custom fittings.</p>
+                <p className="text-sm sm:text-base text-zinc-500 font-normal">Our boutique store is located in Virudhunagar, Tamil Nadu. Drop by for custom fittings.</p>
               </div>
               <div className="w-full h-80 rounded-2xl overflow-hidden border border-zinc-200/60 shadow-2xs relative">
                 <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3886.486266014496!2d80.25866167576406!3d13.055648813455243!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a52661aa4f107f9%3A0xe543329ebc671a5a!2sExpress%20Avenue!5e0!3m2!1sen!2sin!4v1716900000000!5m2!1sen!2sin" 
+                  src="https://maps.google.com/maps?q=VDG%20Fashion%20Narayana%20complex%20Virudhunagar&t=&z=16&ie=UTF8&iwloc=&output=embed" 
                   className="absolute inset-0 w-full h-full border-0 select-none"
                   allowFullScreen="" 
                   loading="lazy" 

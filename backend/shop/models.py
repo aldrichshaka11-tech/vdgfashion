@@ -303,3 +303,29 @@ class Review(models.Model):
     def delete(self, *args, **kwargs):
         self.is_active = False
         self.save()
+
+
+
+class SiteSettings(models.Model):
+    contact_phone = models.CharField(max_length=100, default="083001 12996")
+    contact_email = models.EmailField(default="gouthamraj@vdgfashion.com")
+    store_address = models.TextField(default="61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001")
+    about_text = models.TextField(default="Trendy looks for every vibe. Stay stylish, every day.")
+    free_shipping_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=3000.00)
+    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=99.00)
+    active_promo_code = models.CharField(max_length=100, default="TREND10")
+    active_promo_discount = models.IntegerField(default=10)
+    is_store_open = models.BooleanField(default=True)
+    
+    # Social Media URL Fields
+    facebook_url = models.URLField(max_length=500, default="https://www.facebook.com/fashionvdg/")
+    instagram_url = models.URLField(max_length=500, default="https://www.instagram.com/vdgfashion/")
+    youtube_url = models.URLField(max_length=500, default="https://www.youtube.com/channel/UCLLKwEMo4FManOeDUO3jaKw")
+
+    class Meta:
+        verbose_name = "Site Settings"
+        verbose_name_plural = "Site Settings"
+
+    def __str__(self):
+        return "Site Settings"
+

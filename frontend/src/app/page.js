@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStore } from './context/StoreContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -10,7 +11,7 @@ import ProductFilters from './components/ProductFilters';
 import ProductDetailView from './components/ProductDetailView';
 import HeroSlider from './components/HeroSlider';
 import Footer from './components/Footer';
-import { ArrowRight, Sparkles, Send, Flame, X, SlidersHorizontal, Grid, LayoutGrid } from 'lucide-react';
+import { ArrowRight, Sparkles, Send, Flame, X, SlidersHorizontal, Grid, LayoutGrid, Truck, Gift, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 
 // AOS animation imports
@@ -31,15 +32,32 @@ export default function Home() {
     sortBy,
     selectedProduct,
     setSelectedProduct,
-    setSelectedCategory
+    setSelectedCategory,
+    setCheckedCategories,
+    resetFilters
   } = useStore();
+
+  const router = useRouter();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [filterCategory, setFilterCategory] = useState(null);
 
+  const reviewsRef = React.useRef(null);
+  const handleScrollReviews = (direction) => {
+    if (reviewsRef.current) {
+      const scrollAmount = direction === 'left' ? -350 : 350;
+      reviewsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
+    resetFilters();
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
 
@@ -107,7 +125,7 @@ export default function Home() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
+  }, [products, searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
 
   const PRODUCTS_PER_PAGE = 8;
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE) || 1;
@@ -182,38 +200,42 @@ export default function Home() {
                   </span>
                 </div>
                 
-                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1.5 px-2.5">
-                  {categoryTrack.map((cat, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setSelectedCategory(cat.categoryRef);
-                        setFilterCategory(cat.name);
-                        setShowFiltersPanel(true);
-                        setTimeout(() => handleScrollToShop(), 50);
-                      }}
-                      data-aos="zoom-in"
-                      data-aos-delay={idx * 50}
-                      className={`relative rounded-2xl p-3 w-28 sm:w-32 flex flex-col justify-between flex-shrink-0 cursor-pointer border border-zinc-100 hover:scale-102 hover:shadow-sm transition-all ${
-                        selectedCategory === cat.categoryRef ? 'ring-2 ring-[#e11d48]/30 shadow-md bg-rose-50/20' : 'bg-white'
-                      }`}
-                    >
-                      {/* Pastel background photo box */}
+                <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
+                  {categoryTrack.map((cat, idx) => {
+                    const isSelected = selectedCategory === cat.categoryRef;
+                    return (
                       <div
-                        className="w-full aspect-square rounded-xl flex items-center justify-center p-2 relative overflow-hidden"
-                        style={{ backgroundColor: cat.bg }}
+                        key={idx}
+                        onClick={() => {
+                          setSelectedCategory(cat.categoryRef);
+                          setCheckedCategories([cat.categoryRef]);
+                          router.push('/categories');
+                        }}
+                        data-aos="zoom-in"
+                        data-aos-delay={idx * 50}
+                        className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
                       >
-                        <div className="relative w-[90%] h-[90%]">
-                          <Image src={cat.img} alt={cat.name} fill className="object-contain" />
+                        {/* Circle photo container */}
+                        <div
+                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center p-3.5 relative overflow-hidden shadow-2xs transition-all duration-300 ${
+                            isSelected ? 'ring-3 ring-[#e11d48] ring-offset-2 scale-102' : 'hover:shadow-sm'
+                          }`}
+                          style={{ backgroundColor: cat.bg }}
+                        >
+                          <div className="relative w-4/5 h-4/5">
+                            <Image src={cat.img} alt={cat.name} fill className="object-contain" />
+                          </div>
                         </div>
+                        
+                        {/* Plain text label below */}
+                        <span className={`mt-2.5 text-xs sm:text-sm font-bold tracking-tight text-center transition-colors ${
+                          isSelected ? 'text-[#e11d48]' : 'text-zinc-700'
+                        }`}>
+                          {cat.name}
+                        </span>
                       </div>
-                      
-                      {/* White bottom text label */}
-                      <div className="mt-3 bg-white/95 rounded-lg border border-zinc-100/50 py-2 text-center text-sm font-normal text-zinc-950 shadow-2xs">
-                        {cat.name}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -344,6 +366,204 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Promo Banners Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in" data-aos="fade-up">
+                {/* Left Banner: Summer Outfits */}
+                <div className="rounded-[2.5rem] p-6 sm:p-8 bg-[#e2f2ed] flex items-center justify-between gap-6 border border-[#c4e3d9]/30 hover:shadow-md transition-all duration-300 min-h-[220px]">
+                  <div className="relative w-1/3 aspect-square max-w-[155px] flex-shrink-0 flex items-center justify-center">
+                    <img 
+                      src="/products/tshirt_green.png" 
+                      alt="Summer Outfits Green Tshirt" 
+                      className="object-contain max-h-[160px] drop-shadow-md hover:scale-105 transition-transform duration-305"
+                    />
+                  </div>
+                  <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
+                    <h3 className="font-serif italic text-2xl sm:text-3xl text-zinc-900 font-extrabold tracking-tight">Summer Outfits</h3>
+                    <p className="text-xs sm:text-sm text-zinc-500 font-semibold">100% Pure Natural Cotton Wear</p>
+                    <button 
+                      onClick={handleScrollToShop}
+                      className="bg-[#d32f2f] hover:bg-[#b71c1c] text-white px-6 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 active:scale-95 shadow-md shadow-red-900/10 cursor-pointer"
+                    >
+                      Shop Now
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Banner: Winter Hoodies */}
+                <div className="rounded-[2.5rem] p-6 sm:p-8 bg-[#fdf0d5] flex items-center justify-between gap-6 border border-[#ebd7b1]/30 hover:shadow-md transition-all duration-300 min-h-[220px]">
+                  <div className="relative w-1/3 aspect-square max-w-[155px] flex-shrink-0 flex items-center justify-center">
+                    <img 
+                      src="/products/hoodie_pink.png" 
+                      alt="Winter Hoodies Pink Hoodie" 
+                      className="object-contain max-h-[160px] drop-shadow-md hover:scale-105 transition-transform duration-305"
+                    />
+                  </div>
+                  <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
+                    <h3 className="font-serif italic text-2xl sm:text-3xl text-zinc-900 font-extrabold tracking-tight">Winter Hoodies</h3>
+                    <p className="text-xs sm:text-sm text-zinc-500 font-semibold">With 25% Off All Winter Wear</p>
+                    <button 
+                      onClick={handleScrollToShop}
+                      className="bg-[#d32f2f] hover:bg-[#b71c1c] text-white px-6 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 active:scale-95 shadow-md shadow-red-900/10 cursor-pointer"
+                    >
+                      Shop Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Value Props Section with Cherry Blossom Petals decoration */}
+              <div className="relative py-8 px-4 sm:px-8 overflow-hidden" data-aos="fade-up">
+                
+                {/* Left Blossom Petal Cluster */}
+                <div className="absolute left-3 sm:left-6 md:left-8 lg:left-12 top-1/2 -translate-y-1/2 hidden md:block select-none pointer-events-none">
+                  <img src="/petal.png" alt="Sakura Petals Left" className="h-20 sm:h-24 w-auto object-contain opacity-95" />
+                </div>
+
+                {/* Right Blossom Petal Cluster */}
+                <div className="absolute right-3 sm:right-6 md:right-8 lg:right-12 top-1/2 -translate-y-1/2 hidden md:block select-none pointer-events-none">
+                  <img src="/petal.png" alt="Sakura Petals Right" className="h-20 sm:h-24 w-auto object-contain opacity-95 scale-x-[-1]" />
+                </div>
+
+                {/* Features Row */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 max-w-[1000px] mx-auto w-full">
+                  
+                  {/* Free Delivery */}
+                  <div className="flex flex-col items-center text-center space-y-3 max-w-[220px]">
+                    <Truck className="h-9 w-9 text-zinc-900 stroke-[1.5]" />
+                    <h5 className="text-sm sm:text-base font-black text-zinc-950 tracking-wider">FREE DELIVERY</h5>
+                    <p className="text-xs sm:text-sm text-zinc-500 font-normal leading-relaxed">Enjoy free delivery on all orders</p>
+                  </div>
+
+                  {/* Easy Returns */}
+                  <div className="flex flex-col items-center text-center space-y-3 max-w-[220px]">
+                    <Gift className="h-9 w-9 text-zinc-900 stroke-[1.5]" />
+                    <h5 className="text-sm sm:text-base font-black text-zinc-950 tracking-wider">EASY RETURNS</h5>
+                    <p className="text-xs sm:text-sm text-zinc-500 font-normal leading-relaxed">Shop with confidence, enjoy easy returns</p>
+                  </div>
+
+                  {/* Secure Payments */}
+                  <div className="flex flex-col items-center text-center space-y-3 max-w-[220px]">
+                    <Shield className="h-9 w-9 text-zinc-900 stroke-[1.5]" />
+                    <h5 className="text-sm sm:text-base font-black text-zinc-950 tracking-wider">SECURE PAYMENTS</h5>
+                    <p className="text-xs sm:text-sm text-zinc-500 font-normal leading-relaxed">Shop securely with our trusted payment options</p>
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* Real Love, Real reviews Section */}
+              <div className="space-y-8 pt-10 border-t border-zinc-200/60" data-aos="fade-up">
+                <h2 className="text-2xl sm:text-3xl font-black text-zinc-950 text-center tracking-tight">
+                  Real Love, Real reviews
+                </h2>
+                
+                <div className="relative flex items-center group px-4">
+
+                  {/* Reviews Cards Scrollable Track */}
+                  <div 
+                    ref={reviewsRef}
+                    className="flex gap-6 overflow-x-auto no-scrollbar pb-6 w-full snap-x scroll-smooth px-1.5"
+                  >
+                    {[
+                      {
+                        image: "/review_girl_pink.png",
+                        quote: "Lovely dress..",
+                        name: "Anonymous",
+                        product: "Rose Pink Weave Wrap...",
+                        stickers: null
+                      },
+                      {
+                        image: "/review_boy_navy.png",
+                        quote: "nice fabric, nice fit",
+                        name: "Preeti.",
+                        product: "Navy Blue Peplum Top",
+                        stickers: (
+                          <div className="absolute top-3 right-3 bg-[#eab308] text-zinc-950 text-[8.5px] font-black px-1.5 py-0.5 rounded-md rotate-12 select-none pointer-events-none shadow-sm flex items-center gap-0.5">
+                            <span>₹</span>
+                            <span>★</span>
+                          </div>
+                        )
+                      },
+                      {
+                        image: "/review_boy_cream.png",
+                        quote: "Very nice coord set loved it",
+                        name: "Anonymous",
+                        product: "Khaki Cream Crop Top",
+                        stickers: null
+                      },
+                      {
+                        image: "/review_boy_blue.png",
+                        quote: "I ordered 2 shirts and 2 tops. Love the fabric, it'...",
+                        name: "Gunasekharan Siva",
+                        product: "vdgfashion",
+                        stickers: (
+                          <div className="absolute top-3 right-3 bg-zinc-950 text-white rounded-full p-1 select-none pointer-events-none animate-pulse">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-yellow-400">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
+                        )
+                      }
+                    ].map((review, idx) => (
+                      <div 
+                        key={idx}
+                        className="group w-[260px] sm:w-[280px] flex-shrink-0 bg-white border border-zinc-150 rounded-3xl p-4 vdgfashion-card-shadow flex flex-col justify-between items-center text-center snap-start transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                      >
+                        {/* Image with Gold Border & Stickers */}
+                        <div className="relative w-full aspect-square rounded-[1.85rem] overflow-hidden border-3 border-[#facc15] shadow-xs">
+                          <img 
+                            src={review.image} 
+                            alt={`Review ${idx + 1}`} 
+                            className="object-cover w-full h-full select-none transition-transform duration-500 group-hover:scale-110"
+                          />
+                          {review.stickers}
+                        </div>
+                        
+                        {/* Quote & Stars & Customer Details */}
+                        <div className="mt-4 flex flex-col items-center flex-1 w-full justify-between">
+                          <p className="text-sm sm:text-base font-bold text-zinc-800 leading-relaxed line-clamp-2 px-1">
+                            &quot;{review.quote}&quot;
+                          </p>
+                          
+                          <div className="mt-3 flex flex-col items-center">
+                            {/* Stars */}
+                            <div className="flex gap-1 mb-2">
+                              {[...Array(5)].map((_, i) => (
+                                <svg key={i} className="h-6 w-6 fill-[#facc15] text-[#facc15] drop-shadow-xs" viewBox="0 0 24 24">
+                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                              ))}
+                            </div>
+                            
+                            {/* Verified Name */}
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-extrabold text-zinc-900">{review.name}</span>
+                              <svg className="h-4 w-4 text-zinc-900 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                              </svg>
+                            </div>
+                            
+                            {/* Product Name */}
+                            <span className="text-xs text-zinc-500 font-extrabold tracking-wide mt-1 uppercase">
+                              {review.product}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+
+                {/* Footer Follow Callout */}
+                <div className="text-center pt-2">
+                  <h4 className="text-sm sm:text-base font-black text-zinc-900 tracking-tight">
+                    Love fashion? Follow <span className="text-[#e11d48] font-black cursor-pointer hover:underline">@vdgfashion</span> now!
+                  </h4>
+                </div>
+              </div>
 
             </div>
           )}

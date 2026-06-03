@@ -227,27 +227,36 @@ function DashboardPortal({ onLogout, adminUser }) {
     contactPhone: '',
     contactEmail: '',
     storeAddress: '',
+    aboutText: '',
     freeShippingThreshold: 3000,
     shippingFee: 99,
     activePromoCode: 'TREND10',
     activePromoDiscount: 10,
-    isStoreOpen: true
+    isStoreOpen: true,
+    facebookUrl: '',
+    instagramUrl: '',
+    youtubeUrl: ''
   });
 
   useEffect(() => {
     if (settings) {
       setSettingsForm({
-        contactPhone: settings.contactPhone || '+91 98765 43210',
-        contactEmail: settings.contactEmail || 'gouthamraj@vdgfashion.com',
-        storeAddress: settings.storeAddress || 'Express Avenue Mall, 1st Floor, No. 2, Club House Rd, India, TN - 600002',
+        contactPhone: settings.contactPhone || '',
+        contactEmail: settings.contactEmail || '',
+        storeAddress: settings.storeAddress || '',
+        aboutText: settings.aboutText || '',
         freeShippingThreshold: settings.freeShippingThreshold !== undefined ? settings.freeShippingThreshold : 3000,
         shippingFee: settings.shippingFee !== undefined ? settings.shippingFee : 99,
         activePromoCode: settings.activePromoCode || 'TREND10',
         activePromoDiscount: settings.activePromoDiscount !== undefined ? settings.activePromoDiscount : 10,
-        isStoreOpen: settings.isStoreOpen !== undefined ? settings.isStoreOpen : true
+        isStoreOpen: settings.isStoreOpen !== undefined ? settings.isStoreOpen : true,
+        facebookUrl: settings.facebookUrl || '',
+        instagramUrl: settings.instagramUrl || '',
+        youtubeUrl: settings.youtubeUrl || ''
       });
     }
   }, [settings]);
+
 
   const handleSaveSettings = (e) => {
     if (e) e.preventDefault();
@@ -1658,7 +1667,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[500px] text-left text-sm font-semibold">
-                      <thead className={`font-black uppercase tracking-wider border-b pb-2.5 text-[12px] ${theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'}`}>
+                      <thead className={`font-bold tracking-normal border-b pb-2.5 text-[12px] ${theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'}`}>
                         <tr>
                           <th className="pb-3">Product</th>
                           <th className="pb-3">Category</th>
@@ -1776,7 +1785,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[800px] text-left text-sm">
-                  <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4.5">Product Name</th>
                       <th className="p-4.5">Category</th>
@@ -2053,7 +2062,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {categoriesActiveTab === 'categories' ? (
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[700px] text-left text-sm">
-                      <thead className={`font-black uppercase tracking-wider border-b text-[12px] ${
+                      <thead className={`font-bold tracking-normal border-b text-[12px] ${
                         theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
                       }`}>
                         <tr>
@@ -2136,7 +2145,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   // All Subcategories view
                   <div className="overflow-x-auto no-scrollbar animate-fade-in">
                     <table className="w-full min-w-[700px] text-left text-sm">
-                      <thead className={`font-black uppercase tracking-wider border-b text-[12px] ${
+                      <thead className={`font-bold tracking-normal border-b text-[12px] ${
                         theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
                       }`}>
                         <tr>
@@ -2244,7 +2253,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               <div className={`border rounded-2xl overflow-x-auto min-h-[420px] ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[850px] text-left text-xs">
-                  <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Order ID</th>
                       <th className="p-4">Customer</th>
@@ -2323,6 +2332,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               </div>
                             </td>
                             <td className="p-4 text-center text-zinc-500 font-semibold">
+                              {/* eslint-disable-next-line react-hooks/purity */}
                               {new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </td>
                             <td className="p-4 text-center">
@@ -2350,7 +2360,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[850px] text-left text-xs">
-                  <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Customer Name</th>
                       <th className="p-4">Email</th>
@@ -2389,6 +2399,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             {r.comment}
                           </td>
                           <td className="p-4 text-center text-zinc-500 font-semibold">
+                            {/* eslint-disable-next-line react-hooks/purity */}
                             {new Date(r.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </td>
                           <td className="p-4 text-center">
@@ -2661,7 +2672,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-zinc-950/20' : 'border-zinc-150 bg-white'}`}>
                   <table className="w-full min-w-[700px] text-left text-xs">
-                    <thead className={`font-bold uppercase tracking-wider border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                    <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                       <tr>
                         <th className="p-4">SKU / Item</th>
                         <th className="p-4">Category</th>
@@ -2843,7 +2854,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           )}
 
           {activePage === 'settings' && (
-            <div className="space-y-6 text-left animate-fade-in">
+            <div className="space-y-6 text-left animate-fade-in admin-settings-container">
               <div>
                 <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Configurations</h2>
                 <p className="text-xs text-zinc-500 font-medium mt-1">Manage public details, checkout configurations, and store accessibility settings.</p>
@@ -2957,6 +2968,67 @@ function DashboardPortal({ onLogout, adminUser }) {
                             : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                         }`}
                       />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Boutique About Text</label>
+                      <textarea
+                        rows={2}
+                        value={settingsForm.aboutText}
+                        onChange={e => setSettingsForm(prev => ({ ...prev, aboutText: e.target.value }))}
+                        placeholder="Trendy looks for every vibe. Stay stylish, every day."
+                        required
+                        className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                          theme === 'dark' 
+                            ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                            : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Facebook Page URL</label>
+                        <input
+                          type="url"
+                          value={settingsForm.facebookUrl}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, facebookUrl: e.target.value }))}
+                          placeholder="https://facebook.com/..."
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Instagram Profile URL</label>
+                        <input
+                          type="url"
+                          value={settingsForm.instagramUrl}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, instagramUrl: e.target.value }))}
+                          placeholder="https://instagram.com/..."
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">YouTube Channel URL</label>
+                        <input
+                          type="url"
+                          value={settingsForm.youtubeUrl}
+                          onChange={e => setSettingsForm(prev => ({ ...prev, youtubeUrl: e.target.value }))}
+                          placeholder="https://youtube.com/..."
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
+                            theme === 'dark' 
+                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
+                          }`}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -3225,7 +3297,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {/* Main Table view */}
                 <div className="overflow-x-auto no-scrollbar">
                   <table className="w-full min-w-[900px] text-left text-sm font-semibold">
-                    <thead className={`font-black uppercase tracking-wider border-b pb-2.5 text-[11px] ${
+                    <thead className={`font-bold tracking-normal border-b pb-2.5 text-[11px] ${
                       theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'
                     }`}>
                       <tr>
@@ -3419,7 +3491,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
 
             {modalType === 'product' && (
-              <form onSubmit={handleSaveProduct} className="space-y-6 text-xs font-semibold">
+              <form onSubmit={handleSaveProduct} className="space-y-6 text-sm font-medium">
                 
                 {/* 1. Featured Image & Gallery Section */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
@@ -3431,7 +3503,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Image Path / URL</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Image path / URL</label>
                       <input 
                         type="text" 
                         value={productForm.image} 
@@ -3443,7 +3515,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Upload Local File</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
                       <div className="relative flex items-center justify-center">
                         <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${
                           theme === 'dark' 
@@ -3460,14 +3532,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                         </label>
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Color Selection (Hex)</label>
-                      <div className="flex gap-2">
+                    <div className="space-y-1.5 min-w-0">
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Color selection (hex)</label>
+                      <div className="flex gap-2 min-w-0">
                         <input 
                           type="color" 
                           value={productForm.color_hex} 
                           onChange={(e) => setProductForm({ ...productForm, color_hex: e.target.value })} 
-                          className={`w-12 h-[46px] p-1.5 rounded-xl border cursor-pointer ${
+                          className={`w-12 h-[46px] p-1.5 rounded-xl border cursor-pointer shrink-0 ${
                             theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                           }`}
                         />
@@ -3476,7 +3548,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={productForm.color_hex} 
                           onChange={(e) => setProductForm({ ...productForm, color_hex: e.target.value })} 
                           placeholder="#ffffff"
-                          className={`flex-1 p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
+                          className={`flex-1 min-w-0 p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
                             theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                           }`}
                         />
@@ -3496,7 +3568,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Category Dropdown - root categories only */}
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Category <span className="text-red-400">*</span></label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
                       <select
                         required
                         value={productForm.category}
@@ -3521,7 +3593,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                     {/* Subcategory Dropdown - filtered by selected category */}
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Subcategory</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
                       <select
                         value={productForm.parent_category}
                         onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value }))}
@@ -3547,7 +3619,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                     {/* Tag Type */}
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Tag Type</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Tag type</label>
                       <select 
                         value={productForm.tag_type} 
                         onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value })}
@@ -3576,7 +3648,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2 space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Product Name*</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
                       <input 
                         type="text" 
                         required 
@@ -3588,7 +3660,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Unit*</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Unit *</label>
                       <input 
                         type="text" 
                         required 
@@ -3603,7 +3675,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Slug (Automatic / Custom)</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slug (automatic / custom)</label>
                       <input 
                         type="text" 
                         value={productForm.slug} 
@@ -3615,7 +3687,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Discount Label</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount label</label>
                       <input 
                         type="text" 
                         value={productForm.discount} 
@@ -3628,7 +3700,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Description*</label>
+                    <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Description *</label>
                     <textarea 
                       required
                       value={productForm.description} 
@@ -3650,7 +3722,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Product Type</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product type</label>
                       <select 
                         value={productForm.product_type} 
                         onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value })}
@@ -3663,7 +3735,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Width (cm)</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Width (cm)</label>
                       <input 
                         type="number" 
                         value={productForm.width} 
@@ -3675,7 +3747,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Height (cm)</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Height (cm)</label>
                       <input 
                         type="number" 
                         value={productForm.height} 
@@ -3687,7 +3759,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Length (cm)</label>
+                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Length (cm)</label>
                       <input 
                         type="number" 
                         value={productForm.length} 
@@ -3711,7 +3783,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Price (INR)*</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Price (INR) *</label>
                       <input 
                         type="number" 
                         required 
@@ -3723,7 +3795,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Sale Price (Original)</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sale price (original)</label>
                       <input 
                         type="number" 
                         value={productForm.original_price} 
@@ -3734,7 +3806,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Quantity (Stock)*</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Quantity (stock) *</label>
                       <input 
                         type="number" 
                         required 
@@ -3746,7 +3818,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>SKU*</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sku *</label>
                       <input 
                         type="text" 
                         required 
@@ -3853,8 +3925,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* 1. Category Image */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200 flex items-center">
-                    Category Image <span className="text-red-500 ml-1">*</span>
+                  <label className={`text-xs sm:text-sm font-semibold flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                    Category image <span className="text-red-500 ml-1">*</span>
                   </label>
                   
                   <div className={`flex items-center p-6 bg-zinc-50/50 dark:bg-zinc-900/30 border border-dashed border-indigo-200 dark:border-zinc-700 rounded-2xl gap-5 transition-all ${
@@ -3891,8 +3963,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 2. Category Name */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">
-                    Category Name <span className="text-red-500 ml-1">*</span>
+                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                    Category name <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
                     type="text"
@@ -3906,7 +3978,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 4. Status */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">
+                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Status <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
@@ -3948,8 +4020,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* 1. Subcategory Image */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200 flex items-center">
-                    Subcategory Image <span className="text-red-500 ml-1">*</span>
+                  <label className={`text-xs sm:text-sm font-semibold flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                    Subcategory image <span className="text-red-500 ml-1">*</span>
                   </label>
                   
                   <div className={`flex items-center p-6 bg-zinc-50/50 dark:bg-zinc-900/30 border border-dashed border-indigo-200 dark:border-zinc-700 rounded-2xl gap-5 transition-all ${
@@ -3986,8 +4058,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 2. Parent Category Select */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">
-                    Category Name Select <span className="text-red-500 ml-1">*</span>
+                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                    Category name select <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
                     required
@@ -4004,8 +4076,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 3. Subcategory Name */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">
-                    Subcategory Name Type <span className="text-red-500 ml-1">*</span>
+                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                    Subcategory name type <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
                     type="text"
@@ -4019,7 +4091,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 4. Status */}
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">
+                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Status <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select

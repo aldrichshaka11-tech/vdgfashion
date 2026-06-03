@@ -65,7 +65,7 @@ const PinterestIcon = () => (
 
 export default function Footer() {
   const router = useRouter();
-  const { setSelectedCategory } = useStore();
+  const { settings, setSelectedCategory } = useStore();
 
   const handleLinkClick = (category) => {
     setSelectedCategory(category);
@@ -75,41 +75,13 @@ export default function Footer() {
     }
   };
 
-  // Structured accurately to match columns and specific icons in mockup
-  const shopItems = [
-    { name: 'Categories', icon: Grid, action: () => router.push('/categories') },
-    { name: 'New Arrivals', icon: Sparkles, action: () => handleLinkClick('New Arrivals') },
-    { name: 'Best Sellers', icon: Flame, action: () => handleLinkClick('ALL') },
-    { name: 'Offers', icon: Tag, action: () => handleLinkClick('Offers') },
-    { name: 'Collections', icon: Layers, action: () => handleLinkClick('Collections') },
-    { name: 'Brands', icon: CheckCircle2, action: () => router.push('/brands') },
-  ];
-
-  const customerItems = [
+  const quickLinks = [
+    { name: 'Home', icon: User, action: () => router.push('/') },
+    { name: 'Shop Categories', icon: Grid, action: () => router.push('/categories') },
     { name: 'My Orders', icon: Package, action: () => router.push('/orders') },
-    { name: 'Returns & Refunds', icon: RotateCcw, action: () => router.push('/contact') },
-    { name: 'Shipping Policy', icon: Truck, action: () => router.push('/contact') },
-    { name: 'Size Guide', icon: Ruler, action: () => router.push('/contact') },
-    { name: 'FAQs', icon: HelpCircle, action: () => router.push('/contact') },
+    { name: 'About Us', icon: Users, action: () => router.push('/about') },
     { name: 'Contact Us', icon: Headphones, action: () => router.push('/contact') },
-  ];
-
-  const companyItems = [
-    { name: 'About Us', icon: User, action: () => router.push('/about') },
-    { name: 'Careers', icon: Briefcase, action: () => router.push('/about') },
-    { name: 'Press', icon: Newspaper, action: () => router.push('/about') },
-    { name: 'Blog', icon: Pencil, action: () => router.push('/about') },
-    { name: 'Affiliates', icon: Users, action: () => router.push('/about') },
-    { name: 'Sitemap', icon: Map, action: () => router.push('/') },
-  ];
-
-  const helpItems = [
-    { name: 'Track Order', icon: MapPin, action: () => router.push('/orders') },
-    { name: 'Payment Options', icon: CreditCard, action: () => router.push('/contact') },
-    { name: 'Privacy Policy', icon: Lock, action: () => router.push('/contact') },
-    { name: 'Terms & Conditions', icon: FileText, action: () => router.push('/contact') },
-    { name: 'Security', icon: Shield, action: () => router.push('/contact') },
-    { name: 'Accessibility', icon: Accessibility, action: () => router.push('/contact') },
+    { name: 'Offers', icon: Tag, action: () => router.push('/offers') },
   ];
 
   return (
@@ -145,12 +117,11 @@ export default function Footer() {
       {/* Content wrapper */}
       <div className="relative z-10 w-full max-w-[1300px] mx-auto px-4 sm:px-8 pt-16 pb-8 space-y-12 text-black">
         
-        {/* Top Grid: Logo description + Links columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 items-start">
+        {/* Top Grid: Brand description, Quick Links, Address */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           
-          {/* Logo Description & Social column */}
-          <div className="lg:col-span-4 space-y-5 lg:pr-4">
-            
+          {/* Column 1: Brand & About */}
+          <div className="space-y-4">
             {/* Colorful custom vdgfashion logo */}
             <div className="flex items-center gap-2.5 lg:gap-3">
               <div className="h-10 w-10 bg-gradient-to-tr from-[#e11d48] to-[#c026d3] rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm relative">
@@ -160,143 +131,96 @@ export default function Footer() {
               <span className="text-3xl font-black tracking-tight text-zinc-950">vdgfashion</span>
             </div>
             
-            <p className="text-[17.5px] font-normal text-zinc-650 leading-relaxed max-w-sm">
-              Trendy looks for every vibe.<br />Stay stylish, every day.
+            <p className="text-[15.5px] font-medium text-zinc-650 leading-relaxed max-w-sm">
+              {settings?.aboutText || "Trendy looks for every vibe. Stay stylish, every day."}
             </p>
 
-
-            {/* Social media icons with colored circle backgrounds matching screenshot exactly */}
-            <div className="flex items-center gap-3 pt-1.5">
-              {[
-                { icon: InstagramIcon, href: '#', bgClass: 'bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7]' },
-                { icon: FacebookIcon, href: '#', bgClass: 'bg-[#1877F2]' },
-                { icon: TwitterIcon, href: '#', bgClass: 'bg-[#1DA1F2]' },
-                { icon: PinterestIcon, href: '#', bgClass: 'bg-[#BD081C]' },
-                { icon: YoutubeIcon, href: '#', bgClass: 'bg-[#FF0000]' }
-              ].map((social, idx) => {
-                const IconComponent = social.icon;
-                return (
-                  <a
-                    key={idx}
-                    href={social.href}
-                    className={`h-8 w-8 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-110 shadow-xs ${social.bgClass}`}
-                  >
-                    <IconComponent />
-                  </a>
-                );
-              })}
+            {/* Social media icons */}
+            <div className="flex items-center gap-3 pt-2">
+              {settings?.instagramUrl && (
+                <a
+                  href={settings.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-110 shadow-xs bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7]"
+                >
+                  <InstagramIcon />
+                </a>
+              )}
+              {settings?.facebookUrl && (
+                <a
+                  href={settings.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-110 shadow-xs bg-[#1877F2]"
+                >
+                  <FacebookIcon />
+                </a>
+              )}
+              {settings?.youtubeUrl && (
+                <a
+                  href={settings.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-110 shadow-xs bg-[#FF0000]"
+                >
+                  <YoutubeIcon />
+                </a>
+              )}
             </div>
-
-            {/* Clear spacer to compensate for the model image overlapping on desktop */}
-            <div className="hidden lg:block h-28" />
           </div>
 
-          {/* Links columns */}
-          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-6 pt-2">
-            
-            {/* Shop Column (Purple underline) */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Shop</h4>
-                <div className="h-[2.5px] w-8 bg-purple-600 mt-1.5" />
-              </div>
-              <ul className="space-y-3.5 text-[17px] font-sans font-medium text-zinc-650">
-                {shopItems.map((item) => {
-                  const LinkIcon = item.icon;
-                  return (
-                    <li key={item.name}>
-                      <button 
-                        onClick={item.action}
-                        className="flex items-center gap-2.5 hover:text-[#e11d48] text-zinc-650 transition-colors text-left group"
-                      >
-                        <LinkIcon className="h-5 w-5 text-zinc-500 group-hover:text-[#e11d48] transition-colors shrink-0" />
-                        {item.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+          {/* Column 2: Quick Links */}
+          <div className="space-y-4 md:pl-4">
+            <div>
+              <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Quick Links</h4>
+              <div className="h-[2.5px] w-8 bg-rose-600 mt-1.5" />
             </div>
+            <ul className="space-y-3.5 text-[17px] font-sans font-medium text-zinc-650">
+              {quickLinks.map((item) => {
+                const LinkIcon = item.icon;
+                return (
+                  <li key={item.name}>
+                    <button 
+                      onClick={item.action}
+                      className="flex items-center gap-2.5 hover:text-[#e11d48] text-zinc-650 transition-colors text-left group"
+                    >
+                      <LinkIcon className="h-5 w-5 text-zinc-500 group-hover:text-[#e11d48] transition-colors shrink-0" />
+                      {item.name}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
-            {/* Customer Service Column (Pink underline) */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Customer Service</h4>
-                <div className="h-[2.5px] w-8 bg-[#e11d48] mt-1.5" />
-              </div>
-              <ul className="space-y-3.5 text-[17px] font-sans font-medium text-zinc-650">
-                {customerItems.map((item) => {
-                  const LinkIcon = item.icon;
-                  return (
-                    <li key={item.name}>
-                      <button 
-                        onClick={item.action}
-                        className="flex items-center gap-2.5 hover:text-[#e11d48] text-zinc-650 transition-colors text-left group"
-                      >
-                        <LinkIcon className="h-5 w-5 text-zinc-500 group-hover:text-[#e11d48] transition-colors shrink-0" />
-                        {item.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+          {/* Column 3: Address */}
+          <div className="space-y-4 md:pl-4">
+            <div>
+              <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Address</h4>
+              <div className="h-[2.5px] w-8 bg-indigo-600 mt-1.5" />
             </div>
-
-            {/* Company Column (Yellow underline) */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Company</h4>
-                <div className="h-[2.5px] w-8 bg-amber-500 mt-1.5" />
+            <div className="space-y-4 text-zinc-700">
+              <div className="flex items-start gap-2.5">
+                <MapPin className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                <p className="text-[15.5px] font-medium leading-relaxed">
+                  {settings?.storeAddress || '61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001'}
+                </p>
               </div>
-              <ul className="space-y-3.5 text-[17px] font-sans font-medium text-zinc-650">
-                {companyItems.map((item) => {
-                  const LinkIcon = item.icon;
-                  return (
-                    <li key={item.name}>
-                      <button 
-                        onClick={item.action}
-                        className="flex items-center gap-2.5 hover:text-[#e11d48] text-zinc-650 transition-colors text-left group"
-                      >
-                        <LinkIcon className="h-5 w-5 text-zinc-500 group-hover:text-[#e11d48] transition-colors shrink-0" />
-                        {item.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
-            {/* Help & Support Column (Green underline) */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Help & Support</h4>
-                <div className="h-[2.5px] w-8 bg-emerald-500 mt-1.5" />
+              
+              <div className="flex items-center gap-2.5">
+                <Headphones className="h-5 w-5 text-indigo-600 shrink-0" />
+                <p className="text-[15.5px] font-semibold">
+                  Phone: <a href={`tel:${settings?.contactPhone || '083001 12996'}`} className="hover:text-rose-600 transition-colors">{settings?.contactPhone || '083001 12996'}</a>
+                </p>
               </div>
-              <ul className="space-y-3.5 text-[17px] font-sans font-medium text-zinc-650">
-                {helpItems.map((item) => {
-                  const LinkIcon = item.icon;
-                  return (
-                    <li key={item.name}>
-                      <button 
-                        onClick={item.action}
-                        className="flex items-center gap-2.5 hover:text-[#e11d48] text-zinc-650 transition-colors text-left group"
-                      >
-                        <LinkIcon className="h-5 w-5 text-zinc-500 group-hover:text-[#e11d48] transition-colors shrink-0" />
-                        {item.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
             </div>
-
           </div>
 
         </div>
 
         {/* Bottom Bar: Copyright notice only */}
         <div className="pt-6 border-t border-zinc-200/60 flex items-center justify-center w-full">
-          {/* Copyright text */}
           <span className="text-[15.5px] font-normal text-zinc-500">
             &copy; 2026 vdgfashion. All rights reserved.
           </span>

@@ -1,6 +1,7 @@
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -232,7 +233,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* Custom global font sizing scale-up utility for vdgfashion Admin Panel */
 .admin-portal-font-boost {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Poppins', sans-serif !important;
   letter-spacing: -0.012em;
   -webkit-font-smoothing: antialiased;
 }
@@ -242,9 +243,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .admin-portal-font-boost h4, 
 .admin-portal-font-boost h5, 
 .admin-portal-font-boost h6 {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Poppins', sans-serif !important;
   letter-spacing: -0.025em !important;
-  font-weight: 900 !important;
+  font-weight: 700 !important;
 }
 .admin-portal-font-boost p,
 .admin-portal-font-boost span:not(.font-black):not(.font-extrabold):not(.font-bold):not(.font-semibold),
@@ -254,30 +255,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .admin-portal-font-boost textarea,
 .admin-portal-font-boost a,
 .admin-portal-font-boost li {
-  font-weight: 500 !important;
-}
-.admin-portal-font-boost label {
-  font-weight: 750 !important;
-  font-size: 10px !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
+  font-weight: 600 !important;
 }
 .admin-portal-font-boost th {
-  font-weight: 900 !important;
-  font-size: 11px !important;
-  letter-spacing: 0.05em !important;
-}
-.admin-portal-font-boost button:not(.py-3) {
-  font-weight: 600 !important;
-}
-.admin-portal-font-boost .font-black {
-  font-weight: 600 !important;
-}
-.admin-portal-font-boost .font-extrabold {
-  font-weight: 600 !important;
-}
-.admin-portal-font-boost .font-bold {
-  font-weight: 600 !important;
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 12.5px !important;
+  letter-spacing: normal !important;
 }
 .admin-portal-font-boost .text-\[8px\] {
   font-size: 11px !important;
@@ -313,4 +297,68 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-size: 2.45rem !important; /* ~39px instead of 30px */
 }
 
+/* User Portal Responsive Top-Navbar Overrides */
+@media (min-width: 1024px) {
+  /* Hide the customer portal desktop sidebar */
+  aside.hidden.lg\:flex {
+    display: none !important;
+  }
+  
+  /* Reset left padding offset of customer portal pages on desktop */
+  div.lg\:pl-72 {
+    padding-left: 0 !important;
+  }
+}
 
+/* Infinite Marquee Animation for Announcement Bar */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Force normal Arial typography in the Admin Settings page */
+.admin-settings-container {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+.admin-settings-container h2,
+.admin-settings-container h3,
+.admin-settings-container h4 {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-weight: 800 !important; /* Extra bold for clear, distinct section titles */
+}
+.admin-settings-container button {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-weight: bold !important;
+}
+.admin-settings-container label {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-weight: 800 !important; /* Extra bold for highly readable and clear labels */
+  color: #6d28d9 !important; /* Rich deep purple for excellent contrast and readability in light mode */
+  font-size: 11.5px !important; /* Slightly larger font size for clarity */
+  letter-spacing: 0.05em !important;
+}
+.dark .admin-settings-container label {
+  color: #a78bfa !important; /* High contrast soft purple for dark mode readability */
+}
+.admin-settings-container p,
+.admin-settings-container input,
+.admin-settings-container textarea,
+.admin-settings-container span,
+.admin-settings-container select {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-weight: normal !important;
+}

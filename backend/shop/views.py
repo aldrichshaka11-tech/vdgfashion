@@ -4,11 +4,11 @@ from rest_framework.decorators import action
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, CategoryItem, MarketingBanner, Review
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, CategoryItem, MarketingBanner, Review, SiteSettings
 from .serializers import (
     CategorySerializer, ProductSerializer, OrderCreateSerializer,
     HeroBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
-    PaymentSerializer, ReviewSerializer
+    PaymentSerializer, ReviewSerializer, SiteSettingsSerializer
 )
 
 
@@ -296,3 +296,19 @@ class MarketingBannerViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.filter(is_active=True).order_by('-created_at')
     serializer_class = ReviewSerializer
+
+
+class SiteSettingsViewSet(viewsets.ViewSet):
+    def list(self, request):
+        settings_obj, _ = SiteSettings.objects.get_or_create(id=1)
+        serializer = SiteSettingsSerializer(settings_obj)
+        return Response(serializer.data)
+
+    def create(self, request):
+        settings_obj, _ = SiteSettings.objects.get_or_create(id=1)
+        serializer = SiteSettingsSerializer(settings_obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

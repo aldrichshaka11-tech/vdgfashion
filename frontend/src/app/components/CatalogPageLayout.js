@@ -13,6 +13,11 @@ import { X } from 'lucide-react';
 export default function CatalogPageLayout({ title, subtitle, type }) {
   const { products: allProducts, selectedProduct, wishlist, searchQuery } = useStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, type, wishlist]);
 
   const products = useMemo(() => {
     let result = [...allProducts];
@@ -34,7 +39,14 @@ export default function CatalogPageLayout({ title, subtitle, type }) {
     }
 
     return result;
-  }, [type, wishlist, searchQuery]);
+  }, [type, wishlist, searchQuery, allProducts]);
+
+  const PRODUCTS_PER_PAGE = 8;
+  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE) || 1;
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return products.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
+  }, [products, currentPage]);
 
   return (
     <div className="flex bg-[#fafafa] min-h-screen text-black overflow-hidden relative">
@@ -69,7 +81,7 @@ export default function CatalogPageLayout({ title, subtitle, type }) {
               </section>
 
               <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {products.length === 0 ? (
+                {paginatedProducts.length === 0 ? (
                   <div className="col-span-full rounded-[2rem] border border-zinc-200 bg-white p-12 text-center">
                     <h3 className="text-base sm:text-lg font-black text-zinc-950">
                       {type === 'wishlist' ? 'Your wishlist is empty' : 'No products found'}
@@ -81,11 +93,61 @@ export default function CatalogPageLayout({ title, subtitle, type }) {
                     </p>
                   </div>
                 ) : (
-                  products.map((product) => (
+                  paginatedProducts.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))
                 )}
               </section>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-zinc-200 text-xs font-semibold select-none gap-4">
+                  <span className="text-zinc-500 font-normal">
+                    Showing <span className="text-[#e11d48] font-bold">{Math.min(products.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-bold">{Math.min(products.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-bold text-zinc-800">{products.length}</span> products
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      disabled={currentPage === 1}
+                      onClick={() => {
+                        setCurrentPage(prev => Math.max(1, prev - 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="py-2 px-3 bg-white hover:bg-zinc-50 disabled:opacity-40 text-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-200 active:scale-95 shadow-2xs font-bold"
+                    >
+                      ◀ Prev
+                    </button>
+                    {[...Array(totalPages)].map((_, idx) => {
+                      const pageNum = idx + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => {
+                            setCurrentPage(pageNum);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-all cursor-pointer active:scale-90 shadow-2xs ${
+                            currentPage === pageNum
+                              ? 'bg-gradient-to-r from-[#e11d48] to-[#be123c] text-white'
+                              : 'bg-white hover:bg-zinc-50 text-zinc-600 border border-zinc-200'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button 
+                      disabled={currentPage === totalPages}
+                      onClick={() => {
+                        setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="py-2 px-3 bg-white hover:bg-zinc-50 disabled:opacity-40 text-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-200 active:scale-95 shadow-2xs font-bold"
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </main>

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner, SiteSettings
 
 class ProductColorInline(admin.TabularInline):
     model = ProductColor
@@ -215,4 +215,28 @@ class PaymentAdmin(admin.ModelAdmin):
     list_editable = ('status', 'is_active')
     search_fields = ('transaction_id', 'order__order_id', 'payment_method')
     list_filter = ('status', 'payment_method', 'is_active', 'created_at')
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(admin.ModelAdmin):
+    list_display = ('contact_phone', 'contact_email', 'store_address', 'is_store_open')
+    
+    fieldsets = (
+        ('Store Contacts', {
+            'fields': ('contact_phone', 'contact_email', 'store_address', 'about_text')
+        }),
+        ('Store Checkout & Operations', {
+            'fields': ('free_shipping_threshold', 'shipping_fee', 'active_promo_code', 'active_promo_discount', 'is_store_open')
+        }),
+        ('Social Media Links', {
+            'fields': ('facebook_url', 'instagram_url', 'youtube_url')
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return not SiteSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 

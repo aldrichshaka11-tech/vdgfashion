@@ -13,17 +13,26 @@ import ProductCard from '../components/ProductCard';
 import ProductDetailView from '../components/ProductDetailView';
 import CartDrawer from '../components/CartDrawer';
 import Footer from '../components/Footer';
-import { ChevronRight, SlidersHorizontal, Grid, X, Search } from 'lucide-react';
+import { ChevronRight, SlidersHorizontal, Grid, LayoutGrid, X, Search } from 'lucide-react';
 
-// Dynamic Category Slider items from backend
+const STATIC_SUBCATEGORIES = {
+  'New Born': ['Baby Rompers', 'New Boy Dress', 'Gown', 'New Born Baby'],
+  'Shirts': ['Full Hand Shirts', 'Casual Shirts'],
+  'Toys': ['Car', 'Teddy Bear'],
+  'Pants': ['Jeans', 'Cargos'],
+  'T-Shirts': ['T-Shirts']
+};
 
 export default function CategoriesPage() {
   const {
     products,
     categoryItems,
+    allCategories,
     searchQuery,
     selectedCategory,
     setSelectedCategory,
+    selectedSubcategory,
+    setSelectedSubcategory,
     checkedCategories,
     setCheckedCategories,
     priceRange,
@@ -38,11 +47,118 @@ export default function CategoriesPage() {
 
   const horizontalCategories = categoryItems || [];
 
+  const availableSubcategories = useMemo(() => {
+    if (selectedCategory === 'ALL') return [];
+    
+    const dbSubcategories = allCategories
+      .filter(cat => cat.parent_category && cat.parent_category.toLowerCase() === selectedCategory.toLowerCase())
+      .map(cat => cat.name);
+      
+    const productSubcategories = products
+      .filter(p => {
+        const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
+        return catName && catName.toLowerCase() === selectedCategory.toLowerCase() && p.parent_category;
+      })
+      .map(p => p.parent_category);
+      
+    const staticSubs = STATIC_SUBCATEGORIES[selectedCategory] || [];
+    
+    return Array.from(new Set([...dbSubcategories, ...productSubcategories, ...staticSubs]));
+  }, [selectedCategory, allCategories, products]);
+
+  const subcategoryCounts = useMemo(() => {
+    const counts = {};
+    products.forEach(p => {
+      const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
+      if (catName && catName.toLowerCase() === selectedCategory.toLowerCase()) {
+        const matchedSub = availableSubcategories.find(sub => {
+          if (p.parent_category && p.parent_category.toLowerCase() === sub.toLowerCase()) return true;
+          const nameMatch = p.name.toLowerCase().includes(sub.toLowerCase());
+          const descMatch = p.description ? p.description.toLowerCase().includes(sub.toLowerCase()) : false;
+          return nameMatch || descMatch;
+        });
+        if (matchedSub) {
+          counts[matchedSub] = (counts[matchedSub] || 0) + 1;
+        }
+      }
+    });
+    return counts;
+  }, [products, selectedCategory, availableSubcategories]);
+
+  const parentCategoryTotalCount = useMemo(() => {
+    return products.filter(p => {
+      const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
+      return catName && catName.toLowerCase() === selectedCategory.toLowerCase();
+    }).length;
+  }, [products, selectedCategory]);
+
+  const renderSubcategoriesList = () => {
+    if (selectedCategory === 'ALL' || availableSubcategories.length === 0) return null;
+
+    return (
+      <div 
+        className="bg-white rounded-[1.85rem] p-6 border border-zinc-200 shadow-2xs text-black space-y-4 mb-6"
+        data-aos="fade-right"
+      >
+        <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
+          <span className="text-base font-black text-zinc-950 tracking-tight">
+            {selectedCategory} Subcategories
+          </span>
+        </div>
+
+        <div className="space-y-1.5 pt-1">
+          <button
+            onClick={() => setSelectedSubcategory('ALL')}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] ${
+              selectedSubcategory === 'ALL'
+                ? 'bg-rose-50 text-[#e11d48]'
+                : 'text-zinc-650 hover:bg-zinc-50 hover:text-zinc-950'
+            }`}
+          >
+            <span>All Products</span>
+            <span className={`text-xs px-2 py-0.5 rounded-md font-bold ${
+              selectedSubcategory === 'ALL' ? 'bg-[#e11d48]/10 text-[#e11d48]' : 'bg-zinc-100 text-zinc-400'
+            }`}>
+              {parentCategoryTotalCount}
+            </span>
+          </button>
+
+          {availableSubcategories.map((sub) => {
+            const isSelected = selectedSubcategory === sub;
+            const count = subcategoryCounts[sub] || 0;
+            return (
+              <button
+                key={sub}
+                onClick={() => setSelectedSubcategory(sub)}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] ${
+                  isSelected
+                    ? 'bg-rose-50 text-[#e11d48]'
+                    : 'text-zinc-650 hover:bg-zinc-50 hover:text-zinc-950'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isSelected ? 'text-[#e11d48] translate-x-0.5' : 'text-zinc-400'}`} />
+                  <span>{sub}</span>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-md font-bold ${
+                  isSelected ? 'bg-[#e11d48]/10 text-[#e11d48]' : 'bg-zinc-100 text-zinc-400'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
 
@@ -91,6 +207,18 @@ export default function CategoriesPage() {
       });
     }
 
+    // Subcategory Filter
+    if (selectedCategory !== 'ALL' && selectedSubcategory !== 'ALL') {
+      result = result.filter((p) => {
+        if (p.parent_category && p.parent_category.toLowerCase() === selectedSubcategory.toLowerCase()) {
+          return true;
+        }
+        const nameMatch = p.name.toLowerCase().includes(selectedSubcategory.toLowerCase());
+        const descMatch = p.description ? p.description.toLowerCase().includes(selectedSubcategory.toLowerCase()) : false;
+        return nameMatch || descMatch;
+      });
+    }
+
     // Price Range Filter
     result = result.filter((p) => p.price <= priceRange);
 
@@ -114,7 +242,7 @@ export default function CategoriesPage() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
+  }, [products, searchQuery, selectedCategory, selectedSubcategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
 
   const PRODUCTS_PER_PAGE = 8;
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE) || 1;
@@ -184,32 +312,41 @@ export default function CategoriesPage() {
               </section>
 
               {/* 2. Horizontal Category Selector Card Row */}
-              <section className="space-y-4" data-aos="fade-up">
-                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
+              <section className="space-y-6" data-aos="fade-up">
+                <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
+                  <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
+                    <LayoutGrid className="h-5 w-5 fill-[#e11d48] text-[#e11d48]" />
+                    Categories
+                  </span>
+                </div>
+                
+                <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                   {horizontalCategories.map((cat, idx) => {
                     const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase() || checkedCategories.includes(cat.name);
                     return (
                       <button
                         key={idx}
                         onClick={() => handleHorizontalCategoryClick(cat.name)}
-                        className={`relative rounded-2xl p-3 w-28 sm:w-32 flex flex-col justify-between flex-shrink-0 cursor-pointer border border-zinc-100 hover:scale-102 hover:shadow-sm transition-all text-left ${
-                          isSelected ? 'ring-2 ring-[#e11d48]/30 shadow-md bg-rose-50/20' : 'bg-white'
-                        }`}
+                        className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 focus:outline-none"
                       >
-                        {/* Pastel background photo container */}
+                        {/* Circle photo container */}
                         <div
-                          className="w-full aspect-square rounded-xl flex items-center justify-center p-2 relative overflow-hidden"
+                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center p-3.5 relative overflow-hidden shadow-2xs transition-all duration-300 ${
+                            isSelected ? 'ring-3 ring-[#e11d48] ring-offset-2 scale-102' : 'hover:shadow-sm'
+                          }`}
                           style={{ backgroundColor: cat.bg }}
                         >
-                          <div className="relative w-[90%] h-[90%] group-hover:scale-105 transition-transform duration-300">
+                          <div className="relative w-4/5 h-4/5">
                             <Image src={cat.img} alt={cat.name} fill className="object-contain" />
                           </div>
                         </div>
                         
-                        {/* White bottom text label container matching home page exactly */}
-                        <div className="mt-3 bg-white/95 rounded-lg border border-zinc-100/50 py-2 text-center text-sm font-normal text-zinc-950 w-full shadow-2xs">
+                        {/* Plain text label below */}
+                        <span className={`mt-2.5 text-xs sm:text-sm font-bold tracking-tight text-center transition-colors ${
+                          isSelected ? 'text-[#e11d48]' : 'text-zinc-700'
+                        }`}>
                           {cat.name}
-                        </div>
+                        </span>
                       </button>
                     );
                   })}
@@ -280,7 +417,8 @@ export default function CategoriesPage() {
               {/* 4. Main Two-Column Layout (Filters & Product Grid) */}
               <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-2">
                 {/* Left Side Filters Card (Desktop) */}
-                <div className="hidden lg:block lg:col-span-3 sticky top-4">
+                <div className="hidden lg:block lg:col-span-3 sticky top-4 space-y-6">
+                  {renderSubcategoriesList()}
                   <ProductFilters />
                 </div>
 
@@ -382,7 +520,10 @@ export default function CategoriesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <ProductFilters />
+            <div className="space-y-6">
+              {renderSubcategoriesList()}
+              <ProductFilters />
+            </div>
           </div>
         </div>
       )}

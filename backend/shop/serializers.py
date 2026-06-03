@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner, Review
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner, Review, SiteSettings
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -204,3 +204,28 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'product', 'product_name', 'user_name', 'user_email', 'rating', 'comment', 'created_at', 'is_active']
+
+
+class SiteSettingsSerializer(serializers.ModelSerializer):
+    contactPhone = serializers.CharField(source='contact_phone', required=False, allow_blank=True, allow_null=True)
+    contactEmail = serializers.EmailField(source='contact_email', required=False, allow_blank=True, allow_null=True)
+    storeAddress = serializers.CharField(source='store_address', required=False, allow_blank=True, allow_null=True)
+    freeShippingThreshold = serializers.DecimalField(source='free_shipping_threshold', max_digits=10, decimal_places=2, required=False, allow_null=True)
+    shippingFee = serializers.DecimalField(source='shipping_fee', max_digits=10, decimal_places=2, required=False, allow_null=True)
+    activePromoCode = serializers.CharField(source='active_promo_code', required=False, allow_blank=True, allow_null=True)
+    activePromoDiscount = serializers.IntegerField(source='active_promo_discount', required=False, allow_null=True)
+    isStoreOpen = serializers.BooleanField(source='is_store_open', required=False, allow_null=True)
+    facebookUrl = serializers.URLField(source='facebook_url', required=False, allow_blank=True, allow_null=True)
+    instagramUrl = serializers.URLField(source='instagram_url', required=False, allow_blank=True, allow_null=True)
+    youtubeUrl = serializers.URLField(source='youtube_url', required=False, allow_blank=True, allow_null=True)
+    aboutText = serializers.CharField(source='about_text', required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = SiteSettings
+        fields = [
+            'id', 'contactPhone', 'contactEmail', 'storeAddress', 'aboutText',
+            'freeShippingThreshold', 'shippingFee', 'activePromoCode',
+            'activePromoDiscount', 'isStoreOpen',
+            'facebookUrl', 'instagramUrl', 'youtubeUrl'
+        ]
+

@@ -9,7 +9,7 @@ django.setup()
 
 from django.core.files import File
 from django.core.cache import cache
-from shop.models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, HeroBanner, CategoryItem, MarketingBanner, Order, Payment
+from shop.models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, HeroBanner, CategoryItem, MarketingBanner, Order, Payment, SiteSettings
 
 def clean_database():
     print("--- Cleaning database records ---")
@@ -25,6 +25,8 @@ def clean_database():
     HeroBanner.objects.all().delete()
     CategoryItem.objects.all().delete()
     MarketingBanner.objects.all().delete()
+    SiteSettings.objects.all().delete()
+
     
     # Clear redis cache if configured
     try:
@@ -64,6 +66,7 @@ def seed_database():
         {"name": "Toys", "parent_category": None, "image_filename": "wooden_toy.png", "order": 2},
         {"name": "Books", "parent_category": None, "image_filename": "activity_book.png", "order": 3},
         {"name": "Accessories", "parent_category": None, "image_filename": "accessories_category.png", "order": 4},
+        {"name": "Footwear", "parent_category": None, "image_filename": "sneakers_white.png", "order": 5},
     ]
     
     category_map = {}
@@ -276,7 +279,7 @@ def seed_database():
         },
         {
             "name": "Urban White Sneakers",
-            "category_name": "Accessories",
+            "category_name": "Footwear",
             "parent_category": "Shoes",
             "price": 1499.00,
             "original_price": 1999.00,
@@ -535,8 +538,30 @@ def seed_database():
     )
     print("   Created Sample Orders & Payments.")
 
+    # --- 7. SEED SITE SETTINGS ---
+    print("Seeding Site Settings...")
+    SiteSettings.objects.update_or_create(
+        id=1,
+        defaults={
+            "contact_phone": "083001 12996",
+            "contact_email": "gouthamraj@vdgfashion.com",
+            "store_address": "61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001",
+            "about_text": "Trendy looks for every vibe. Stay stylish, every day.",
+            "facebook_url": "https://www.facebook.com/fashionvdg/",
+            "instagram_url": "https://www.instagram.com/vdgfashion/",
+            "youtube_url": "https://www.youtube.com/channel/UCLLKwEMo4FManOeDUO3jaKw",
+            "free_shipping_threshold": 3000.00,
+            "shipping_fee": 99.00,
+            "active_promo_code": "TREND10",
+            "active_promo_discount": 10,
+            "is_store_open": True
+        }
+    )
+    print("   Created/Updated Site Settings.")
+
     print("Database successfully seeded with rich, realistic dummy data!")
 
 if __name__ == '__main__':
     clean_database()
     seed_database()
+

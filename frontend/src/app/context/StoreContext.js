@@ -113,31 +113,46 @@ export function StoreProvider({ children }) {
   const [wishlist, setWishlist] = useState([]);
 
   const [settings, setSettings] = useState({
-    contactPhone: '+91 98765 43210',
+    contactPhone: '083001 12996',
     contactEmail: 'gouthamraj@vdgfashion.com',
-    storeAddress: 'Express Avenue Mall, 1st Floor, No. 2, Club House Rd, India, TN - 600002',
+    storeAddress: '61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001',
+    aboutText: 'Trendy looks for every vibe. Stay stylish, every day.',
     freeShippingThreshold: 3000,
     shippingFee: 99,
     activePromoCode: 'TREND10',
     activePromoDiscount: 10,
-    isStoreOpen: true
+    isStoreOpen: true,
+    facebookUrl: 'https://www.facebook.com/fashionvdg/',
+    instagramUrl: 'https://www.instagram.com/vdgfashion/',
+    youtubeUrl: 'https://www.youtube.com/channel/UCLLKwEMo4FManOeDUO3jaKw'
   });
 
   useEffect(() => {
+    // First try to load from localstorage for instant load
     const saved = localStorage.getItem('vdgfashion_settings');
     if (saved) {
       try {
-        setSettings(JSON.parse(saved));
+        setSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
       } catch (e) {
         console.error('Failed to parse settings', e);
       }
     }
   }, []);
 
-  const saveStoreSettings = (newSettings) => {
+  const saveStoreSettings = async (newSettings) => {
     setSettings(newSettings);
     localStorage.setItem('vdgfashion_settings', JSON.stringify(newSettings));
+    try {
+      await fetch('http://127.0.0.1:8000/api/settings/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings)
+      });
+    } catch (e) {
+      console.error('Failed to save settings to backend', e);
+    }
   };
+
 
   const getPastelBg = (name) => {
     const n = name.toLowerCase();
@@ -239,7 +254,18 @@ export function StoreProvider({ children }) {
         }
       })
       .catch(() => {});
+
+    // Site Settings
+    fetch('http://127.0.0.1:8000/api/settings/')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        if (data) {
+          setSettings(data);
+        }
+      })
+      .catch(() => {});
   };
+
 
   useEffect(() => {
     fetchAllData();
@@ -255,11 +281,16 @@ export function StoreProvider({ children }) {
   // Search & Filtering state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedSubcategory, setSelectedSubcategory] = useState('ALL');
   const [checkedCategories, setCheckedCategories] = useState([]); // Array of checked categories
   const [priceRange, setPriceRange] = useState(5000); // Max budget in INR
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [sortBy, setSortBy] = useState('DEFAULT'); // DEFAULT, PRICE_LOW_HIGH, PRICE_HIGH_LOW, RATING
+
+  useEffect(() => {
+    setSelectedSubcategory('ALL');
+  }, [selectedCategory]);
 
   // Active view: either 'shop' or the full product object itself for detailed viewing
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -392,6 +423,7 @@ export function StoreProvider({ children }) {
   // Reset all filters
   const resetFilters = () => {
     setSelectedCategory('ALL');
+    setSelectedSubcategory('ALL');
     setCheckedCategories([]);
     setPriceRange(5000);
     setSelectedColor('');
@@ -432,6 +464,8 @@ export function StoreProvider({ children }) {
         setSearchQuery,
         selectedCategory,
         setSelectedCategory,
+        selectedSubcategory,
+        setSelectedSubcategory,
         checkedCategories,
         setCheckedCategories,
         priceRange,
