@@ -104,6 +104,7 @@ export function StoreProvider({ children }) {
   const [categoryItems, setCategoryItems] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
   const [marketingBanners, setMarketingBanners] = useState([]);
+  const [reviews, setReviews] = useState([]);
 
   // Cart state
   const [cart, setCart] = useState([]);
@@ -197,16 +198,20 @@ export function StoreProvider({ children }) {
     fetch('http://127.0.0.1:8000/api/hero-banners/')
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
+        let mergedBanners = [...defaultBanners];
         if (data && data.length > 0) {
-          setHeroBanners(data.map((b) => {
-            let src = b.src;
+          data.forEach(b => {
+            let src = b.src || b.image;
             if (src && src.startsWith('/media/')) src = `http://127.0.0.1:8000${src}`;
             if (src && !src.startsWith('http') && !src.startsWith('/')) src = `http://127.0.0.1:8000/media/${src}`;
-            return { ...b, src };
-          }));
-        } else {
-          setHeroBanners(defaultBanners);
+            
+            const index = (b.order || 1) - 1;
+            if (index >= 0 && index < 3 && src) {
+              mergedBanners[index] = { ...mergedBanners[index], ...b, src };
+            }
+          });
         }
+        setHeroBanners(mergedBanners);
       })
       .catch(() => {
         setHeroBanners(defaultBanners);
@@ -251,6 +256,16 @@ export function StoreProvider({ children }) {
             if (img && !img.startsWith('http') && !img.startsWith('/')) img = `http://127.0.0.1:8000/media/${img}`;
             return { ...mb, img };
           }));
+        }
+      })
+      .catch(() => {});
+
+    // Reviews
+    fetch('http://127.0.0.1:8000/api/reviews/')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        if (data && data.length > 0) {
+          setReviews(data);
         }
       })
       .catch(() => {});
@@ -491,6 +506,8 @@ export function StoreProvider({ children }) {
         // Settings configurations
         settings,
         saveStoreSettings,
+
+        reviews
       }}
     >
       {children}

@@ -115,7 +115,7 @@ export default function Footer() {
       <div className="absolute inset-0 bg-white/10 lg:bg-white/0 z-0 pointer-events-none" />
 
       {/* Content wrapper */}
-      <div className="relative z-10 w-full max-w-[1300px] mx-auto px-4 sm:px-8 pt-16 pb-8 space-y-12 text-black">
+      <div className="relative z-10 w-full max-w-[1600px] mx-auto px-4 sm:px-8 pt-16 pb-8 space-y-12 text-black">
         
         {/* Top Grid: Brand description, Quick Links, Address */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
@@ -123,13 +123,19 @@ export default function Footer() {
           {/* Column 1: Brand & About */}
           <div className="space-y-4">
             {/* Colorful custom vdgfashion logo */}
-            <div className="flex items-center gap-2.5 lg:gap-3">
-              <div className="h-10 w-10 bg-gradient-to-tr from-[#e11d48] to-[#c026d3] rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm relative">
-                <span className="text-xl font-sans tracking-tighter">V</span>
-                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 bg-cyan-400 border-2 border-white rounded-full" />
+            {settings?.logoImage ? (
+              <div className="flex items-center gap-2.5 lg:gap-3">
+                <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`} alt="Store Logo" className="h-16 md:h-20 w-auto object-contain" />
               </div>
-              <span className="text-3xl font-black tracking-tight text-zinc-950">vdgfashion</span>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2.5 lg:gap-3">
+                <div className="h-10 w-10 bg-gradient-to-tr from-[#e11d48] to-[#c026d3] rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm relative">
+                  <span className="text-xl font-sans tracking-tighter">V</span>
+                  <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 bg-cyan-400 border-2 border-white rounded-full" />
+                </div>
+                <span className="text-3xl font-black tracking-tight text-zinc-950">vdgfashion</span>
+              </div>
+            )}
             
             <p className="text-[15.5px] font-medium text-zinc-650 leading-relaxed max-w-sm">
               {settings?.aboutText || "Trendy looks for every vibe. Stay stylish, every day."}

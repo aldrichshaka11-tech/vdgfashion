@@ -44,7 +44,11 @@ export default function MyOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/orders/');
+      const headers = {};
+      if (user && user.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
+      const res = await fetch('http://127.0.0.1:8000/api/orders/', { headers });
       if (res.ok) {
         const data = await res.json();
         // Filter by user email or username if logged in
@@ -88,8 +92,13 @@ export default function MyOrdersPage() {
   const handleDeleteOrder = async (id) => {
     if (!confirm('Are you sure you want to delete/cancel this order?')) return;
     try {
+      const headers = {};
+      if (user && user.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
       const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
       });
       if (res.ok) {
         alert('Order deleted/cancelled successfully!');
@@ -212,7 +221,7 @@ export default function MyOrdersPage() {
         <Header onMobileMenuToggle={() => setMobileSidebarOpen(true)} />
 
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1400px] mx-auto space-y-6 flex-grow">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6 flex-grow">
             
             {/* Header Title Section */}
             <div className="space-y-1" data-aos="fade-up">

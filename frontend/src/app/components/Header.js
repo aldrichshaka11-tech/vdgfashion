@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, User, Heart, ShoppingBag, Menu, Home, Package, Headphones } from 'lucide-react';
+import { Search, User, Heart, ShoppingBag, Menu, Home, Package, Headphones, Gift, Star, Truck } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -19,6 +19,7 @@ export default function Header({ onMobileMenuToggle }) {
     setCheckedCategories,
     allCategories,
     user,
+    settings,
   } = useStore();
 
   const handleCategorySelect = (categoryName) => {
@@ -36,23 +37,23 @@ export default function Header({ onMobileMenuToggle }) {
       <div className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 py-2.5 text-white text-xs font-bold tracking-wide overflow-hidden whitespace-nowrap select-none">
         <div className="animate-marquee">
           <div className="shrink-0 flex items-center gap-12 px-6">
-            <span>🎉 Free Shipping on Orders Above ₹999</span>
+            <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Free Shipping on Orders Above ₹999</span>
             <span className="text-white/40 font-normal">|</span>
-            <span>🎁 Premium Quality Kids Fashion</span>
+            <span className="flex items-center gap-1.5"><Gift className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Premium Quality Kids Fashion</span>
             <span className="text-white/40 font-normal">|</span>
-            <span>📦 Fast & Secure Delivery</span>
+            <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Fast & Secure Delivery</span>
             <span className="text-white/40 font-normal">|</span>
-            <span>🌟 Shop Now & Get Special Offers!</span>
+            <span className="flex items-center gap-1.5"><Star className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Shop Now & Get Special Offers!</span>
             <span className="text-white/40 font-normal">|</span>
           </div>
           <div className="shrink-0 flex items-center gap-12 px-6" aria-hidden="true">
-            <span>🎉 Free Shipping on Orders Above ₹999</span>
+            <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Free Shipping on Orders Above ₹999</span>
             <span className="text-white/40 font-normal">|</span>
-            <span>🎁 Premium Quality Kids Fashion</span>
+            <span className="flex items-center gap-1.5"><Gift className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Premium Quality Kids Fashion</span>
             <span className="text-white/40 font-normal">|</span>
-            <span>📦 Fast & Secure Delivery</span>
+            <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Fast & Secure Delivery</span>
             <span className="text-white/40 font-normal">|</span>
-            <span>🌟 Shop Now & Get Special Offers!</span>
+            <span className="flex items-center gap-1.5"><Star className="h-3.5 w-3.5" fill="white" strokeWidth={1} /> Shop Now & Get Special Offers!</span>
             <span className="text-white/40 font-normal">|</span>
           </div>
         </div>
@@ -60,7 +61,7 @@ export default function Header({ onMobileMenuToggle }) {
 
       {/* Main Navbar */}
       <header className="w-full bg-white py-3.5 px-4 sm:px-8 text-black border-b border-zinc-100">
-        <div className="max-w-[1300px] mx-auto w-full flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-4">
           
           {/* Left Side: Mobile Menu Button & Logo on Mobile, Desktop Logo & Nav Links on Desktop */}
           <div className="flex items-center gap-6">
@@ -78,7 +79,7 @@ export default function Header({ onMobileMenuToggle }) {
                 className="flex items-center cursor-pointer"
                 onClick={() => { setSelectedProduct(null); setSelectedCategory('ALL'); router.push('/'); }}
               >
-                <img src="/logo.png" alt="vdgfashion logo" className="h-9 object-contain" />
+                <img src={settings?.logoImage ? (settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`) : "/logo.png"} alt="vdgfashion logo" className="h-12 w-auto object-contain" />
               </div>
             </div>
 
@@ -88,7 +89,7 @@ export default function Header({ onMobileMenuToggle }) {
                 className="flex items-center cursor-pointer mr-2 shrink-0"
                 onClick={() => { setSelectedProduct(null); setSelectedCategory('ALL'); router.push('/'); }}
               >
-                <img src="/logo.png" alt="vdgfashion logo" className="h-10 object-contain" />
+                <img src={settings?.logoImage ? (settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`) : "/logo.png"} alt="vdgfashion logo" className="h-14 xl:h-16 w-auto object-contain" />
               </div>
 
               {/* Navigation links */}

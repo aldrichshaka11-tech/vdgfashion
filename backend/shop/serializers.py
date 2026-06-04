@@ -141,10 +141,11 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
 class HeroBannerSerializer(serializers.ModelSerializer):
     src = serializers.SerializerMethodField()
+    image = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = HeroBanner
-        fields = ['id', 'title', 'subtitle', 'src', 'alt', 'link', 'order']
+        fields = ['id', 'title', 'subtitle', 'image', 'src', 'alt', 'link', 'order']
 
     def get_src(self, obj):
         if obj.image:
@@ -158,10 +159,11 @@ class HeroBannerSerializer(serializers.ModelSerializer):
 class CategoryItemSerializer(serializers.ModelSerializer):
     img = serializers.SerializerMethodField()
     categoryRef = serializers.CharField(source='category_ref')
+    image = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = CategoryItem
-        fields = ['id', 'name', 'bg', 'img', 'categoryRef', 'order']
+        fields = ['id', 'name', 'bg', 'image', 'img', 'categoryRef', 'order']
 
     def get_img(self, obj):
         if obj.image:
@@ -176,10 +178,11 @@ class MarketingBannerSerializer(serializers.ModelSerializer):
     img = serializers.SerializerMethodField()
     buttonText = serializers.CharField(source='button_text')
     categoryRef = serializers.CharField(source='category_ref')
+    image = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = MarketingBanner
-        fields = ['id', 'title', 'description', 'bg', 'img', 'buttonText', 'categoryRef', 'order']
+        fields = ['id', 'title', 'description', 'bg', 'image', 'img', 'buttonText', 'categoryRef', 'order']
 
     def get_img(self, obj):
         if obj.image:
@@ -219,13 +222,13 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
     instagramUrl = serializers.URLField(source='instagram_url', required=False, allow_blank=True, allow_null=True)
     youtubeUrl = serializers.URLField(source='youtube_url', required=False, allow_blank=True, allow_null=True)
     aboutText = serializers.CharField(source='about_text', required=False, allow_blank=True, allow_null=True)
+    logoImage = serializers.ImageField(source='logo_image', required=False, allow_null=True, read_only=True)
 
     class Meta:
         model = SiteSettings
         fields = [
-            'id', 'contactPhone', 'contactEmail', 'storeAddress', 'aboutText',
-            'freeShippingThreshold', 'shippingFee', 'activePromoCode',
-            'activePromoDiscount', 'isStoreOpen',
-            'facebookUrl', 'instagramUrl', 'youtubeUrl'
+            'id', 'contactPhone', 'contactEmail', 'storeAddress', 
+            'freeShippingThreshold', 'shippingFee', 
+            'activePromoCode', 'activePromoDiscount', 'isStoreOpen',
+            'facebookUrl', 'instagramUrl', 'youtubeUrl', 'aboutText', 'logoImage'
         ]
-

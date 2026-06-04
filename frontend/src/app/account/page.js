@@ -7,7 +7,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
-import { User, ShoppingBag, MapPin, ChevronRight, X, UserCheck, ShieldCheck, HelpCircle, Phone } from 'lucide-react';
+import { User, ShoppingBag, MapPin, ChevronRight, X, UserCheck, ShieldCheck, HelpCircle, Phone, Eye, EyeOff } from 'lucide-react';
 import { formatINR } from '../utils/currency';
 import { useStore } from '../context/StoreContext';
 
@@ -23,10 +23,12 @@ export default function AccountPage() {
   const [regPassword, setRegPassword] = useState('');
   const [regFirst, setRegFirst] = useState('');
   const [regLast, setRegLast] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   
   // Login Form States
   const [loginUserVal, setLoginUserVal] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -240,10 +242,15 @@ export default function AccountPage() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Password*</label>
-                      <input 
-                        type="password" required value={regPassword} onChange={(e) => setRegPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
-                      />
+                      <div className="relative">
+                        <input 
+                          type={showRegPassword ? "text" : "password"} required value={regPassword} onChange={(e) => setRegPassword(e.target.value)}
+                          className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs pr-10"
+                        />
+                        <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer flex items-center justify-center">
+                          {showRegPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
 
                     <button
@@ -255,20 +262,30 @@ export default function AccountPage() {
                   </form>
                 ) : (
                   /* Login Form */
-                  <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs font-semibold">
+                  <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4 text-xs font-semibold">
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Username / Email*</label>
                       <input 
                         type="text" required value={loginUserVal} onChange={(e) => setLoginUserVal(e.target.value)}
+                        autoComplete="off"
                         className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Password*</label>
-                      <input 
-                        type="password" required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
-                      />
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Password*</label>
+                        <button type="button" onClick={() => alert('Forgot password functionality coming soon!')} className="text-[10px] uppercase tracking-wider text-pink-500 font-bold hover:text-pink-600 transition-colors cursor-pointer">Forgot Password?</button>
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type={showLoginPassword ? "text" : "password"} required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+                          autoComplete="new-password"
+                          className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs pr-10"
+                        />
+                        <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer flex items-center justify-center">
+                          {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
 
                     <button
@@ -294,7 +311,7 @@ export default function AccountPage() {
             </div>
           ) : (
             /* Real Account Profile panel */
-            <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1400px] mx-auto space-y-6 flex-grow">
+            <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6 flex-grow">
               <div className="space-y-1.5" data-aos="fade-up">
                 <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight">My Account</h1>
                 <p className="text-sm sm:text-base text-zinc-500 font-normal">Manage your profile, saved addresses, and active/delivered streetwear orders.</p>

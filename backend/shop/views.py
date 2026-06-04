@@ -250,10 +250,21 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.filter(is_active=True).order_by('-created_at')
     serializer_class = OrderCreateSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            if user.is_staff:
+                return Order.objects.filter(is_active=True).order_by('-created_at')
+            return Order.objects.filter(is_active=True, user=user).order_by('-created_at')
+        return Order.objects.none()
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            order = serializer.save()
+            if request.user.is_authenticated:
+                order = serializer.save(user=request.user)
+            else:
+                order = serializer.save()
             return Response({'success': True, 'order_id': order.order_id, 'message': 'Order placed successfully!'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -271,6 +282,18 @@ class HeroBannerViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    @action(detail=False, methods=['POST'], url_path='upload-image')
+    def upload_image(self, request):
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            path = _save_file(file_obj, 'banners')
+            url = f"{settings.MEDIA_URL}{path}" if not path.startswith('/') else path
+            return Response({'success': True, 'path': path, 'url': url})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CategoryItemViewSet(viewsets.ModelViewSet):
@@ -311,4 +334,16 @@ class SiteSettingsViewSet(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['POST'], url_path='upload-logo')
+    def upload_logo(self, request):
+        settings_obj, _ = SiteSettings.objects.get_or_create(id=1)
+        if 'image' not in request.FILES:
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        settings_obj.logo_image = request.FILES['image']
+        settings_obj.save()
+        
+        serializer = SiteSettingsSerializer(settings_obj)
+        return Response(serializer.data)
 

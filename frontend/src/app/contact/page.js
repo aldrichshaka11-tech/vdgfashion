@@ -116,7 +116,7 @@ export default function ContactPage() {
         
         {/* Full-viewport scrolling container with decoupled scroll constraints */}
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1400px] mx-auto space-y-8 flex-grow">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-8 flex-grow">
             
 
             {/* 1. Interactive Top Banner using contact.png */}
@@ -265,17 +265,18 @@ export default function ContactPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#5c51db] hover:bg-[#4b41ca] px-5 py-3.5 text-sm sm:text-base font-semibold text-white transition-colors cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs hover:shadow-xs active:scale-99"
+                      style={{ color: '#ffffff' }}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#5c51db] hover:bg-[#4b41ca] px-5 py-3.5 text-sm sm:text-base font-semibold transition-colors cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs hover:shadow-xs active:scale-99 !text-white"
                     >
                       {isSubmitting ? (
                         <>
                           <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Sending enquiry...
+                          <span style={{ color: '#ffffff' }}>Sending enquiry...</span>
                         </>
                       ) : (
                         <>
-                          <Send className="h-4 w-4" />
-                          Submit Enquiry
+                          <Send className="h-4 w-4" style={{ color: '#ffffff' }} />
+                          <span style={{ color: '#ffffff' }}>Submit Enquiry</span>
                         </>
                       )}
                     </button>

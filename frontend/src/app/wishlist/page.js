@@ -76,7 +76,7 @@ export default function WishlistPage() {
         
         {/* Full-viewport scrolling container with decoupled scroll constraints */}
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1400px] mx-auto space-y-6 flex-grow">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6 flex-grow">
             
 
             {selectedProduct ? (

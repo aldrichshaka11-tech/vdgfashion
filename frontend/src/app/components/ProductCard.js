@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart, ShoppingBag, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import Image from 'next/image';
 import { formatINR } from '../utils/currency';
@@ -135,14 +135,15 @@ export default function ProductCard({ product }) {
         </div>
       </div>
 
-      {/* Floating Add to Cart circle button */}
-      <div className="mt-3.5 flex items-center justify-end">
+      {/* Full-width Add to Cart button */}
+      <div className="mt-3.5 flex w-full">
         <button
           onClick={handleAddToCart}
-          className={`h-9.5 w-9.5 rounded-full flex items-center justify-center text-white shadow-md transition-all active:scale-95 ${safeBtnColor(product.cartBtnColor)}`}
+          className="w-full py-2.5 bg-[#10b981] hover:bg-[#059669] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
           aria-label="Add directly to cart"
         >
-          <ShoppingBag className="h-4.5 w-4.5" />
+          <ShoppingCart className="h-4.5 w-4.5" />
+          Add to Cart
         </button>
       </div>
 

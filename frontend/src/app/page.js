@@ -11,7 +11,7 @@ import ProductFilters from './components/ProductFilters';
 import ProductDetailView from './components/ProductDetailView';
 import HeroSlider from './components/HeroSlider';
 import Footer from './components/Footer';
-import { ArrowRight, Sparkles, Send, Flame, X, SlidersHorizontal, Grid, LayoutGrid, Truck, Gift, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Sparkles, Send, Flame, X, SlidersHorizontal, Grid, LayoutGrid, Truck, Gift, Shield, ChevronLeft, ChevronRight, Headphones } from 'lucide-react';
 import Image from 'next/image';
 
 // AOS animation imports
@@ -34,7 +34,8 @@ export default function Home() {
     setSelectedProduct,
     setSelectedCategory,
     setCheckedCategories,
-    resetFilters
+    resetFilters,
+    reviews
   } = useStore();
 
   const router = useRouter();
@@ -175,7 +176,7 @@ export default function Home() {
 
         {/* Scrollable interior section */}
         <div className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 space-y-8 max-w-[1300px] w-full mx-auto flex-1">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 space-y-8 max-w-[1600px] w-full mx-auto flex-1">
           
           {selectedProduct ? (
             /* High Fidelity detail page */
@@ -314,7 +315,7 @@ export default function Home() {
                         {totalPages > 1 && (
                           <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-zinc-200 text-xs font-semibold select-none gap-4">
                             <span className="text-zinc-500 font-normal">
-                              Showing <span className="text-[#e11d48] font-bold">{Math.min(filteredProducts.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-bold">{Math.min(filteredProducts.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-bold text-zinc-800">{filteredProducts.length}</span> products
+                              Showing <span className="text-[#e11d48] font-normal">{Math.min(filteredProducts.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-normal">{Math.min(filteredProducts.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-normal text-zinc-800">{filteredProducts.length}</span> products
                             </span>
                             <div className="flex items-center gap-1.5">
                               <button 
@@ -367,6 +368,57 @@ export default function Home() {
               </div>
 
               {/* Promo Banners Section */}
+              {marketingBanners && marketingBanners.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in" data-aos="fade-up">
+                  {marketingBanners.map((banner, idx) => {
+                    const catRef = banner.categoryRef || banner.category_ref;
+                    let matchedProduct = null;
+                    if (products && products.length > 0) {
+                      if (catRef) {
+                        matchedProduct = products.find(p => p.category_name === catRef || p.parent_category === catRef || p.category === catRef);
+                      }
+                      if (!matchedProduct) {
+                        matchedProduct = products[idx % products.length];
+                      }
+                    }
+                    const bannerImgSrc = matchedProduct?.image || banner.img || banner.image;
+
+                    return (
+                    <div key={banner.id || idx} className={`rounded-[2.5rem] p-6 sm:p-8 flex items-center justify-between gap-6 border-0 hover:shadow-md transition-all duration-300 min-h-[220px] ${
+                      banner.bg === 'bg-teal-50' ? 'bg-[#e2f2ed]' :
+                      banner.bg === 'bg-pink-50' ? 'bg-[#fdf0d5]' :
+                      (banner.bg || (idx % 2 === 0 ? 'bg-[#e2f2ed]' : 'bg-[#fdf0d5]'))
+                    }`}>
+                      <div className="relative w-2/5 aspect-square max-w-[200px] flex-shrink-0 flex items-center justify-center">
+                        <img 
+                          src={bannerImgSrc} 
+                          alt={banner.title} 
+                          className="object-contain max-h-[195px] drop-shadow-md hover:scale-105 transition-transform duration-305"
+                        />
+                      </div>
+                      <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
+                        <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">{banner.title}</h3>
+                        <p className="text-xs sm:text-sm text-zinc-500 font-semibold">{banner.description}</p>
+                        <button 
+                          onClick={() => {
+                            if (catRef) {
+                              setSelectedCategory(catRef);
+                              setCheckedCategories([catRef]);
+                            } else {
+                              setSelectedCategory('ALL');
+                            }
+                            setTimeout(() => handleScrollToShop(), 50);
+                          }}
+                          className="bg-[#d32f2f] hover:bg-[#b71c1c] text-white px-6 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 active:scale-95 shadow-md shadow-red-900/10 cursor-pointer"
+                        >
+                          Shop Now
+                        </button>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in" data-aos="fade-up">
                 {/* Left Banner: Summer Outfits */}
                 <div className="rounded-[2.5rem] p-6 sm:p-8 bg-[#e2f2ed] flex items-center justify-between gap-6 border border-[#c4e3d9]/30 hover:shadow-md transition-all duration-300 min-h-[220px]">
@@ -378,7 +430,7 @@ export default function Home() {
                     />
                   </div>
                   <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
-                    <h3 className="font-serif italic text-2xl sm:text-3xl text-zinc-900 font-extrabold tracking-tight">Summer Outfits</h3>
+                    <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">Summer Outfits</h3>
                     <p className="text-xs sm:text-sm text-zinc-500 font-semibold">100% Pure Natural Cotton Wear</p>
                     <button 
                       onClick={handleScrollToShop}
@@ -399,7 +451,7 @@ export default function Home() {
                     />
                   </div>
                   <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
-                    <h3 className="font-serif italic text-2xl sm:text-3xl text-zinc-900 font-extrabold tracking-tight">Winter Hoodies</h3>
+                    <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">Winter Hoodies</h3>
                     <p className="text-xs sm:text-sm text-zinc-500 font-semibold">With 25% Off All Winter Wear</p>
                     <button 
                       onClick={handleScrollToShop}
@@ -408,6 +460,50 @@ export default function Home() {
                       Shop Now
                     </button>
                   </div>
+                </div>
+              </div>
+              )}
+
+              {/* Shop The Latest Trends Section */}
+              <div className="py-8 sm:py-12 overflow-hidden animate-fade-in" data-aos="fade-up">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 items-center">
+                  
+                  {/* Card 1 */}
+                  <div className="flex flex-col items-center text-center group cursor-pointer" onClick={() => { setSelectedCategory('Men'); setTimeout(() => handleScrollToShop(), 50); }}>
+                    <div className="relative w-full aspect-[4/5] overflow-hidden mb-5 rounded-sm">
+                      <Image src="/now/1.png" alt="Elegant Fashion" fill className="object-cover" />
+                      {/* Shining Effect Overlay */}
+                      <div className="absolute inset-0 z-10 before:absolute before:inset-0 before:-translate-x-full group-hover:before:animate-[shine_1.2s_ease-in-out] before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent block pointer-events-none"></div>
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-normal text-zinc-900 mb-2 tracking-wide">Perfect Match for Elegant Fashion</h3>
+                    <span className="text-[13px] text-zinc-500 border-b border-zinc-300 pb-0.5 group-hover:text-black group-hover:border-black transition-colors tracking-wide mt-1">Shop Collection</span>
+                  </div>
+
+                  {/* Card 2 */}
+                  <div className="flex flex-col items-center text-center group cursor-pointer" onClick={() => { setSelectedCategory('Toys'); setTimeout(() => handleScrollToShop(), 50); }}>
+                    <div className="relative w-full aspect-[4/5] overflow-hidden mb-5 rounded-sm">
+                      <Image src="/now/2.png" alt="Lifestyle Collection" fill className="object-cover" />
+                      {/* Shining Effect Overlay */}
+                      <div className="absolute inset-0 z-10 before:absolute before:inset-0 before:-translate-x-full group-hover:before:animate-[shine_1.2s_ease-in-out] before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent block pointer-events-none"></div>
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-normal text-zinc-900 mb-2 tracking-wide">Trendy Lifestyle Collection</h3>
+                    <span className="text-[13px] text-zinc-500 border-b border-zinc-300 pb-0.5 group-hover:text-black group-hover:border-black transition-colors tracking-wide mt-1">Shop Collection</span>
+                  </div>
+
+                  {/* Text Column */}
+                  <div className="flex flex-col items-start text-left pl-0 md:pl-6 lg:pl-10">
+                    <h2 className="text-2xl sm:text-3xl font-normal text-zinc-900 mb-4 tracking-tight leading-tight">Shop The Latest Trends</h2>
+                    <p className="text-sm text-zinc-500 leading-relaxed mb-6 font-normal">
+                      Stay ahead of the curve with our curated collection of the latest fashion trends. Shop now for fresh styles and must-have pieces!
+                    </p>
+                    <button 
+                      onClick={() => { setSelectedCategory('ALL'); setTimeout(() => handleScrollToShop(), 50); }}
+                      className="bg-[#212529] hover:bg-black text-white px-8 py-3.5 text-sm font-semibold transition-colors shadow-md rounded-sm"
+                    >
+                      Shop Now
+                    </button>
+                  </div>
+
                 </div>
               </div>
 
@@ -448,6 +544,13 @@ export default function Home() {
                     <p className="text-xs sm:text-sm text-zinc-500 font-normal leading-relaxed">Shop securely with our trusted payment options</p>
                   </div>
 
+                  {/* Best Online Support */}
+                  <div className="flex flex-col items-center text-center space-y-3 max-w-[220px]">
+                    <Headphones className="h-9 w-9 text-zinc-900 stroke-[1.5]" />
+                    <h5 className="text-sm sm:text-base font-black text-zinc-950 tracking-wider">BEST ONLINE SUPPORT</h5>
+                    <p className="text-xs sm:text-sm text-zinc-500 font-normal leading-relaxed">Always available to assist with any questions or issues.</p>
+                  </div>
+
                 </div>
 
               </div>
@@ -465,19 +568,28 @@ export default function Home() {
                     ref={reviewsRef}
                     className="flex gap-6 overflow-x-auto no-scrollbar pb-6 w-full snap-x scroll-smooth px-1.5"
                   >
-                    {[
+                    {(reviews && reviews.length > 0 ? reviews.map((r, idx) => ({
+                        image: ["/review_girl_pink.png", "/review_boy_navy.png", "/review_boy_cream.png", "/review_boy_blue.png"][idx % 4],
+                        quote: r.comment,
+                        name: r.user_name,
+                        product: r.product_name || "vdgfashion",
+                        rating: r.rating,
+                        stickers: null
+                    })) : [
                       {
                         image: "/review_girl_pink.png",
                         quote: "Lovely dress..",
                         name: "Anonymous",
                         product: "Rose Pink Weave Wrap...",
-                        stickers: null
+                        stickers: null,
+                        rating: 5
                       },
                       {
                         image: "/review_boy_navy.png",
                         quote: "nice fabric, nice fit",
                         name: "Preeti.",
                         product: "Navy Blue Peplum Top",
+                        rating: 5,
                         stickers: (
                           <div className="absolute top-3 right-3 bg-[#eab308] text-zinc-950 text-[8.5px] font-black px-1.5 py-0.5 rounded-md rotate-12 select-none pointer-events-none shadow-sm flex items-center gap-0.5">
                             <span>₹</span>
@@ -490,13 +602,15 @@ export default function Home() {
                         quote: "Very nice coord set loved it",
                         name: "Anonymous",
                         product: "Khaki Cream Crop Top",
-                        stickers: null
+                        stickers: null,
+                        rating: 5
                       },
                       {
                         image: "/review_boy_blue.png",
                         quote: "I ordered 2 shirts and 2 tops. Love the fabric, it'...",
                         name: "Gunasekharan Siva",
                         product: "vdgfashion",
+                        rating: 5,
                         stickers: (
                           <div className="absolute top-3 right-3 bg-zinc-950 text-white rounded-full p-1 select-none pointer-events-none animate-pulse">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-yellow-400">
@@ -504,8 +618,16 @@ export default function Home() {
                             </svg>
                           </div>
                         )
+                      },
+                      {
+                        image: "/review_girl_pink.png",
+                        quote: "Perfect fit, fast delivery! The quality of the material is exceptional.",
+                        name: "Sarah M.",
+                        product: "Organic Green T-Shirt",
+                        rating: 5,
+                        stickers: null
                       }
-                    ].map((review, idx) => (
+                    ]).map((review, idx) => (
                       <div 
                         key={idx}
                         className="group w-[260px] sm:w-[280px] flex-shrink-0 bg-white border border-zinc-150 rounded-3xl p-4 vdgfashion-card-shadow flex flex-col justify-between items-center text-center snap-start transition-all duration-300 hover:shadow-md hover:-translate-y-1"
@@ -529,7 +651,7 @@ export default function Home() {
                           <div className="mt-3 flex flex-col items-center">
                             {/* Stars */}
                             <div className="flex gap-1 mb-2">
-                              {[...Array(5)].map((_, i) => (
+                              {[...Array(review.rating || 5)].map((_, i) => (
                                 <svg key={i} className="h-6 w-6 fill-[#facc15] text-[#facc15] drop-shadow-xs" viewBox="0 0 24 24">
                                   <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                                 </svg>

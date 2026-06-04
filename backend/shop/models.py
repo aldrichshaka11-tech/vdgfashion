@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -145,6 +146,7 @@ class Order(models.Model):
     ]
 
     order_id = models.CharField(max_length=100, unique=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     customer_name = models.CharField(max_length=255)
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=50)
@@ -307,6 +309,7 @@ class Review(models.Model):
 
 
 class SiteSettings(models.Model):
+    logo_image = models.ImageField(upload_to='logos/', blank=True, null=True)
     contact_phone = models.CharField(max_length=100, default="083001 12996")
     contact_email = models.EmailField(default="gouthamraj@vdgfashion.com")
     store_address = models.TextField(default="61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001")

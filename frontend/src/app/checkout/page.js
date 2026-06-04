@@ -23,7 +23,8 @@ export default function CheckoutPage() {
     couponDiscount,
     shippingFee,
     cartTotal,
-    settings
+    settings,
+    user
   } = useStore();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -104,12 +105,15 @@ export default function CheckoutPage() {
     setTimeout(() => {
       setProcessStep('Saving order details in secure database...');
       
+      const headers = { 'Content-Type': 'application/json' };
+      if (user && user.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
+
       // Perform actual fetch to Django API
       fetch('http://127.0.0.1:8000/api/orders/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify(orderPayload)
       })
       .then(res => {
@@ -188,7 +192,7 @@ export default function CheckoutPage() {
         <Header onMobileMenuToggle={() => setMobileSidebarOpen(true)} />
 
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1400px] mx-auto space-y-6 flex-grow">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6 flex-grow">
             
             <div className="flex items-center justify-between gap-3">
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">Secure Checkout</h1>

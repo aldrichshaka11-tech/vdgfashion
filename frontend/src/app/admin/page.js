@@ -27,8 +27,8 @@ const STATUS_CONFIG = {
 export default function AdminRoute() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -123,17 +123,17 @@ export default function AdminRoute() {
               <rect x="30" y="26" width="10" height="26" rx="5" fill="url(#rightPill)" />
             </svg>
             <div className="space-y-1">
-              <h2 className="text-3xl font-extrabold tracking-tight text-[#0f172a]">vdgfashion</h2>
-              <h3 className="text-[17px] font-bold text-zinc-700">Admin Control Panel</h3>
-              <p className="text-[11px] text-zinc-400 font-semibold tracking-wide">Sign in to access custom dashboard</p>
+              <h2 className="text-3xl font-normal tracking-tight text-[#0f172a]">vdgfashion</h2>
+              <h3 className="text-[17px] font-normal text-zinc-700">Admin Control Panel</h3>
+              <p className="text-[11px] text-zinc-400 font-normal tracking-wide">Sign in to access custom dashboard</p>
             </div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
             {error && (
               <div className="bg-red-50/70 border border-red-200 rounded-2xl p-3 flex items-start gap-2 text-red-500 text-xs">
                 <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
-                <span className="font-semibold">{error}</span>
+                <span className="font-normal">{error}</span>
               </div>
             )}
             <div className="relative">
@@ -144,7 +144,8 @@ export default function AdminRoute() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Username"
-                className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-semibold text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
+                autoComplete="off"
+                className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
               />
             </div>
             <div className="relative">
@@ -155,7 +156,8 @@ export default function AdminRoute() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full pl-12 pr-12 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-semibold text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
+                autoComplete="new-password"
+                className="w-full pl-12 pr-12 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
               />
               <button
                 type="button"
@@ -168,12 +170,12 @@ export default function AdminRoute() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-bold rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-2"
+              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-normal rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>Sign In</span>}
             </button>
           </form>
-          <p className="text-[10px] text-center text-zinc-400 font-bold pt-4">
+          <p className="text-[10px] text-center text-zinc-400 font-normal pt-4">
             © 2026 vdgfashion Admin. All rights reserved.
           </p>
         </div>
@@ -257,6 +259,37 @@ function DashboardPortal({ onLogout, adminUser }) {
     }
   }, [settings]);
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/settings/upload-logo/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        const updatedSettings = await res.json();
+        saveStoreSettings(updatedSettings);
+        showToast('Logo uploaded successfully', 'success');
+      } else {
+        throw new Error('Failed to upload logo');
+      }
+    } catch (err) {
+      showToast('Failed to upload logo', 'error');
+      console.error(err);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const handleSaveSettings = (e) => {
     if (e) e.preventDefault();
@@ -1013,6 +1046,74 @@ function DashboardPortal({ onLogout, adminUser }) {
   };
 
   const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+  const [uploadingBannerSlot, setUploadingBannerSlot] = useState(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleDeleteBanner = async (bannerId) => {
+    if (!confirm('Are you sure you want to revert this banner to default?')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/hero-banners/${bannerId}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast('Banner reverted to default.', 'success');
+        syncData();
+      } else {
+        showToast('Failed to delete banner.', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error.', 'warning');
+    }
+  };
+
+  const handleHeroBannerUpload = async (e, slotOrder) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingBannerSlot(slotOrder);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/hero-banners/upload-image/', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const existingBanner = banners.find(b => b.order === slotOrder);
+        const payload = {
+            title: `Index Banner ${slotOrder}`,
+            subtitle: '',
+            image: data.path,
+            order: slotOrder,
+            alt: `Banner Slot ${slotOrder}`,
+            is_active: true
+        };
+        const method = existingBanner ? 'PATCH' : 'POST';
+        const url = existingBanner 
+          ? `http://127.0.0.1:8000/api/hero-banners/${existingBanner.id}/`
+          : `http://127.0.0.1:8000/api/hero-banners/`;
+          
+        const saveRes = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (saveRes.ok) {
+            showToast(`Banner slot ${slotOrder} updated!`, 'success');
+            syncData();
+        } else {
+            showToast('Failed to save banner slot.', 'warning');
+        }
+      } else {
+        showToast(data.error || 'Failed to upload image.', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error during image upload.', 'warning');
+    } finally {
+      setUploadingBannerSlot(null);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const handleCategoryImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -1167,7 +1268,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       {/* Side Toasts Notifications */}
       <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
-          <div key={t.id} className="p-4 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold border bg-white border-zinc-200 text-zinc-800 pointer-events-auto">
+          <div key={t.id} className="p-4 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-normal border bg-white border-zinc-200 text-zinc-800 pointer-events-auto">
             <CheckCircle className="h-4.5 w-4.5 text-green-500" />
             <span>{t.message}</span>
           </div>
@@ -1202,13 +1303,14 @@ function DashboardPortal({ onLogout, adminUser }) {
           <NavItem theme={theme} icon={<Star size={20} />} label="Reviews" active={activePage === 'reviews'} onClick={() => handlePageChange('reviews')} />
           <NavItem theme={theme} icon={<BarChart3 size={20} />} label="Analytics" active={activePage === 'analytics'} onClick={() => handlePageChange('analytics')} />
           <NavItem theme={theme} icon={<Users size={20} />} label="Users" active={activePage === 'users'} onClick={() => handlePageChange('users')} />
+          <NavItem theme={theme} icon={<Megaphone size={20} />} label="Index Banners" active={activePage === 'hero-banners'} onClick={() => handlePageChange('hero-banners')} />
           <NavItem theme={theme} icon={<Settings size={20} />} label="Settings" active={activePage === 'settings'} onClick={() => handlePageChange('settings')} />
           
           <hr className="border-dashed my-2 opacity-50 border-zinc-200 dark:border-[#2a3145]" />
 
           <button 
             onClick={onLogout}
-            className="w-full px-5 py-4 rounded-2xl text-[18px] font-black transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+            className="w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
           >
             <LogOut size={20} />
             <span>Log Out</span>
@@ -1221,11 +1323,11 @@ function DashboardPortal({ onLogout, adminUser }) {
           theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200'
         }`} onClick={onLogout}>
           <div className="flex items-center gap-3 min-w-0 text-left">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white font-black text-sm shadow-3xs shrink-0 select-none">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white font-normal text-sm shadow-3xs shrink-0 select-none">
               {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
             </div>
             <div className="min-w-0">
-              <p className={`font-bold text-[17px] truncate ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>
+              <p className={`font-normal text-[17px] truncate ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>
                 {adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}`.trim() : adminUser?.username || 'Admin User'}
               </p>
               <p className="text-[14px] text-zinc-400 truncate">
@@ -1287,7 +1389,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               >
                 <Bell size={18} />
                 {notifications.length > 0 && (
-                  <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-red-500 text-white font-extrabold text-[7px] flex items-center justify-center shadow-md animate-pulse">
+                  <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-red-500 text-white font-normal text-[7px] flex items-center justify-center shadow-md animate-pulse">
                     {notifications.length}
                   </span>
                 )}
@@ -1300,20 +1402,20 @@ function DashboardPortal({ onLogout, adminUser }) {
                     theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/60' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
                   }`}>
                     <div className="pb-2 flex justify-between items-center">
-                      <span className="font-extrabold text-[12px] uppercase tracking-wider text-indigo-500">Notifications ({notifications.length})</span>
-                      <button className="text-[10px] font-bold text-zinc-400 hover:text-zinc-650" onClick={() => setShowNotifications(false)}>Close</button>
+                      <span className="font-normal text-[12px] uppercase tracking-wider text-indigo-500">Notifications ({notifications.length})</span>
+                      <button className="text-[10px] font-normal text-zinc-400 hover:text-zinc-650" onClick={() => setShowNotifications(false)}>Close</button>
                     </div>
                     <div className="pt-2 space-y-2.5">
                       {notifications.length === 0 ? (
-                        <p className="text-[11px] text-zinc-400 font-semibold py-4 text-center">No active notifications.</p>
+                        <p className="text-[11px] text-zinc-400 font-normal py-4 text-center">No active notifications.</p>
                       ) : (
                         notifications.map((n) => (
                           <div key={n.id} className="text-[11px] leading-relaxed pt-2 first:pt-0">
                             <div className="flex justify-between items-start gap-1">
-                              <span className="font-extrabold text-zinc-900 dark:text-white">{n.title}</span>
-                              <span className="text-[9px] font-bold text-zinc-400 shrink-0">{n.time}</span>
+                              <span className="font-normal text-zinc-900 dark:text-white">{n.title}</span>
+                              <span className="text-[9px] font-normal text-zinc-400 shrink-0">{n.time}</span>
                             </div>
-                            <p className="text-zinc-500 dark:text-zinc-400 font-semibold mt-0.5">{n.message}</p>
+                            <p className="text-zinc-500 dark:text-zinc-400 font-normal mt-0.5">{n.message}</p>
                           </div>
                         ))
                       )}
@@ -1324,14 +1426,14 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
 
             <div className="flex items-center gap-2 pl-3 border-l border-zinc-200 dark:border-[#cbd5e1]/10">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-3xs shrink-0 select-none">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white font-normal text-xs shadow-3xs shrink-0 select-none">
                 {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
               </div>
               <div className="hidden sm:block text-left leading-none">
-                <p className={`font-bold text-[11px] ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                <p className={`font-normal text-[11px] ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                   {adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}`.trim() : adminUser?.username || 'Admin User'}
                 </p>
-                <p className="text-[9px] text-zinc-500 font-semibold mt-0.5">
+                <p className="text-[9px] text-zinc-500 font-normal mt-0.5">
                   {adminUser?.is_staff ? 'Super Admin' : 'Staff Admin'}
                 </p>
               </div>
@@ -1344,8 +1446,8 @@ function DashboardPortal({ onLogout, adminUser }) {
           {activePage === 'dashboard' && (
             <div className="space-y-6 text-left animate-fade-in">
               <div>
-                <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Dashboard</h2>
-                <p className="text-xs text-zinc-500 font-medium mt-1">Welcome back! Here&apos;s what&apos;s happening with your store today.</p>
+                <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Dashboard</h2>
+                <p className="text-xs text-zinc-500 font-normal mt-1">Welcome back! Here&apos;s what&apos;s happening with your store today.</p>
               </div>
 
               {/* Grid Statistics Metrics */}
@@ -1409,8 +1511,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Plus className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs">Add Product</h4>
-                    <p className="text-[10px] text-zinc-500 font-medium">Create new inventory item</p>
+                    <h4 className="font-normal text-xs">Add Product</h4>
+                    <p className="text-[10px] text-zinc-500 font-normal">Create new inventory item</p>
                   </div>
                 </button>
 
@@ -1427,8 +1529,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Folders className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs">Add Category</h4>
-                    <p className="text-[10px] text-zinc-500 font-medium">Add category or subcategory</p>
+                    <h4 className="font-normal text-xs">Add Category</h4>
+                    <p className="text-[10px] text-zinc-500 font-normal">Add category or subcategory</p>
                   </div>
                 </button>
 
@@ -1454,8 +1556,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <ArrowUpRight className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs">Export Orders</h4>
-                    <p className="text-[10px] text-zinc-500 font-medium">Download JSON data sheet</p>
+                    <h4 className="font-normal text-xs">Export Orders</h4>
+                    <p className="text-[10px] text-zinc-500 font-normal">Download JSON data sheet</p>
                   </div>
                 </button>
 
@@ -1491,8 +1593,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Database className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs text-red-600 dark:text-red-400">Database Reset</h4>
-                    <p className="text-[10px] text-zinc-500 font-medium">Erase all dynamic data</p>
+                    <h4 className="font-normal text-xs text-red-600 dark:text-red-400">Database Reset</h4>
+                    <p className="text-[10px] text-zinc-500 font-normal">Erase all dynamic data</p>
                   </div>
                 </button>
               </div>
@@ -1505,8 +1607,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales Overview</h3>
-                    <select className={`text-[10px] font-bold p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
+                    <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales Overview</h3>
+                    <select className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
                       theme === 'dark' ? 'border-[#2a3145] text-zinc-300' : 'border-zinc-200 text-zinc-700'
                     }`}>
                       <option>This Week</option>
@@ -1515,7 +1617,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   
                   <div className="flex gap-4 h-64 mt-2 select-none flex-grow">
                     {/* Y-axis Labels */}
-                    <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-bold h-[88%] pb-2 select-none w-8 text-left leading-none">
+                    <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-normal h-[88%] pb-2 select-none w-8 text-left leading-none">
                       <span>₹10K</span>
                       <span>₹8K</span>
                       <span>₹6K</span>
@@ -1548,7 +1650,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </svg>
                       
                       {/* X-axis Labels */}
-                      <div className="flex justify-between text-[9px] text-zinc-400 font-bold absolute bottom-0 left-0 right-0">
+                      <div className="flex justify-between text-[9px] text-zinc-400 font-normal absolute bottom-0 left-0 right-0">
                         <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
                       </div>
                     </div>
@@ -1559,7 +1661,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${
                   theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
-                  <h3 className={`font-black text-sm mb-4 text-left ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales by Category</h3>
+                  <h3 className={`font-normal text-sm mb-4 text-left ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales by Category</h3>
                   <div className="flex items-center justify-between gap-6 h-64 mt-2 flex-grow">
                     <div className="w-40 h-40 relative flex-shrink-0">
                       <svg width="100%" height="100%" viewBox="0 0 42 42" className="donut">
@@ -1586,7 +1688,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
                     <div className="flex-grow space-y-3.5 text-left flex flex-col justify-center max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                       {donutSlices.length === 0 ? (
-                        <span className="text-xs font-semibold text-zinc-400 text-center">No categories recorded yet.</span>
+                        <span className="text-xs font-normal text-zinc-400 text-center">No categories recorded yet.</span>
                       ) : (
                         donutSlices.map((slice, idx) => (
                           <CategoryLegendRow 
@@ -1607,12 +1709,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Recent Orders</h3>
-                    <span className="text-[10px] font-black text-[#8b5cf6] dark:text-[#a855f7] cursor-pointer tracking-wider" onClick={() => setActivePage('orders')}>View All</span>
+                    <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Recent Orders</h3>
+                    <span className="text-[10px] font-normal text-[#8b5cf6] dark:text-[#a855f7] cursor-pointer tracking-wider" onClick={() => setActivePage('orders')}>View All</span>
                   </div>
                   <div className="space-y-3 pt-0.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                     {orders.length === 0 ? (
-                      <div className="text-center py-12 text-xs font-semibold text-zinc-400">
+                      <div className="text-center py-12 text-xs font-normal text-zinc-400">
                         No orders recorded yet.
                       </div>
                     ) : (
@@ -1662,12 +1764,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Top Selling Products</h3>
-                    <span className="text-[10px] font-black text-[#8b5cf6] dark:text-[#a855f7] cursor-pointer tracking-wider" onClick={() => setActivePage('products')}>View All</span>
+                    <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Top Selling Products</h3>
+                    <span className="text-[10px] font-normal text-[#8b5cf6] dark:text-[#a855f7] cursor-pointer tracking-wider" onClick={() => setActivePage('products')}>View All</span>
                   </div>
                   <div className="overflow-x-auto no-scrollbar">
-                    <table className="w-full min-w-[500px] text-left text-sm font-semibold">
-                      <thead className={`font-bold tracking-normal border-b pb-2.5 text-[12px] ${theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'}`}>
+                    <table className="w-full min-w-[500px] text-left text-sm font-normal">
+                      <thead className={`font-normal tracking-normal border-b pb-2.5 text-[12px] ${theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'}`}>
                         <tr>
                           <th className="pb-3">Product</th>
                           <th className="pb-3">Category</th>
@@ -1679,7 +1781,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <tbody className="divide-y divide-zinc-100 dark:divide-[#2a3145]/60 text-zinc-700 dark:text-zinc-300">
                         {topSellingProducts.length === 0 ? (
                           <tr>
-                            <td colSpan="5" className="py-8 text-center text-xs font-semibold text-zinc-400">
+                            <td colSpan="5" className="py-8 text-center text-xs font-normal text-zinc-400">
                               No products recorded yet.
                             </td>
                           </tr>
@@ -1706,8 +1808,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Customer Growth</h3>
-                    <select className={`text-[10px] font-bold p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
+                    <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Customer Growth</h3>
+                    <select className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
                       theme === 'dark' ? 'border-[#2a3145] text-zinc-355' : 'border-zinc-200 text-zinc-755'
                     }`}>
                       <option>This Month</option>
@@ -1716,7 +1818,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   
                   <div className="flex gap-4 h-64 mt-4 select-none">
                     {/* Y-axis Labels */}
-                    <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-bold h-[88%] pb-4 w-7 text-left leading-none">
+                    <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-normal h-[88%] pb-4 w-7 text-left leading-none">
                       <span>300</span>
                       <span>240</span>
                       <span>180</span>
@@ -1742,7 +1844,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </div>
 
                       {/* X-axis labels row (completely separated, no overlapping!) */}
-                      <div className="flex justify-between text-[9px] text-zinc-400 font-bold pt-2 px-1">
+                      <div className="flex justify-between text-[9px] text-zinc-400 font-normal pt-2 px-1">
                         <span>{customerGrowthData[0]?.label}</span>
                         <span>{customerGrowthData[4]?.label}</span>
                         <span>{customerGrowthData[9]?.label}</span>
@@ -1754,7 +1856,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Clean elegant dashboard footer */}
-              <footer className={`pt-6 border-t flex items-center justify-between text-[10px] text-zinc-400 font-bold ${
+              <footer className={`pt-6 border-t flex items-center justify-between text-[10px] text-zinc-400 font-normal ${
                 theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200'
               }`}>
                 <span>© 2026 vdgfashion Admin. All rights reserved.</span>
@@ -1766,17 +1868,17 @@ function DashboardPortal({ onLogout, adminUser }) {
           {activePage === 'products' && (
             <div className="space-y-4 text-left">
               <div className="flex justify-between items-center">
-                <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Product Registry</h3>
+                <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Product Registry</h3>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setModalType('bulk')}
-                    className="py-2.5 px-4 bg-[#161b26] hover:bg-[#20293a] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors border border-[#2a3145] cursor-pointer"
+                    className="py-2.5 px-4 bg-[#161b26] hover:bg-[#20293a] text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-colors border border-[#2a3145] cursor-pointer"
                   >
                     <Upload size={14} /> Bulk Upload
                   </button>
                   <button 
                     onClick={() => handleOpenProductModal('add')}
-                    className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Plus size={14} /> Add Product
                   </button>
@@ -1785,7 +1887,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[800px] text-left text-sm">
-                  <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4.5">Product Name</th>
                       <th className="p-4.5">Category</th>
@@ -1797,12 +1899,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
                     {paginatedProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-white/2 transition-colors">
-                        <td className="p-4 font-bold flex items-center gap-2.5">
+                        <td className="p-4 font-normal flex items-center gap-2.5">
                           {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#2a3145]" />}
                           <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</span>
                         </td>
-                        <td className="p-4 font-semibold text-zinc-400">{p.category_name || 'Unassigned'}</td>
-                        <td className={`p-4 font-bold text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
+                        <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                        <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
                         <td className="p-4 text-right">
                           {inlineStockEdit[p.id] !== undefined ? (
                             <div className="flex items-center justify-end gap-1">
@@ -1811,7 +1913,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 value={inlineStockEdit[p.id]}
                                 onChange={(e) => setInlineStockEdit(prev => ({ ...prev, [p.id]: e.target.value }))}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); if (e.key === 'Escape') setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; }); }}
-                                className={`w-16 px-2 py-1 rounded-lg border text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                                className={`w-16 px-2 py-1 rounded-lg border text-xs font-normal text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                                   theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white' : 'bg-white border-zinc-300 text-zinc-800'
                                 }`}
                                 autoFocus
@@ -1827,7 +1929,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <span
                               onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))}
                               title="Click to edit stock"
-                              className={`px-3 py-1 rounded-full text-[9px] font-semibold border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${
+                              className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${
                                 p.stock === 0 ? 'bg-red-600 text-white border-transparent'
                                 : p.stock < 15 ? 'bg-amber-500 text-white border-transparent'
                                 : 'bg-emerald-600 text-white border-transparent'
@@ -1860,15 +1962,15 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Pagination Controls */}
               {totalProductPages > 1 && (
-                <div className="flex items-center justify-between pt-4 pb-2 text-xs font-semibold select-none leading-none">
+                <div className="flex items-center justify-between pt-4 pb-2 text-xs font-normal select-none leading-none">
                   <span className="text-zinc-400">
-                    Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredProducts.length, (productPage - 1) * ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredProducts.length, productPage * ITEMS_PER_PAGE)}</span> of <span className="font-extrabold text-zinc-650 dark:text-zinc-300">{filteredProducts.length}</span> products
+                    Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredProducts.length, (productPage - 1) * ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredProducts.length, productPage * ITEMS_PER_PAGE)}</span> of <span className="font-normal text-zinc-650 dark:text-zinc-300">{filteredProducts.length}</span> products
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button 
                       disabled={productPage === 1}
                       onClick={() => setProductPage(prev => Math.max(1, prev - 1))}
-                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-black active:scale-95"
+                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
                     >
                       ◀ Prev
                     </button>
@@ -1878,7 +1980,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <button
                           key={pageNum}
                           onClick={() => setProductPage(pageNum)}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-black transition-all cursor-pointer active:scale-90 ${
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
                             productPage === pageNum
                               ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
                               : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
@@ -1891,7 +1993,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <button 
                       disabled={productPage === totalProductPages}
                       onClick={() => setProductPage(prev => Math.min(totalProductPages, prev + 1))}
-                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-black active:scale-95"
+                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
                     >
                       Next ▶
                     </button>
@@ -1905,19 +2007,19 @@ function DashboardPortal({ onLogout, adminUser }) {
             <div className="space-y-6 text-left animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Category & Subcategory</h2>
-                  <p className="text-xs text-zinc-500 font-medium mt-1">Dashboard &gt; Categories</p>
+                  <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Category & Subcategory</h2>
+                  <p className="text-xs text-zinc-500 font-normal mt-1">Dashboard &gt; Categories</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button 
                     onClick={() => handleOpenCategoryModal('add')}
-                    className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                    className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     <Plus size={14} /> Add Category
                   </button>
                   <button 
                     onClick={() => handleOpenSubcategoryModal('add')}
-                    className="py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                    className="py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     <Plus size={14} /> Add Subcategory
                   </button>
@@ -1933,11 +2035,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Folders className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Total Categories</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Total Categories</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                       {rootCategories.length}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold mt-1.5 leading-none">
+                    <div className="flex items-center gap-1.5 text-[9px] font-normal mt-1.5 leading-none">
                       <span className="text-emerald-500">Active: {rootCategories.filter(c => c.is_active).length}</span>
                       <span className="text-zinc-350 dark:text-zinc-700">•</span>
                       <span className="text-rose-500">Inactive: {rootCategories.filter(c => !c.is_active).length}</span>
@@ -1952,11 +2054,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Folders className="h-6 w-6 rotate-90" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Total Subcategories</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Total Subcategories</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                       {subCategories.length}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold mt-1.5 leading-none">
+                    <div className="flex items-center gap-1.5 text-[9px] font-normal mt-1.5 leading-none">
                       <span className="text-emerald-500">Active: {subCategories.filter(c => c.is_active).length}</span>
                       <span className="text-zinc-350 dark:text-zinc-700">•</span>
                       <span className="text-rose-500">Inactive: {subCategories.filter(c => !c.is_active).length}</span>
@@ -1971,11 +2073,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Package className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Total Products</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Total Products</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                       {products.length}
                     </h3>
-                    <p className="text-zinc-400 text-[9px] font-semibold mt-1.5 leading-none">Linked to Categories</p>
+                    <p className="text-zinc-400 text-[9px] font-normal mt-1.5 leading-none">Linked to Categories</p>
                   </div>
                 </div>
 
@@ -1986,11 +2088,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Package className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Low Stock</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Low Stock</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                       {products.filter(p => p.stock < 15).length}
                     </h3>
-                    <p className="text-zinc-400 text-[9px] font-semibold mt-1.5 leading-none">Items below 15 units</p>
+                    <p className="text-zinc-400 text-[9px] font-normal mt-1.5 leading-none">Items below 15 units</p>
                   </div>
                 </div>
               </div>
@@ -2005,7 +2107,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="flex gap-6 border-b border-transparent">
                     <button
                       onClick={() => setCategoriesActiveTab('categories')}
-                      className={`pb-2.5 text-sm font-black relative transition-all cursor-pointer ${
+                      className={`pb-2.5 text-sm font-normal relative transition-all cursor-pointer ${
                         categoriesActiveTab === 'categories'
                           ? 'text-indigo-600 dark:text-indigo-400'
                           : 'text-zinc-450 hover:text-zinc-800 dark:hover:text-white'
@@ -2018,7 +2120,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </button>
                     <button
                       onClick={() => setCategoriesActiveTab('subcategories')}
-                      className={`pb-2.5 text-sm font-black relative transition-all cursor-pointer ${
+                      className={`pb-2.5 text-sm font-normal relative transition-all cursor-pointer ${
                         categoriesActiveTab === 'subcategories'
                           ? 'text-indigo-600 dark:text-indigo-400'
                           : 'text-zinc-450 hover:text-zinc-800 dark:hover:text-white'
@@ -2042,14 +2144,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={categorySearchQuery}
                         onChange={(e) => setCategorySearchQuery(e.target.value)}
                         placeholder="Search categories..."
-                        className="text-xs font-semibold pl-2 bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 w-full placeholder-zinc-455 text-zinc-800 dark:text-white"
+                        className="text-xs font-normal pl-2 bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 w-full placeholder-zinc-455 text-zinc-800 dark:text-white"
                       />
                       {categorySearchQuery && (
                         <button onClick={() => setCategorySearchQuery('')} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white"><X size={12} /></button>
                       )}
                     </div>
                     
-                    <button className={`py-1.5 px-3.5 border rounded-2xl text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all cursor-pointer ${
+                    <button className={`py-1.5 px-3.5 border rounded-2xl text-xs font-normal flex items-center gap-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all cursor-pointer ${
                       theme === 'dark' ? 'border-[#2a3145] text-zinc-455' : 'border-zinc-200 text-zinc-650'
                     }`}>
                       <Filter className="h-3.5 w-3.5" />
@@ -2062,7 +2164,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {categoriesActiveTab === 'categories' ? (
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[700px] text-left text-sm">
-                      <thead className={`font-bold tracking-normal border-b text-[12px] ${
+                      <thead className={`font-normal tracking-normal border-b text-[12px] ${
                         theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
                       }`}>
                         <tr>
@@ -2093,8 +2195,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     : theme === 'dark' ? 'hover:bg-white/2' : 'hover:bg-zinc-50/50'
                                 }`}
                               >
-                                <td className="p-4 font-bold text-center text-zinc-400">{index + 1}</td>
-                                <td className="p-4 font-bold">
+                                <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
+                                <td className="p-4 font-normal">
                                   <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{c.name}</span>
                                 </td>
                                 <td className="p-4 text-center">
@@ -2106,10 +2208,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     )}
                                   </div>
                                 </td>
-                                <td className="p-4 text-center font-bold text-zinc-650 dark:text-zinc-350">{subsCount}</td>
-                                <td className="p-4 text-center font-bold text-zinc-650 dark:text-zinc-350">{prodsCount}</td>
+                                <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{subsCount}</td>
+                                <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{prodsCount}</td>
                                 <td className="p-4 text-center">
-                                  <span className={`px-3 py-1 rounded-full text-[9px] font-bold border ${
+                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${
                                     c.is_active 
                                       ? 'bg-emerald-600 text-white border-transparent' 
                                       : 'bg-rose-600 text-white border-transparent'
@@ -2145,7 +2247,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   // All Subcategories view
                   <div className="overflow-x-auto no-scrollbar animate-fade-in">
                     <table className="w-full min-w-[700px] text-left text-sm">
-                      <thead className={`font-bold tracking-normal border-b text-[12px] ${
+                      <thead className={`font-normal tracking-normal border-b text-[12px] ${
                         theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
                       }`}>
                         <tr>
@@ -2166,11 +2268,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                             
                             return (
                               <tr key={sub.id} className={`transition-all duration-150 ${theme === 'dark' ? 'hover:bg-white/2' : 'hover:bg-zinc-50/50'}`}>
-                                <td className="p-4 font-bold text-center text-zinc-400">{index + 1}</td>
-                                <td className="p-4 font-bold">
+                                <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
+                                <td className="p-4 font-normal">
                                   <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{sub.name}</span>
                                 </td>
-                                <td className="p-4 font-extrabold text-indigo-500">
+                                <td className="p-4 font-normal text-indigo-500">
                                   <span>{sub.parent_category}</span>
                                 </td>
                                 <td className="p-4 text-center">
@@ -2182,9 +2284,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     )}
                                   </div>
                                 </td>
-                                <td className="p-4 text-center font-bold text-zinc-650 dark:text-zinc-350">{prodsCount}</td>
+                                <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{prodsCount}</td>
                                 <td className="p-4 text-center">
-                                  <span className={`px-3 py-1 rounded-full text-[9px] font-bold border ${
+                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${
                                     sub.is_active 
                                       ? 'bg-emerald-600 text-white border-transparent' 
                                       : 'bg-rose-600 text-white border-transparent'
@@ -2224,7 +2326,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           {activePage === 'orders' && (
             <div className="space-y-4 text-left">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Checkout Orders</h3>
+                <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Checkout Orders</h3>
                 <div className="relative w-full max-w-[300px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                   <input
@@ -2245,15 +2347,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div key={label} className={`p-4 rounded-2xl border flex items-center gap-3 ${
                     theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                   }`}>
-                    <div className={`w-9 h-9 rounded-xl ${color} text-white flex items-center justify-center font-black text-sm`}>{count}</div>
-                    <span className={`text-xs font-bold ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>{label}</span>
+                    <div className={`w-9 h-9 rounded-xl ${color} text-white flex items-center justify-center font-normal text-sm`}>{count}</div>
+                    <span className={`text-xs font-normal ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>{label}</span>
                   </div>
                 ))}
               </div>
 
               <div className={`border rounded-2xl overflow-x-auto min-h-[420px] ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[850px] text-left text-xs">
-                  <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Order ID</th>
                       <th className="p-4">Customer</th>
@@ -2267,23 +2369,23 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </thead>
                   <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
                     {filteredOrders.length === 0 ? (
-                      <tr><td colSpan="8" className="p-8 text-center text-zinc-400 font-semibold">No orders found.</td></tr>
+                      <tr><td colSpan="8" className="p-8 text-center text-zinc-400 font-normal">No orders found.</td></tr>
                     ) : (
                       filteredOrders.map((o) => {
                         const StatusIcon = STATUS_CONFIG[o.status || 'pending']?.icon || Clock;
                         return (
                           <tr key={o.order_id} className="hover:bg-white/2 transition-colors">
-                            <td className="p-4 font-bold text-indigo-400">{o.order_id}</td>
-                            <td className={`p-4 font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
-                            <td className="p-4 text-zinc-400 font-semibold">{o.phone || '---'}</td>
-                            <td className="p-4 uppercase text-zinc-500 font-bold">{o.payment_method}</td>
-                            <td className={`p-4 font-extrabold text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
+                            <td className="p-4 font-normal text-indigo-400">{o.order_id}</td>
+                            <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
+                            <td className="p-4 text-zinc-400 font-normal">{o.phone || '---'}</td>
+                            <td className="p-4 uppercase text-zinc-500 font-normal">{o.payment_method}</td>
+                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
                             <td className="p-4 text-center relative">
                               <div className="inline-block text-left">
                                 {/* Custom Dropdown Toggle Button */}
                                  <button
                                    onClick={() => setActiveDropdownId(activeDropdownId === o.id ? null : o.id)}
-                                   className={`text-xs font-black px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${
+                                   className={`text-xs font-normal px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${
                                      STATUS_CONFIG[o.status || 'pending']?.bg || 'bg-zinc-500/10 text-zinc-650 border-zinc-500/20'
                                    }`}
                                  >
@@ -2314,7 +2416,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                                 handleOrderStatusChange(o.id, key);
                                                 setActiveDropdownId(null);
                                               }}
-                                              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-black transition-all cursor-pointer select-none active:scale-97 ${
+                                              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-normal transition-all cursor-pointer select-none active:scale-97 ${
                                                 (o.status || 'pending') === key 
                                                   ? cfg.bg 
                                                   : (theme === 'dark' ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-zinc-50 text-zinc-650 hover:text-zinc-900')
@@ -2331,7 +2433,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 )}
                               </div>
                             </td>
-                            <td className="p-4 text-center text-zinc-500 font-semibold">
+                            <td className="p-4 text-center text-zinc-500 font-normal">
                               {/* eslint-disable-next-line react-hooks/purity */}
                               {new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </td>
@@ -2356,11 +2458,11 @@ function DashboardPortal({ onLogout, adminUser }) {
 
           {activePage === 'reviews' && (
             <div className="space-y-4 text-left animate-fade-in">
-              <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Product Reviews</h3>
+              <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Product Reviews</h3>
 
               <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[850px] text-left text-xs">
-                  <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Customer Name</th>
                       <th className="p-4">Email</th>
@@ -2374,16 +2476,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
                     {reviews.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="p-8 text-center text-zinc-500 font-semibold">
+                        <td colSpan="7" className="p-8 text-center text-zinc-500 font-normal">
                           No reviews found.
                         </td>
                       </tr>
                     ) : (
                       reviews.map((r) => (
                         <tr key={r.id} className="hover:bg-white/2 transition-colors">
-                          <td className={`p-4 font-bold ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{r.user_name}</td>
-                          <td className="p-4 text-zinc-500 font-semibold">{r.user_email}</td>
-                          <td className={`p-4 font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{r.product_name || 'Deleted Product'}</td>
+                          <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{r.user_name}</td>
+                          <td className="p-4 text-zinc-500 font-normal">{r.user_email}</td>
+                          <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{r.product_name || 'Deleted Product'}</td>
                           <td className="p-4 text-center">
                             <div className="flex items-center justify-center gap-0.5 text-amber-500">
                               {[...Array(5)].map((_, i) => (
@@ -2398,7 +2500,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <td className="p-4 text-zinc-650 dark:text-zinc-350 max-w-[250px] truncate" title={r.comment}>
                             {r.comment}
                           </td>
-                          <td className="p-4 text-center text-zinc-500 font-semibold">
+                          <td className="p-4 text-center text-zinc-500 font-normal">
                             {/* eslint-disable-next-line react-hooks/purity */}
                             {new Date(r.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </td>
@@ -2423,8 +2525,8 @@ function DashboardPortal({ onLogout, adminUser }) {
           {activePage === 'analytics' && (
             <div className="space-y-6 text-left animate-fade-in">
               <div>
-                <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Business Intelligence & Analytics</h2>
-                <p className="text-xs text-zinc-500 font-medium mt-1">Real-time charts, order distributions, and warehousing stock tracking.</p>
+                <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Business Intelligence & Analytics</h2>
+                <p className="text-xs text-zinc-500 font-normal mt-1">Real-time charts, order distributions, and warehousing stock tracking.</p>
               </div>
 
               {/* Statistics Grid */}
@@ -2443,10 +2545,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                 }`}>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
-                      <h4 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
+                      <h4 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                         {analyticsChartMetric === 'revenue' ? 'Revenue Growth Trend' : 'Order Volume Trend'}
                       </h4>
-                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Daily performance tracking over the last 14 days.</p>
+                      <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Daily performance tracking over the last 14 days.</p>
                     </div>
                     <div className={`flex rounded-xl p-0.5 border ${
                       theme === 'dark' ? 'bg-zinc-900 border-[#2a3145]' : 'bg-zinc-150 border-zinc-200'
@@ -2454,7 +2556,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button
                         type="button"
                         onClick={() => setAnalyticsChartMetric('revenue')}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wide transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-normal tracking-wide transition-all cursor-pointer ${
                           analyticsChartMetric === 'revenue'
                             ? 'bg-[#8b5cf6] text-white shadow-xs'
                             : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
@@ -2465,7 +2567,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button
                         type="button"
                         onClick={() => setAnalyticsChartMetric('orders')}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wide transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-normal tracking-wide transition-all cursor-pointer ${
                           analyticsChartMetric === 'orders'
                             ? 'bg-[#8b5cf6] text-white shadow-xs'
                             : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
@@ -2478,7 +2580,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                   <div className="relative h-56 w-full flex select-none flex-grow">
                     {/* Y-axis Labels */}
-                    <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-bold h-[85%] pb-2 select-none w-10 text-left leading-none">
+                    <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-normal h-[85%] pb-2 select-none w-10 text-left leading-none">
                       <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal).toLocaleString('en-IN')}` : Math.round(maxChartVal)}</span>
                       <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.75).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.75)}</span>
                       <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.5).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.5)}</span>
@@ -2564,7 +2666,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </svg>
 
                       {/* X-axis Labels */}
-                      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] font-bold text-zinc-400 px-1 pointer-events-none">
+                      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] font-normal text-zinc-400 px-1 pointer-events-none">
                         {points.map((p, idx) => {
                           if (idx % 2 !== 0 && idx !== points.length - 1) return <span key={idx} className="w-6 text-center opacity-0" />;
                           return (
@@ -2583,8 +2685,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                             transform: 'translate(-50%, -100%)',
                           }}
                         >
-                          <p className="font-bold text-zinc-400">{points[hoveredPointIndex].date}</p>
-                          <p className="font-black text-xs text-white">
+                          <p className="font-normal text-zinc-400">{points[hoveredPointIndex].date}</p>
+                          <p className="font-normal text-xs text-white">
                             {analyticsChartMetric === 'revenue' 
                               ? `₹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
                               : `${points[hoveredPointIndex].val} Orders`}
@@ -2600,8 +2702,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div>
-                    <h4 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Order Statuses</h4>
-                    <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Distribution of active workflow statuses.</p>
+                    <h4 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Order Statuses</h4>
+                    <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Distribution of active workflow statuses.</p>
                   </div>
                   
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mt-4 flex-grow">
@@ -2631,17 +2733,17 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                     <div className="flex-grow w-full space-y-2 text-left flex flex-col justify-center max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
                       {statusDonutSlices.length === 0 ? (
-                        <span className="text-[10px] font-semibold text-zinc-400 text-center">No orders recorded yet.</span>
+                        <span className="text-[10px] font-normal text-zinc-400 text-center">No orders recorded yet.</span>
                       ) : (
                         statusDonutSlices.map((slice, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-[10px] font-bold text-zinc-550 dark:text-zinc-455">
+                          <div key={idx} className="flex items-center justify-between text-[10px] font-normal text-zinc-550 dark:text-zinc-455">
                             <div className="flex items-center gap-2">
                               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
                               <span className="capitalize">{slice.label}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-zinc-400 font-medium">{slice.percentage}%</span>
-                              <span className="text-zinc-800 dark:text-white font-extrabold">{slice.count}</span>
+                              <span className="text-zinc-400 font-normal">{slice.percentage}%</span>
+                              <span className="text-zinc-800 dark:text-white font-normal">{slice.count}</span>
                             </div>
                           </div>
                         ))
@@ -2658,13 +2760,13 @@ function DashboardPortal({ onLogout, adminUser }) {
               }`}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
-                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Inventory Stock Registry</h3>
-                    <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Real-time tracking of item stocks, supply states, and automatic refills.</p>
+                    <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Inventory Stock Registry</h3>
+                    <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Real-time tracking of item stocks, supply states, and automatic refills.</p>
                   </div>
                   <button 
                     type="button"
                     onClick={() => window.print()}
-                    className="py-2 px-3 bg-[#8b5cf6] hover:bg-purple-650 text-white text-[10px] font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="py-2 px-3 bg-[#8b5cf6] hover:bg-purple-650 text-white text-[10px] font-normal rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <ClipboardList size={12} /> Export Stock Report
                   </button>
@@ -2672,7 +2774,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-zinc-950/20' : 'border-zinc-150 bg-white'}`}>
                   <table className="w-full min-w-[700px] text-left text-xs">
-                    <thead className={`font-bold tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                    <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                       <tr>
                         <th className="p-4">SKU / Item</th>
                         <th className="p-4">Category</th>
@@ -2684,14 +2786,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
                       {paginatedAnalyticsProducts.map((p) => (
                         <tr key={p.id} className="hover:bg-white/2 transition-colors">
-                          <td className="p-4 font-bold flex items-center gap-2.5">
+                          <td className="p-4 font-normal flex items-center gap-2.5">
                             {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#2a3145]" />}
                             <div>
                               <p className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</p>
                               <p className="text-[10px] text-zinc-500">PROD-00{p.id}</p>
                             </div>
                           </td>
-                          <td className="p-4 font-semibold text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                          <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
                           <td className="p-4 text-right">
                             <div className="flex items-center gap-1.5 justify-end">
                               <input 
@@ -2724,19 +2826,19 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     e.target.blur();
                                   }
                                 }}
-                                className={`w-16 p-1.5 text-center rounded-lg border outline-none text-xs font-black transition-all ${
+                                className={`w-16 p-1.5 text-center rounded-lg border outline-none text-xs font-normal transition-all ${
                                   theme === 'dark' 
                                     ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
                                     : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                                 }`}
                               />
-                              <span className="text-[10px] text-zinc-500 font-semibold">pcs</span>
+                              <span className="text-[10px] text-zinc-500 font-normal">pcs</span>
                             </div>
                           </td>
                           <td className="p-4">
                             <div className="flex flex-col items-center gap-1.5">
                               {/* Stock Warning Badge */}
-                              <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider border transition-all ${
+                              <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-normal uppercase tracking-wider border transition-all ${
                                 p.stock === 0
                                   ? 'bg-red-500/10 text-red-500 border-red-500/20'
                                   : p.stock < 15
@@ -2765,14 +2867,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     showToast('Network error during status update', 'warning');
                                   }
                                 }}
-                                className={`text-[9px] font-black p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
+                                className={`text-[9px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
                                   theme === 'dark' 
                                     ? 'border-[#2a3145] text-zinc-300 bg-zinc-950' 
                                     : 'border-zinc-200 text-zinc-750 bg-white'
                                 }`}
                               >
-                                <option value="published" className={theme === 'dark' ? 'bg-[#10141c] text-white font-bold' : 'bg-white text-zinc-950 font-semibold'}>Published</option>
-                                <option value="draft" className={theme === 'dark' ? 'bg-[#10141c] text-white font-bold' : 'bg-white text-zinc-950 font-semibold'}>Draft</option>
+                                <option value="published" className={theme === 'dark' ? 'bg-[#10141c] text-white font-normal' : 'bg-white text-zinc-950 font-normal'}>Published</option>
+                                <option value="draft" className={theme === 'dark' ? 'bg-[#10141c] text-white font-normal' : 'bg-white text-zinc-950 font-normal'}>Draft</option>
                               </select>
                             </div>
                           </td>
@@ -2794,7 +2896,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   showToast('Network error during restock', 'warning');
                                 }
                               }}
-                              className="py-2 px-4 bg-zinc-50 border border-zinc-200 text-zinc-750 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-450 dark:hover:border-emerald-900/30 font-black rounded-xl text-[10px] transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs"
+                              className="py-2 px-4 bg-zinc-50 border border-zinc-200 text-zinc-750 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-450 dark:hover:border-emerald-900/30 font-normal rounded-xl text-[10px] transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs"
                             >
                               Refill to 100
                             </button>
@@ -2807,16 +2909,16 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Analytics Pagination Controls */}
                 {totalAnalyticsPages > 1 && (
-                  <div className="flex items-center justify-between pt-6 text-xs font-semibold select-none leading-none">
+                  <div className="flex items-center justify-between pt-6 text-xs font-normal select-none leading-none">
                     <span className="text-zinc-400">
-                      Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredAnalyticsProducts.length, (analyticsPage - 1) * 8 + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredAnalyticsProducts.length, analyticsPage * 8)}</span> of <span className="font-extrabold text-zinc-650 dark:text-zinc-300">{filteredAnalyticsProducts.length}</span> items
+                      Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredAnalyticsProducts.length, (analyticsPage - 1) * 8 + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredAnalyticsProducts.length, analyticsPage * 8)}</span> of <span className="font-normal text-zinc-650 dark:text-zinc-300">{filteredAnalyticsProducts.length}</span> items
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button 
                         type="button"
                         disabled={analyticsPage === 1}
                         onClick={() => setAnalyticsPage(prev => Math.max(1, prev - 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-black active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-normal active:scale-95"
                       >
                         ◀ Prev
                       </button>
@@ -2827,7 +2929,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             key={pageNum}
                             type="button"
                             onClick={() => setAnalyticsPage(pageNum)}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-black transition-all cursor-pointer active:scale-90 ${
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
                               analyticsPage === pageNum
                                 ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
                                 : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-650 dark:text-zinc-400'
@@ -2841,7 +2943,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         type="button"
                         disabled={analyticsPage === totalAnalyticsPages}
                         onClick={() => setAnalyticsPage(prev => Math.min(totalAnalyticsPages, prev + 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-black active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-normal active:scale-95"
                       >
                         Next ▶
                       </button>
@@ -2853,11 +2955,111 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
           )}
 
+          {activePage === 'hero-banners' && (
+            <div className="space-y-6 text-left animate-fade-in admin-banners-container">
+              <div>
+                <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Index Banners</h2>
+                <p className="text-xs text-zinc-500 font-normal mt-1">Manage the 3 main hero banners on the index page.</p>
+              </div>
+              
+              {/* Previews Only */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                {[1, 2, 3].map((slot) => {
+                  const existingBanner = banners.find(b => b.order === slot);
+                  const isUploaded = !!existingBanner;
+                  let imgSrc = `/banner/banner${slot}.png`;
+                  
+                  if (existingBanner) {
+                    imgSrc = existingBanner.src || existingBanner.image;
+                    if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `http://127.0.0.1:8000${imgSrc}`;
+                    if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `http://127.0.0.1:8000/media/${imgSrc}`;
+                  }
+                  
+                  return (
+                    <div key={`preview-${slot}`} className={`rounded-3xl border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col items-center gap-4 bg-white dark:bg-[#161b26] shadow-3xs relative overflow-hidden`}>
+                      <div className="w-full flex justify-between items-center mb-1 px-1">
+                        <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Banner {slot}</h3>
+                        {isUploaded && (
+                          <span className="bg-indigo-500/10 text-indigo-500 text-[9px] font-normal px-2 py-0.5 rounded-md uppercase tracking-wider">Custom</span>
+                        )}
+                        {!isUploaded && (
+                          <span className="bg-zinc-500/10 text-zinc-500 text-[9px] font-normal px-2 py-0.5 rounded-md uppercase tracking-wider">Default</span>
+                        )}
+                      </div>
+                      <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-inner">
+                        <img src={imgSrc} alt={`Banner Slot ${slot}`} className="w-full h-full object-cover" />
+                        {uploadingBannerSlot === slot && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                            <Loader2 className="animate-spin text-white w-8 h-8" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Input Fields Below */}
+              <div className={`p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161b26] shadow-3xs mt-6`}>
+                <h3 className={`font-normal text-lg mb-4 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Upload Custom Banners</h3>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((slot) => {
+                    const existingBanner = banners.find(b => b.order === slot);
+                    const isUploaded = !!existingBanner;
+                    
+                    let imgSrc = `/banner/banner${slot}.png`;
+                    if (existingBanner) {
+                      imgSrc = existingBanner.src || existingBanner.image;
+                      if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `http://127.0.0.1:8000${imgSrc}`;
+                      if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `http://127.0.0.1:8000/media/${imgSrc}`;
+                    }
+
+                    return (
+                      <div key={`input-${slot}`} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/50' : 'border-zinc-100 bg-zinc-50/50'}`}>
+                        <span className={`w-16 font-normal text-sm shrink-0 ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slot {slot}</span>
+                        
+                        <div className="w-16 h-8 sm:w-20 sm:h-10 rounded overflow-hidden shrink-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative">
+                          <img src={imgSrc} alt={`Slot ${slot} thumb`} className="w-full h-full object-cover" />
+                          {uploadingBannerSlot === slot && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                              <Loader2 className="animate-spin text-white w-4 h-4" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handleHeroBannerUpload(e, slot)} 
+                            disabled={uploadingBannerSlot === slot}
+                            className={`w-full text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-normal file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-500/10 dark:file:text-indigo-400 cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600'}`}
+                          />
+                        </div>
+                        {isUploaded && (
+                          <button
+                            onClick={() => handleDeleteBanner(existingBanner.id)}
+                            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 transition-all text-xs active:scale-95"
+                            title="Revert to Default"
+                          >
+                            <Trash2 size={14} /> Delete Custom
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+
           {activePage === 'settings' && (
             <div className="space-y-6 text-left animate-fade-in admin-settings-container">
               <div>
-                <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Configurations</h2>
-                <p className="text-xs text-zinc-500 font-medium mt-1">Manage public details, checkout configurations, and store accessibility settings.</p>
+                <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Configurations</h2>
+                <p className="text-xs text-zinc-500 font-normal mt-1">Manage public details, checkout configurations, and store accessibility settings.</p>
               </div>
 
               {/* Tab Header Navigation */}
@@ -2867,7 +3069,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <button
                   type="button"
                   onClick={() => setSettingsTab('general')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
                     settingsTab === 'general'
                       ? 'bg-[#8b5cf6] text-white shadow-xs'
                       : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
@@ -2878,7 +3080,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <button
                   type="button"
                   onClick={() => setSettingsTab('checkout')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
                     settingsTab === 'checkout'
                       ? 'bg-[#8b5cf6] text-white shadow-xs'
                       : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
@@ -2889,7 +3091,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <button
                   type="button"
                   onClick={() => setSettingsTab('status')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
                     settingsTab === 'status'
                       ? 'bg-[#8b5cf6] text-white shadow-xs'
                       : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
@@ -2900,7 +3102,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <button
                   type="button"
                   onClick={() => setSettingsTab('danger')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
                     settingsTab === 'danger'
                       ? 'bg-red-600 text-white shadow-xs'
                       : 'text-red-500 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-500/10'
@@ -2917,13 +3119,50 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {settingsTab === 'general' && (
                   <div className="space-y-4 animate-fade-in">
                     <div>
-                      <h3 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>General Settings</h3>
-                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Edit public contact parameters shown on the storefront.</p>
+                      {/* Logo Upload Section */}
+                      <div className={`mb-6 p-4 border rounded-xl ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
+                        <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+                          <div className="shrink-0">
+                            <h4 className={`text-sm font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Logo</h4>
+                            <p className="text-xs text-zinc-500 mt-1">Upload your brand logo. Recommended format: PNG with transparent background.</p>
+                          </div>
+                          
+                          <div className="flex-1 flex items-center gap-4">
+                            {settings?.logoImage ? (
+                              <div className="h-12 w-auto bg-zinc-100 dark:bg-zinc-800 rounded p-1 border border-zinc-200 dark:border-zinc-700">
+                                 <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`} alt="Store Logo" className="h-full w-auto object-contain" />
+                              </div>
+                            ) : (
+                              <div className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800 rounded flex items-center justify-center border border-zinc-200 dark:border-zinc-700">
+                                <span className="text-[10px] text-zinc-400">None</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex-1 relative">
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={handleLogoUpload}
+                                disabled={uploadingLogo}
+                                className="w-full text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-normal file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-purple-500/10 dark:file:text-purple-400 cursor-pointer"
+                              />
+                              {uploadingLogo && (
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                  <Loader2 className="animate-spin w-4 h-4 text-purple-600" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <h3 className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>General Settings</h3>
+                      <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Edit public contact parameters shown on the storefront.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Public Support Phone</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Public Support Phone</label>
                         <input
                           type="text"
                           value={settingsForm.contactPhone}
@@ -2938,7 +3177,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Contact Email Address</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Contact Email Address</label>
                         <input
                           type="email"
                           value={settingsForm.contactEmail}
@@ -2955,7 +3194,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Boutique Physical Address</label>
+                      <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Boutique Physical Address</label>
                       <textarea
                         rows={3}
                         value={settingsForm.storeAddress}
@@ -2971,7 +3210,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Boutique About Text</label>
+                      <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Boutique About Text</label>
                       <textarea
                         rows={2}
                         value={settingsForm.aboutText}
@@ -2988,7 +3227,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Facebook Page URL</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Facebook Page URL</label>
                         <input
                           type="url"
                           value={settingsForm.facebookUrl}
@@ -3002,7 +3241,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Instagram Profile URL</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Instagram Profile URL</label>
                         <input
                           type="url"
                           value={settingsForm.instagramUrl}
@@ -3016,7 +3255,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">YouTube Channel URL</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">YouTube Channel URL</label>
                         <input
                           type="url"
                           value={settingsForm.youtubeUrl}
@@ -3036,13 +3275,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {settingsTab === 'checkout' && (
                   <div className="space-y-4 animate-fade-in">
                     <div>
-                      <h3 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Checkout Configurations</h3>
-                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Control pricing, active promotional code discounts, and shipping rules.</p>
+                      <h3 className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Checkout Configurations</h3>
+                      <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Control pricing, active promotional code discounts, and shipping rules.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Active Promo Code Name</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Active Promo Code Name</label>
                         <input
                           type="text"
                           value={settingsForm.activePromoCode}
@@ -3057,7 +3296,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Promo Discount Percentage (%)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Promo Discount Percentage (%)</label>
                         <input
                           type="number"
                           min="0"
@@ -3073,7 +3312,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (₹)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (₹)</label>
                         <input
                           type="number"
                           min="0"
@@ -3088,7 +3327,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (₹)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (₹)</label>
                         <input
                           type="number"
                           min="0"
@@ -3109,8 +3348,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {settingsTab === 'status' && (
                   <div className="space-y-4 animate-fade-in">
                     <div>
-                      <h3 className={`text-base font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Boutique Operations</h3>
-                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Toggle store operation between fully active and maintenance modes.</p>
+                      <h3 className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Boutique Operations</h3>
+                      <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Toggle store operation between fully active and maintenance modes.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3125,8 +3364,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                       >
                         <CheckCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
                         <div>
-                          <h4 className="font-black text-sm">Active Storefront (Open)</h4>
-                          <p className="text-[10px] text-zinc-500 font-semibold mt-1">Customers can browse collections, modify shopping carts, and submit orders.</p>
+                          <h4 className="font-normal text-sm">Active Storefront (Open)</h4>
+                          <p className="text-[10px] text-zinc-500 font-normal mt-1">Customers can browse collections, modify shopping carts, and submit orders.</p>
                         </div>
                       </button>
 
@@ -3141,8 +3380,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                       >
                         <XCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
                         <div>
-                          <h4 className="font-black text-sm">Maintenance Mode (Closed)</h4>
-                          <p className="text-[10px] text-zinc-500 font-semibold mt-1">Order submissions are blocked with a clean visual notice. Admins can still access dashboards.</p>
+                          <h4 className="font-normal text-sm">Maintenance Mode (Closed)</h4>
+                          <p className="text-[10px] text-zinc-500 font-normal mt-1">Order submissions are blocked with a clean visual notice. Admins can still access dashboards.</p>
                         </div>
                       </button>
                     </div>
@@ -3152,15 +3391,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {settingsTab === 'danger' && (
                   <div className="space-y-4 animate-fade-in">
                     <div>
-                      <h3 className="text-base font-black text-red-505 text-red-500 uppercase tracking-wider">Danger Zone</h3>
-                      <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Database maintenance, reset scripts, and system wipe controls.</p>
+                      <h3 className="text-base font-normal text-red-505 text-red-500 uppercase tracking-wider">Danger Zone</h3>
+                      <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Database maintenance, reset scripts, and system wipe controls.</p>
                     </div>
 
                     <div className={`p-5 rounded-2xl border ${
                       theme === 'dark' ? 'border-red-900/30 bg-red-950/10' : 'border-red-150 bg-red-50/20'
                     }`}>
-                      <h4 className="text-xs font-black text-red-500 uppercase tracking-wider mb-1">Erase Registry Data</h4>
-                      <p className="text-[10px] text-zinc-500 font-medium mb-4 leading-relaxed">
+                      <h4 className="text-xs font-normal text-red-500 uppercase tracking-wider mb-1">Erase Registry Data</h4>
+                      <p className="text-[10px] text-zinc-500 font-normal mb-4 leading-relaxed">
                         Warning: Clicking the button below will clear all registered products, categories, subcategories, customer orders, and reviews. This action is irreversible.
                       </p>
                       <button
@@ -3185,7 +3424,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             setLoadingData(false);
                           }
                         }}
-                        className="py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        className="py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white text-xs font-normal rounded-xl transition-colors cursor-pointer"
                       >
                         Reset / Clear Database
                       </button>
@@ -3198,7 +3437,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="mt-6 pt-4 border-t border-zinc-150 dark:border-[#2a3145] flex justify-end">
                     <button
                       type="submit"
-                      className="py-2.5 px-5 bg-[#8b5cf6] hover:bg-purple-650 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer active:scale-95 shadow-md shadow-purple-500/10"
+                      className="py-2.5 px-5 bg-[#8b5cf6] hover:bg-purple-650 text-white text-xs font-normal rounded-xl transition-colors cursor-pointer active:scale-95 shadow-md shadow-purple-500/10"
                     >
                       Save Configuration
                     </button>
@@ -3212,8 +3451,8 @@ function DashboardPortal({ onLogout, adminUser }) {
             <div className="space-y-6 text-left animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h2 className={`text-2xl font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Users Registry</h2>
-                  <p className="text-xs text-zinc-500 font-medium mt-1">Dashboard &gt; Users</p>
+                  <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Users Registry</h2>
+                  <p className="text-xs text-zinc-500 font-normal mt-1">Dashboard &gt; Users</p>
                 </div>
               </div>
 
@@ -3226,8 +3465,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Users className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Total Registered Users</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.length}</h3>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Total Registered Users</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.length}</h3>
                   </div>
                 </div>
 
@@ -3238,8 +3477,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <UserCheck className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Staff / Admins</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.filter(u => u.is_staff).length}</h3>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Staff / Admins</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.filter(u => u.is_staff).length}</h3>
                   </div>
                 </div>
 
@@ -3250,8 +3489,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Users className="h-6 w-6 animate-pulse" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Standard Customers</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.filter(u => !u.is_staff).length}</h3>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Standard Customers</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.filter(u => !u.is_staff).length}</h3>
                   </div>
                 </div>
 
@@ -3262,8 +3501,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <UserCheck className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Active Accounts</p>
-                    <h3 className={`text-2xl font-black leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.filter(u => u.is_active).length}</h3>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Active Accounts</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{usersList.filter(u => u.is_active).length}</h3>
                   </div>
                 </div>
               </div>
@@ -3275,8 +3514,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {/* Search Header */}
                 <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-800/80 mb-6">
                   <div>
-                    <h3 className={`font-black text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>User Directory</h3>
-                    <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">Filter, configure, and promote/demote registered customer accounts.</p>
+                    <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>User Directory</h3>
+                    <p className="text-[10px] text-zinc-400 font-normal mt-0.5">Filter, configure, and promote/demote registered customer accounts.</p>
                   </div>
                   <div className="relative w-full max-w-[340px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
@@ -3296,8 +3535,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Main Table view */}
                 <div className="overflow-x-auto no-scrollbar">
-                  <table className="w-full min-w-[900px] text-left text-sm font-semibold">
-                    <thead className={`font-bold tracking-normal border-b pb-2.5 text-[11px] ${
+                  <table className="w-full min-w-[900px] text-left text-sm font-normal">
+                    <thead className={`font-normal tracking-normal border-b pb-2.5 text-[11px] ${
                       theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'
                     }`}>
                       <tr>
@@ -3312,7 +3551,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <tbody className="divide-y divide-zinc-100 dark:divide-[#2a3145]/60 text-zinc-700 dark:text-zinc-300">
                       {paginatedUsers.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="py-12 text-center text-xs font-semibold text-zinc-400">
+                          <td colSpan="6" className="py-12 text-center text-xs font-normal text-zinc-400">
                             No matching user records found.
                           </td>
                         </tr>
@@ -3344,14 +3583,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <tr key={u.id} className="hover:bg-white/2 transition-colors duration-150">
                               <td className="py-4">
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-extrabold text-xs shadow-3xs shrink-0 select-none`}>
+                                  <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-normal text-xs shadow-3xs shrink-0 select-none`}>
                                     {initials}
                                   </div>
                                   <div className="min-w-0">
-                                    <p className={`font-extrabold text-[13px] leading-snug truncate ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
+                                    <p className={`font-normal text-[13px] leading-snug truncate ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                                       {u.username}
                                     </p>
-                                    <p className="text-[11px] text-zinc-400 font-semibold tracking-wide truncate max-w-[200px]">
+                                    <p className="text-[11px] text-zinc-400 font-normal tracking-wide truncate max-w-[200px]">
                                       {u.email}
                                     </p>
                                   </div>
@@ -3365,7 +3604,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <td className="py-4 text-center">
                                 <button
                                   onClick={() => handleToggleUserStaff(u)}
-                                  className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${
+                                  className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${
                                     u.is_staff
                                       ? 'bg-purple-600 text-white border-transparent'
                                       : 'bg-emerald-600 text-white border-transparent'
@@ -3378,7 +3617,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <td className="py-4 text-center">
                                 <button
                                   onClick={() => handleToggleUserActive(u)}
-                                  className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${
+                                  className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${
                                     u.is_active
                                       ? 'bg-emerald-600 text-white border-transparent'
                                       : 'bg-red-650 text-white border-transparent'
@@ -3419,15 +3658,15 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Pagination Controls */}
                 {totalUserPages > 1 && (
-                  <div className="flex items-center justify-between pt-6 border-t border-zinc-100 dark:border-zinc-800/80 text-xs font-semibold select-none leading-none mt-4">
+                  <div className="flex items-center justify-between pt-6 border-t border-zinc-100 dark:border-zinc-800/80 text-xs font-normal select-none leading-none mt-4">
                     <span className="text-zinc-400">
-                      Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredUsers.length, (userPage - 1) * USERS_ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-black">{Math.min(filteredUsers.length, userPage * USERS_ITEMS_PER_PAGE)}</span> of <span className="font-extrabold text-zinc-650 dark:text-zinc-300">{filteredUsers.length}</span> users
+                      Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredUsers.length, (userPage - 1) * USERS_ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredUsers.length, userPage * USERS_ITEMS_PER_PAGE)}</span> of <span className="font-normal text-zinc-650 dark:text-zinc-300">{filteredUsers.length}</span> users
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button 
                         disabled={userPage === 1}
                         onClick={() => setUserPage(prev => Math.max(1, prev - 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-black active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
                       >
                         ◀ Prev
                       </button>
@@ -3437,7 +3676,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <button
                             key={pageNum}
                             onClick={() => setUserPage(pageNum)}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-black transition-all cursor-pointer active:scale-90 ${
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
                               userPage === pageNum
                                 ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
                                 : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
@@ -3450,7 +3689,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button 
                         disabled={userPage === totalUserPages}
                         onClick={() => setUserPage(prev => Math.min(totalUserPages, prev + 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-black active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
                       >
                         Next ▶
                       </button>
@@ -3467,7 +3706,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       {/* Loading overlay */}
       {loadingData && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-bold border ${
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-normal border ${
             theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
           }`}>
             <Loader2 size={14} className="animate-spin text-indigo-500" />
@@ -3484,26 +3723,26 @@ function DashboardPortal({ onLogout, adminUser }) {
           }`}>
             <div className="max-h-[90vh] overflow-y-auto p-6 space-y-4 text-left custom-scrollbar">
             <div className={`flex justify-between items-center pb-4 border-b ${theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200/65'}`}>
-              <h3 className={`text-base font-black ${modalType === 'category' || modalType === 'subcategory' ? 'text-[20px] font-bold text-zinc-900 dark:text-white capitalize tracking-tight font-sans' : 'uppercase tracking-wider'}`}>
+              <h3 className={`text-base font-normal ${modalType === 'category' || modalType === 'subcategory' ? 'text-[20px] font-normal text-zinc-900 dark:text-white capitalize tracking-tight font-sans' : 'uppercase tracking-wider'}`}>
                 {modalMode === 'edit' ? 'Edit' : 'Create New'} {modalType === 'product' ? 'Product' : modalType === 'category' ? 'Category' : modalType === 'subcategory' ? 'Subcategory' : modalType === 'user' ? 'User Account' : modalType}
               </h3>
               <button onClick={() => setModalType(null)} className={`cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-800'}`}><X size={modalType === 'category' || modalType === 'subcategory' ? 20 : 16} /></button>
             </div>
 
             {modalType === 'product' && (
-              <form onSubmit={handleSaveProduct} className="space-y-6 text-sm font-medium">
+              <form onSubmit={handleSaveProduct} className="space-y-6 text-sm font-normal">
                 
                 {/* 1. Featured Image & Gallery Section */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-black flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-black text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
+                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
                     Media Assets
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Image path / URL</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Image path / URL</label>
                       <input 
                         type="text" 
                         value={productForm.image} 
@@ -3515,7 +3754,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
                       <div className="relative flex items-center justify-center">
                         <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${
                           theme === 'dark' 
@@ -3524,7 +3763,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         }`}>
                           <div className="flex items-center gap-2">
                             <Upload size={14} className={uploadingImage ? "animate-spin text-indigo-500" : "animate-pulse text-zinc-400"} />
-                            <span className="text-[10.5px] font-extrabold tracking-wide">
+                            <span className="text-[10.5px] font-normal tracking-wide">
                               {uploadingImage ? 'Uploading...' : productForm.image ? '✅ File Linked' : 'Choose Local File'}
                             </span>
                           </div>
@@ -3533,7 +3772,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </div>
                     </div>
                     <div className="space-y-1.5 min-w-0">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Color selection (hex)</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Color selection (hex)</label>
                       <div className="flex gap-2 min-w-0">
                         <input 
                           type="color" 
@@ -3561,14 +3800,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-black flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-black text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
+                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
                     Group & Classification
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Category Dropdown - root categories only */}
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
                       <select
                         required
                         value={productForm.category}
@@ -3593,7 +3832,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                     {/* Subcategory Dropdown - filtered by selected category */}
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
                       <select
                         value={productForm.parent_category}
                         onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value }))}
@@ -3613,13 +3852,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                         })()}
                       </select>
                       {productForm.category && subCategories.filter(sc => sc.parent_category === rootCategories.find(c => String(c.id) === String(productForm.category))?.name).length === 0 && (
-                        <p className="text-[10px] text-zinc-400 font-semibold mt-1">No subcategories for this category</p>
+                        <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this category</p>
                       )}
                     </div>
 
                     {/* Tag Type */}
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Tag type</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Tag type</label>
                       <select 
                         value={productForm.tag_type} 
                         onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value })}
@@ -3642,13 +3881,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-black flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-black text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">3</span>
+                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">3</span>
                     Product Details
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2 space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
                       <input 
                         type="text" 
                         required 
@@ -3660,7 +3899,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Unit *</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Unit *</label>
                       <input 
                         type="text" 
                         required 
@@ -3675,7 +3914,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slug (automatic / custom)</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slug (automatic / custom)</label>
                       <input 
                         type="text" 
                         value={productForm.slug} 
@@ -3687,7 +3926,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount label</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount label</label>
                       <input 
                         type="text" 
                         value={productForm.discount} 
@@ -3700,7 +3939,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Description *</label>
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Description *</label>
                     <textarea 
                       required
                       value={productForm.description} 
@@ -3716,13 +3955,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-black flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-black text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">4</span>
+                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">4</span>
                     Product Configuration & Dimensions
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product type</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product type</label>
                       <select 
                         value={productForm.product_type} 
                         onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value })}
@@ -3735,7 +3974,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Width (cm)</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Width (cm)</label>
                       <input 
                         type="number" 
                         value={productForm.width} 
@@ -3747,7 +3986,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Height (cm)</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Height (cm)</label>
                       <input 
                         type="number" 
                         value={productForm.height} 
@@ -3759,7 +3998,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Length (cm)</label>
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Length (cm)</label>
                       <input 
                         type="number" 
                         value={productForm.length} 
@@ -3777,13 +4016,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-black flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-black text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">5</span>
+                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">5</span>
                     Pricing & Inventory
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Price (INR) *</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Price (INR) *</label>
                       <input 
                         type="number" 
                         required 
@@ -3795,7 +4034,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sale price (original)</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sale price (original)</label>
                       <input 
                         type="number" 
                         value={productForm.original_price} 
@@ -3806,7 +4045,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Quantity (stock) *</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Quantity (stock) *</label>
                       <input 
                         type="number" 
                         required 
@@ -3818,10 +4057,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sku *</label>
+                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sku</label>
                       <input 
                         type="text" 
-                        required 
                         value={productForm.sku} 
                         onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} 
                         placeholder="e.g., TS-GRN-001"
@@ -3837,8 +4075,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-black flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-black text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">6</span>
+                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">6</span>
                     Publishing Control
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3851,12 +4089,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                       }`}
                     >
                       <div className="flex flex-col text-left">
-                        <span className={`font-extrabold text-[12.5px] ${
+                        <span className={`font-normal text-[12.5px] ${
                           productForm.status === 'published'
                             ? 'text-emerald-950 dark:text-emerald-50'
                             : 'text-zinc-800 dark:text-white'
                         }`}>Published</span>
-                        <span className={`text-[10px] font-medium ${
+                        <span className={`text-[10px] font-normal ${
                           productForm.status === 'published'
                             ? 'text-emerald-700/80 dark:text-emerald-400'
                             : 'text-zinc-400'
@@ -3880,12 +4118,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                       }`}
                     >
                       <div className="flex flex-col text-left">
-                        <span className={`font-extrabold text-[12.5px] ${
+                        <span className={`font-normal text-[12.5px] ${
                           productForm.status === 'draft'
                             ? 'text-emerald-950 dark:text-emerald-50'
                             : 'text-zinc-800 dark:text-white'
                         }`}>Draft Mode</span>
-                        <span className={`text-[10px] font-medium ${
+                        <span className={`text-[10px] font-normal ${
                           productForm.status === 'draft'
                             ? 'text-emerald-700/80 dark:text-emerald-400'
                             : 'text-zinc-400'
@@ -3906,13 +4144,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-6 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-300 rounded-xl font-bold transition-all active:scale-95 cursor-pointer text-xs"
+                    className="py-3 px-6 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-300 rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="py-3 px-8 bg-linear-to-r from-indigo-600 to-violet-600 hover:opacity-95 text-white font-extrabold rounded-xl transition-all active:scale-95 shadow-md shadow-indigo-500/10 cursor-pointer text-xs uppercase tracking-wider"
+                    className="py-3 px-8 bg-linear-to-r from-indigo-600 to-violet-600 hover:opacity-95 text-white font-normal rounded-xl transition-all active:scale-95 shadow-md shadow-indigo-500/10 cursor-pointer text-xs uppercase tracking-wider"
                   >
                     Save Changes
                   </button>
@@ -3925,7 +4163,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* 1. Category Image */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Category image <span className="text-red-500 ml-1">*</span>
                   </label>
                   
@@ -3949,11 +4187,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
                       <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
                         <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
-                        <span className="text-[14px] font-bold">
+                        <span className="text-[14px] font-normal">
                           {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Category Image' : 'Upload Category Image'}
                         </span>
                       </div>
-                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-semibold mt-1">
+                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal mt-1">
                         JPG, PNG or WEBP. Max size 2MB.
                       </span>
                       <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
@@ -3963,7 +4201,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 2. Category Name */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Category name <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -3978,13 +4216,13 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 4. Status */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Status <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
                     value={categoryForm.is_active ? 'true' : 'false'}
                     onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-extrabold"
+                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
                   >
                     <option value="true">🟢 Active</option>
                     <option value="false">🔴 Inactive</option>
@@ -3996,14 +4234,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-6 bg-white hover:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold transition-all active:scale-95 cursor-pointer text-xs"
+                    className="py-3 px-6 bg-white hover:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-700 rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     disabled={uploadingCategoryImage || !categoryForm.image}
-                    className={`py-3 px-8 text-white rounded-xl font-bold transition-all active:scale-95 shadow-md text-xs cursor-pointer ${
+                    className={`py-3 px-8 text-white rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs cursor-pointer ${
                       uploadingCategoryImage || !categoryForm.image
                         ? 'bg-zinc-350 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed shadow-none'
                         : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10'
@@ -4020,7 +4258,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* 1. Subcategory Image */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Subcategory image <span className="text-red-500 ml-1">*</span>
                   </label>
                   
@@ -4044,11 +4282,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
                       <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
                         <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
-                        <span className="text-[14px] font-bold">
+                        <span className="text-[14px] font-normal">
                           {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Subcategory Image' : 'Upload Subcategory Image'}
                         </span>
                       </div>
-                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-semibold mt-1">
+                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal mt-1">
                         JPG, PNG or WEBP. Max size 2MB.
                       </span>
                       <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
@@ -4058,14 +4296,14 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 2. Parent Category Select */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Category name select <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
                     required
                     value={categoryForm.parent_category}
                     onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-extrabold"
+                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
                   >
                     <option value="">Select Category...</option>
                     {rootCategories.map((c) => (
@@ -4076,7 +4314,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 3. Subcategory Name */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Subcategory name type <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -4091,13 +4329,13 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 4. Status */}
                 <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                     Status <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
                     value={categoryForm.is_active ? 'true' : 'false'}
                     onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-extrabold"
+                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
                   >
                     <option value="true">🟢 Active</option>
                     <option value="false">🔴 Inactive</option>
@@ -4109,14 +4347,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-6 bg-white hover:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold transition-all active:scale-95 cursor-pointer text-xs"
+                    className="py-3 px-6 bg-white hover:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-700 rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     disabled={uploadingCategoryImage || !categoryForm.image}
-                    className={`py-3 px-8 text-white rounded-xl font-bold transition-all active:scale-95 shadow-md text-xs cursor-pointer ${
+                    className={`py-3 px-8 text-white rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs cursor-pointer ${
                       uploadingCategoryImage || !categoryForm.image
                         ? 'bg-zinc-350 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed shadow-none'
                         : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10'
@@ -4129,7 +4367,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             )}
 
             {modalType === 'bulk' && (
-              <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-semibold">
+              <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal">
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
                     <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Products JSON Array</label>
@@ -4158,12 +4396,12 @@ function DashboardPortal({ onLogout, adminUser }) {
               <form onSubmit={handleSaveUser} className="space-y-4 text-left text-sm">
                 
                 <div className="p-4 bg-zinc-50 dark:bg-[#161b26] border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-1">
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Username (Immutable)</span>
-                  <p className={`text-base font-extrabold ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{userForm.username}</p>
+                  <span className="text-[10px] text-zinc-400 font-normal uppercase tracking-wider">Username (Immutable)</span>
+                  <p className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{userForm.username}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-[14px] font-normal text-zinc-800 dark:text-zinc-200">
                     Email Address <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -4178,7 +4416,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">First Name</label>
+                    <label className="text-[14px] font-normal text-zinc-800 dark:text-zinc-200">First Name</label>
                     <input
                       type="text"
                       value={userForm.first_name}
@@ -4188,7 +4426,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[14px] font-bold text-zinc-800 dark:text-zinc-200">Last Name</label>
+                    <label className="text-[14px] font-normal text-zinc-800 dark:text-zinc-200">Last Name</label>
                     <input
                       type="text"
                       value={userForm.last_name}
@@ -4208,7 +4446,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setUserForm({ ...userForm, is_staff: e.target.checked })}
                       className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
-                    <label htmlFor="form_is_staff" className="text-xs font-bold text-zinc-800 dark:text-zinc-200 select-none cursor-pointer">
+                    <label htmlFor="form_is_staff" className="text-xs font-normal text-zinc-800 dark:text-zinc-200 select-none cursor-pointer">
                       Is Staff Admin
                     </label>
                   </div>
@@ -4220,7 +4458,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setUserForm({ ...userForm, is_active: e.target.checked })}
                       className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
-                    <label htmlFor="form_is_active" className="text-xs font-bold text-zinc-800 dark:text-zinc-200 select-none cursor-pointer">
+                    <label htmlFor="form_is_active" className="text-xs font-normal text-zinc-800 dark:text-zinc-200 select-none cursor-pointer">
                       Account Active
                     </label>
                   </div>
@@ -4230,13 +4468,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-5 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold rounded-xl cursor-pointer text-xs transition-colors active:scale-95"
+                    className="py-3 px-5 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-normal rounded-xl cursor-pointer text-xs transition-colors active:scale-95"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="py-3 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                    className="py-3 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
                   >
                     {modalMode === 'edit' ? 'Save Changes' : 'Create Account'}
                   </button>
@@ -4255,7 +4493,7 @@ function NavItem({ icon, label, active, onClick, theme }) {
   return (
     <button 
       onClick={onClick}
-      className={`w-full px-5 py-4 rounded-2xl text-[18px] font-black transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 ${
+      className={`w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 ${
         active 
           ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md shadow-purple-500/10' 
           : theme === 'dark'
@@ -4276,25 +4514,25 @@ function GridStat({ color, label, value, icon, theme }) {
         ? 'bg-[#10141c] border-[#2a3145] text-white hover:shadow-purple-500/5' 
         : 'bg-white border-zinc-200 text-[#0f172a] hover:shadow-zinc-300/30'
     }`}>
-      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm ${color} mb-4 shadow-md transition-transform duration-300 hover:rotate-6`}>
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-normal text-sm ${color} mb-4 shadow-md transition-transform duration-300 hover:rotate-6`}>
         {icon}
       </div>
-      <p className="text-[14.5px] font-semibold text-zinc-400 leading-none mb-2.5">{label}</p>
-      <h4 className={`text-[30px] font-black leading-none ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{value}</h4>
+      <p className="text-[14.5px] font-normal text-zinc-400 leading-none mb-2.5">{label}</p>
+      <h4 className={`text-[30px] font-normal leading-none ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{value}</h4>
     </div>
   );
 }
 
 function CategoryLegendRow({ dotColor, label, pct, val }) {
   return (
-    <div className="flex items-center justify-between text-[14.5px] font-black text-zinc-650 dark:text-zinc-300">
+    <div className="flex items-center justify-between text-[14.5px] font-normal text-zinc-650 dark:text-zinc-300">
       <div className="flex items-center gap-3">
         <span className={`w-3.5 h-3.5 rounded-full ${dotColor} shadow-2xs`} />
         <span>{label}</span>
       </div>
       <div className="flex items-center gap-3.5">
-        <span className="text-zinc-400 font-semibold">{pct}</span>
-        <span className="text-zinc-800 dark:text-white font-extrabold">{val}</span>
+        <span className="text-zinc-400 font-normal">{pct}</span>
+        <span className="text-zinc-800 dark:text-white font-normal">{val}</span>
       </div>
     </div>
   );
@@ -4319,17 +4557,17 @@ function OrderRow({ id, date, amount, status, name, gradient, initials, theme })
       theme === 'dark' ? 'border-[#2a3145]/60' : 'border-zinc-100'
     }`}>
       <div className="flex items-center gap-3.5 text-left">
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center font-extrabold text-[12px] text-white shadow-2xs shrink-0 select-none`}>
+        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center font-normal text-[12px] text-white shadow-2xs shrink-0 select-none`}>
           {initials}
         </div>
         <div>
-          <p className={`font-bold text-[16px] leading-none mb-1.5 ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{id}</p>
-          <p className="text-[13px] text-zinc-400 font-semibold">{date}</p>
+          <p className={`font-normal text-[16px] leading-none mb-1.5 ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{id}</p>
+          <p className="text-[13px] text-zinc-400 font-normal">{date}</p>
         </div>
       </div>
       <div className="text-right leading-none flex flex-col items-end gap-2.5">
-        <p className={`font-extrabold text-[16px] leading-none ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{amount}</p>
-        <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${getBadgeStyle()}`}>
+        <p className={`font-normal text-[16px] leading-none ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{amount}</p>
+        <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-normal uppercase tracking-wider ${getBadgeStyle()}`}>
           {status}
         </span>
       </div>
@@ -4344,7 +4582,7 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
         ? 'hover:bg-white/2 border-[#2a3145]/60' 
         : 'hover:bg-zinc-50/50 border-zinc-150'
     }`}>
-      <td className="py-3.5 font-bold flex items-center gap-3">
+      <td className="py-3.5 font-normal flex items-center gap-3">
         {image ? (
           <img 
             src={image} 
@@ -4360,11 +4598,11 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
         )}
         <span className={`text-[15.5px] ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{name}</span>
       </td>
-      <td className="py-3.5 font-semibold text-zinc-400 text-[14.5px]">{category}</td>
-      <td className={`py-3.5 text-center font-bold text-[15.5px] ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{sold}</td>
-      <td className={`py-3.5 text-right font-extrabold text-[16px] ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{rev}</td>
+      <td className="py-3.5 font-normal text-zinc-400 text-[14.5px]">{category}</td>
+      <td className={`py-3.5 text-center font-normal text-[15.5px] ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{sold}</td>
+      <td className={`py-3.5 text-right font-normal text-[16px] ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{rev}</td>
       <td className="py-3.5 text-center">
-        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white border border-transparent">Active</span>
+        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-normal uppercase tracking-wider bg-emerald-600 text-white border border-transparent">Active</span>
       </td>
     </tr>
   );
@@ -4378,13 +4616,13 @@ function StatCard({ icon, label, value, desc, theme }) {
         : 'bg-white border-zinc-200 text-[#0f172a] shadow-3xs'
     }`}>
       <div className="flex items-center justify-between mb-4">
-        <span className="text-[12px] font-black text-zinc-400 uppercase tracking-wider">{label}</span>
+        <span className="text-[12px] font-normal text-zinc-400 uppercase tracking-wider">{label}</span>
         <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-[#161b26] flex items-center justify-center">
           {icon}
         </div>
       </div>
-      <h4 className={`text-3xl font-black leading-none mb-2 ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{value}</h4>
-      <p className="text-[11px] text-zinc-400 font-semibold leading-none">{desc}</p>
+      <h4 className={`text-3xl font-normal leading-none mb-2 ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{value}</h4>
+      <p className="text-[11px] text-zinc-400 font-normal leading-none">{desc}</p>
     </div>
   );
 }

@@ -291,7 +291,7 @@ export default function CategoriesPage() {
         <Header onMobileMenuToggle={() => setMobileSidebarOpen(true)} />
         
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1400px] mx-auto space-y-6 flex-grow">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6 flex-grow">
           {selectedProduct ? (
             /* High Fidelity product detail page */
             <div data-aos="fade-up">
@@ -450,7 +450,7 @@ export default function CategoriesPage() {
                       {totalPages > 1 && (
                         <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-zinc-200 text-xs font-semibold select-none gap-4">
                           <span className="text-zinc-500 font-normal">
-                            Showing <span className="text-[#e11d48] font-bold">{Math.min(filteredProducts.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-bold">{Math.min(filteredProducts.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-bold text-zinc-800">{filteredProducts.length}</span> products
+                            Showing <span className="text-[#e11d48] font-normal">{Math.min(filteredProducts.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-normal">{Math.min(filteredProducts.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-normal text-zinc-800">{filteredProducts.length}</span> products
                           </span>
                           <div className="flex items-center gap-1.5">
                             <button 
