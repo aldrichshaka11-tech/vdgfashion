@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, User, Heart, ShoppingBag, Menu, Home, Package, Headphones, Gift, Star, Truck } from 'lucide-react';
+import { Search, User, Heart, ShoppingBag, Menu, Home, Package, Headphones, Gift, Star, Truck, Tag } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { usePathname, useRouter } from 'next/navigation';
+import { formatINR } from '../utils/currency';
 
 export default function Header({ onMobileMenuToggle }) {
   const router = useRouter();
   const pathname = usePathname();
   const [hoveredMenu, setHoveredMenu] = useState(null);
+  const [isDesktopFocused, setIsDesktopFocused] = useState(false);
+  const [isMobileFocused, setIsMobileFocused] = useState(false);
   const {
+    products = [],
     cartCount,
     wishlist,
     searchQuery,
@@ -21,6 +25,109 @@ export default function Header({ onMobileMenuToggle }) {
     user,
     settings,
   } = useStore();
+
+  const matchedCategories = searchQuery.trim() !== ''
+    ? (allCategories || []).filter(cat => 
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 3)
+    : [];
+
+  const suggestions = searchQuery.trim() !== ''
+    ? (products || []).filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      ).slice(0, 6)
+    : [];
+
+  const renderSuggestions = (isMobile = false, isFocused, setIsFocused) => {
+    if (!isFocused || searchQuery.trim() === '') return null;
+
+    const hasCategories = matchedCategories.length > 0;
+    const hasProducts = suggestions.length > 0;
+
+    return (
+      <div className={`absolute top-full left-0 mt-2 bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 overflow-hidden max-h-96 overflow-y-auto ${
+        isMobile ? 'w-64 right-0 left-auto' : 'w-full'
+      }`}>
+        {!hasCategories && !hasProducts ? (
+          <div className="p-4 text-xs font-semibold text-zinc-400 text-center">
+            No results found
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-zinc-100">
+            {/* Categories Suggestions Section */}
+            {hasCategories && (
+              <div className="bg-zinc-50/50 py-1.5">
+                <span className="px-4 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  Categories
+                </span>
+                {matchedCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => {
+                      setSelectedCategory(category.name);
+                      if (setCheckedCategories) {
+                        setCheckedCategories([category.name]);
+                      }
+                      setSelectedProduct(null);
+                      setSearchQuery('');
+                      setIsFocused(false);
+                      router.push('/categories');
+                    }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-zinc-100/80 transition-colors flex items-center gap-2.5 text-zinc-800 font-semibold text-xs active:bg-zinc-200 cursor-pointer"
+                  >
+                    <Tag className="h-3.5 w-3.5 text-[#e5484d] shrink-0" />
+                    <span>Search in <strong className="text-zinc-950 font-bold">{category.name}</strong></span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Products Suggestions Section */}
+            {hasProducts && (
+              <div>
+                {hasCategories && (
+                  <span className="px-4 pt-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Products
+                  </span>
+                )}
+                <div className="divide-y divide-zinc-100">
+                  {suggestions.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setSearchQuery('');
+                        setIsFocused(false);
+                        
+                        // Navigate to home page to ensure the product detail view is visible
+                        const catalogPaths = ['/', '/categories'];
+                        if (!catalogPaths.includes(pathname)) {
+                          router.push('/');
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors flex items-center gap-3 active:bg-zinc-100 cursor-pointer"
+                    >
+                      <div 
+                        className="relative h-10 w-10 rounded-lg border border-zinc-150 overflow-hidden p-0.5 shrink-0"
+                        style={{ backgroundColor: product.colorHex || '#f4f4f5' }}
+                      >
+                        <img src={product.image} alt={product.name} className="h-full w-full object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-zinc-950 truncate">{product.name}</h4>
+                        <p className="text-[10px] text-[#e5484d] font-bold mt-0.5">{formatINR(product.price)}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const handleCategorySelect = (categoryName) => {
     setSelectedCategory(categoryName);
@@ -155,6 +262,8 @@ export default function Header({ onMobileMenuToggle }) {
               type="text"
               placeholder="Search for products, brands and more..."
               value={searchQuery}
+              onFocus={() => setIsDesktopFocused(true)}
+              onBlur={() => setTimeout(() => setIsDesktopFocused(false), 200)}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setSelectedProduct(null);
@@ -165,6 +274,7 @@ export default function Header({ onMobileMenuToggle }) {
               }}
               className="w-full pl-11 pr-4 py-2.5 bg-zinc-100/90 border-0 focus:border-0 rounded-full text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:bg-white transition-all text-black"
             />
+            {renderSuggestions(false, isDesktopFocused, setIsDesktopFocused)}
           </div>
 
           {/* Right side actions */}
@@ -176,6 +286,8 @@ export default function Header({ onMobileMenuToggle }) {
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
+                onFocus={() => setIsMobileFocused(true)}
+                onBlur={() => setTimeout(() => setIsMobileFocused(false), 200)}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setSelectedProduct(null);
@@ -187,6 +299,7 @@ export default function Header({ onMobileMenuToggle }) {
                 className="w-28 sm:w-36 pl-8 pr-3 py-1.5 bg-zinc-100 rounded-full text-[10px] font-semibold focus:outline-none focus:ring-1 focus:ring-pink-500/20 text-black"
               />
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+              {renderSuggestions(true, isMobileFocused, setIsMobileFocused)}
             </div>
 
             {/* User Account */}

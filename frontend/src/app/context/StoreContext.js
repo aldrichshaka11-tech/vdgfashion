@@ -89,12 +89,12 @@ export function StoreProvider({ children }) {
     },
     {
       id: 'default-2',
-      src: '/banner/banner2.png',
+      src: '/banner/chat1 (1).png',
       alt: 'VGD Fashion Banner 2'
     },
     {
       id: 'default-3',
-      src: '/banner/banner3.png',
+      src: '/banner/chat1 (2).png',
       alt: 'VGD Fashion Banner 3'
     }
   ];
@@ -211,6 +211,17 @@ export function StoreProvider({ children }) {
             }
           });
         }
+        // Force the 2nd and 3rd sliders to use custom local images as requested
+        mergedBanners[1] = {
+          ...mergedBanners[1],
+          src: '/banner/chat1 (1).png',
+          alt: 'VGD Fashion Banner 2'
+        };
+        mergedBanners[2] = {
+          ...mergedBanners[2],
+          src: '/banner/chat1 (2).png',
+          alt: 'VGD Fashion Banner 3'
+        };
         setHeroBanners(mergedBanners);
       })
       .catch(() => {

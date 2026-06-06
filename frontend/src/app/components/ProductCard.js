@@ -77,7 +77,7 @@ export default function ProductCard({ product }) {
           const cardBg = pastelColors[colorIdx % pastelColors.length];
           return (
             <div
-              className="relative w-full aspect-square rounded-[1.4rem] p-5 flex items-center justify-center overflow-hidden vdgfashion-transition group-hover:opacity-95"
+              className="relative w-full aspect-square rounded-[1.4rem] overflow-hidden vdgfashion-transition group-hover:opacity-95"
               style={{ backgroundColor: cardBg }}
             >
               {/* Top-Left Tag Badge */}
@@ -100,12 +100,12 @@ export default function ProductCard({ product }) {
           </button>
 
           {/* Product Illustration */}
-          <div className="relative w-[85%] h-[85%] transition-transform duration-500 group-hover:scale-105">
+          <div className="relative w-full h-full transition-transform duration-500 group-hover:scale-105">
             <Image
               src={product.image}
               alt={product.name}
               fill
-              className="object-contain"
+              className="object-cover object-top"
               priority
             />
           </div>
@@ -139,7 +139,7 @@ export default function ProductCard({ product }) {
       <div className="mt-3.5 flex w-full">
         <button
           onClick={handleAddToCart}
-          className="w-full py-2.5 bg-[#10b981] hover:bg-[#059669] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+          className="w-full py-2.5 bg-[#e5484d] hover:bg-[#d8373d] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
           aria-label="Add directly to cart"
         >
           <ShoppingCart className="h-4.5 w-4.5" />

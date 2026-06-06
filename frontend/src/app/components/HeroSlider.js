@@ -39,14 +39,14 @@ export default function HeroSlider({ onShopClick }) {
   }, [nextSlide, isHovered]);
 
   if (!banners.length) return (
-    <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-950 vdgfashion-card-shadow aspect-[2/1] w-full" />
+    <div className="relative overflow-hidden bg-zinc-950 aspect-[2/1] md:aspect-[3/1] w-full" />
   );
 
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative group overflow-hidden rounded-[2.5rem] bg-zinc-950 vdgfashion-card-shadow aspect-[2/1] w-full"
+      className="relative group overflow-hidden bg-zinc-950 aspect-[2/1] md:aspect-[3/1] w-full"
     >
       {/* Main Slide Images */}
       <div

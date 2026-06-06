@@ -104,7 +104,7 @@ export default function ProductDetailView() {
                 key={idx}
                 onClick={() => setActiveImageIdx(idx)}
                 className={`relative aspect-square w-16 sm:w-full rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
-                  currentImageIdx === idx ? 'border-[#e11d48] scale-102 shadow-sm' : 'border-zinc-200 hover:border-zinc-400'
+                  currentImageIdx === idx ? 'border-[#e5484d] scale-102 shadow-sm' : 'border-zinc-200 hover:border-zinc-400'
                 }`}
                 style={{ backgroundColor: selectedProduct.colorHex || '#f4f4f5' }}
               >
@@ -112,7 +112,7 @@ export default function ProductDetailView() {
                   src={thumb}
                   alt={`Thumbnail ${idx + 1}`}
                   fill
-                  className="object-contain p-1"
+                  className="object-cover object-top"
                 />
               </button>
             ))}
@@ -120,7 +120,7 @@ export default function ProductDetailView() {
 
           {/* Main Display Image Frame */}
           <div
-            className="sm:col-span-10 order-1 sm:order-2 relative aspect-square rounded-[1.8rem] border border-zinc-150 p-8 flex items-center justify-center overflow-hidden"
+            className="sm:col-span-10 order-1 sm:order-2 relative aspect-square rounded-[1.8rem] border border-zinc-150 overflow-hidden"
             style={{ backgroundColor: selectedProduct.colorHex || '#f4f4f5' }}
           >
             {/* Heart wishlist toggle overlay */}
@@ -138,7 +138,7 @@ export default function ProductDetailView() {
                 src={thumbnails[currentImageIdx] || selectedProduct.image}
                 alt={selectedProduct.name}
                 fill
-                className="object-contain"
+                className="object-cover object-top"
                 priority
               />
             </div>
@@ -152,7 +152,7 @@ export default function ProductDetailView() {
           <div className="space-y-3">
             {/* Tag Badge */}
             {selectedProduct.discount && (
-              <span className="inline-block text-xs font-bold tracking-widest bg-rose-50 text-[#e11d48] border border-rose-100 rounded px-2.5 py-1 uppercase">
+              <span className="inline-block text-xs font-bold tracking-widest bg-rose-50 text-[#e5484d] border border-rose-100 rounded px-2.5 py-1 uppercase">
                 {selectedProduct.discount === 'NEW' || selectedProduct.discount === 'BEST SELLER' ? selectedProduct.discount : `${selectedProduct.discount} OFF`}
               </span>
             )}
@@ -203,7 +203,7 @@ export default function ProductDetailView() {
               <span>SIZE: <strong className="text-zinc-950 font-bold">{currentSize}</strong></span>
               <button
                 onClick={() => setShowSizeGuide(true)}
-                className="text-[11px] text-zinc-400 hover:text-[#e11d48] flex items-center gap-1.5 transition-colors border-b border-dashed border-zinc-300 pb-0.5"
+                className="text-[11px] text-zinc-400 hover:text-[#e5484d] flex items-center gap-1.5 transition-colors border-b border-dashed border-zinc-300 pb-0.5"
               >
                 <Info className="h-3.5 w-3.5" />
                 Size Guide
@@ -249,10 +249,10 @@ export default function ProductDetailView() {
               </button>
             </div>
 
-            {/* Deep Pink Add to Cart Button */}
+            {/* Red Add to Cart Button */}
             <button
               onClick={handleAddToCart}
-              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-[#e11d48] hover:bg-[#be123c] text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 text-xs tracking-wider"
+              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-[#e5484d] hover:bg-[#d8373d] text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 text-xs tracking-wider"
             >
               <ShoppingBag className="h-4.5 w-4.5" />
               ADD TO CART
@@ -336,7 +336,7 @@ export default function ProductDetailView() {
           <div className="relative bg-white rounded-3xl max-w-md w-full p-6 shadow-premium animate-fade-in border border-zinc-200">
             <div className="flex items-center justify-between pb-4 border-b border-zinc-100 mb-4">
               <h3 className="text-sm font-bold flex items-center gap-1.5">
-                <Info className="h-4.5 w-4.5 text-[#e11d48]" />
+                <Info className="h-4.5 w-4.5 text-[#e5484d]" />
                 SIZING GUIDE CHART
               </h3>
               <button onClick={() => setShowSizeGuide(false)} className="p-1 rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-black">
@@ -570,7 +570,7 @@ function ProductReviewsSection({ productId }) {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-[#e11d48] hover:bg-[#be123c] disabled:opacity-50 text-white font-extrabold rounded-xl transition-all shadow-md tracking-wider uppercase text-[10px] cursor-pointer"
+                className="w-full py-3 bg-[#e5484d] hover:bg-[#d8373d] disabled:opacity-50 text-white font-extrabold rounded-xl transition-all shadow-md tracking-wider uppercase text-[10px] cursor-pointer"
               >
                 {submitting ? 'Publishing...' : 'Submit Review'}
               </button>

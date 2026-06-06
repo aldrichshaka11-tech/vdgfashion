@@ -18,6 +18,31 @@ import Image from 'next/image';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
+// Helper to generate Google-style letter avatar
+const getGoogleAvatar = (name) => {
+  const initial = (name || 'U').trim().charAt(0).toUpperCase();
+  const colors = [
+    'bg-[#00897b]', // teal (matching the user's second image)
+    'bg-[#4285F4]', // Google Blue
+    'bg-[#EA4335]', // Google Red
+    'bg-[#34A853]', // Google Green
+    'bg-[#FBBC05]', // Google Yellow
+    'bg-[#ab47bc]', // Purple
+    'bg-[#f4511e]', // Orange
+    'bg-[#00acc1]', // Teal Light
+    'bg-[#3f51b5]', // Indigo
+    'bg-[#e91e63]'  // Pink
+  ];
+  const charCode = initial.charCodeAt(0) || 0;
+  const colorClass = colors[charCode % colors.length];
+  
+  return (
+    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-extrabold text-base ${colorClass} select-none border border-zinc-200/50`}>
+      {initial}
+    </div>
+  );
+};
+
 export default function Home() {
   const {
     products,
@@ -48,8 +73,9 @@ export default function Home() {
   const reviewsRef = React.useRef(null);
   const handleScrollReviews = (direction) => {
     if (reviewsRef.current) {
-      const scrollAmount = direction === 'left' ? -350 : 350;
-      reviewsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      const container = reviewsRef.current;
+      const scrollAmount = direction === 'left' ? -container.clientWidth : container.clientWidth;
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
@@ -176,23 +202,24 @@ export default function Home() {
 
         {/* Scrollable interior section */}
         <div className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="px-4 sm:px-8 py-6 sm:py-8 space-y-8 max-w-[1600px] w-full mx-auto flex-1">
+          <div className="flex-grow flex flex-col">
           
           {selectedProduct ? (
             /* High Fidelity detail page */
-            <div data-aos="fade-up">
+            <div data-aos="fade-up" className="px-4 sm:px-8 py-6 sm:py-8 space-y-8 max-w-[1600px] w-full mx-auto flex-1">
               <ProductDetailView />
             </div>
           ) : (
             /* Home Dashboard layout */
-            <div className="space-y-8">
+            <div className="flex-grow flex flex-col">
               
               {/* Hero Slider Banner with interactive indicators */}
-              <div data-aos="fade-up">
+              <div data-aos="fade-up" className="w-full">
                 <HeroSlider onShopClick={handleScrollToShop} />
               </div>
 
-              {/* Horizontal Categories track layout */}
+              <div className="px-4 sm:px-8 py-6 sm:py-8 space-y-8 max-w-[1600px] w-full mx-auto flex-1">
+                {/* Horizontal Categories track layout */}
               <div className="space-y-6" data-aos="fade-up">
                 <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
                   <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
@@ -381,7 +408,9 @@ export default function Home() {
                         matchedProduct = products[idx % products.length];
                       }
                     }
-                    const bannerImgSrc = matchedProduct?.image || banner.img || banner.image;
+                    const bannerImgSrc = (idx === 1 || banner.title?.toLowerCase().includes('hoodie'))
+                      ? '/products/baby_frock.png'
+                      : (matchedProduct?.image || banner.img || banner.image);
 
                     return (
                     <div key={banner.id || idx} className={`rounded-[2.5rem] p-6 sm:p-8 flex items-center justify-between gap-6 border-0 hover:shadow-md transition-all duration-300 min-h-[220px] ${
@@ -393,7 +422,9 @@ export default function Home() {
                         <img 
                           src={bannerImgSrc} 
                           alt={banner.title} 
-                          className="object-contain max-h-[195px] drop-shadow-md hover:scale-105 transition-transform duration-305"
+                          className={`object-contain max-h-[195px] drop-shadow-md transition-transform duration-305 ${
+                            bannerImgSrc.includes('baby_frock.png') ? 'scale-[1.45] hover:scale-[1.55]' : 'hover:scale-105'
+                          }`}
                         />
                       </div>
                       <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
@@ -445,9 +476,9 @@ export default function Home() {
                 <div className="rounded-[2.5rem] p-6 sm:p-8 bg-[#fdf0d5] flex items-center justify-between gap-6 border border-[#ebd7b1]/30 hover:shadow-md transition-all duration-300 min-h-[220px]">
                   <div className="relative w-1/3 aspect-square max-w-[155px] flex-shrink-0 flex items-center justify-center">
                     <img 
-                      src="/products/hoodie_pink.png" 
+                      src="/products/baby_frock.png" 
                       alt="Winter Hoodies Pink Hoodie" 
-                      className="object-contain max-h-[160px] drop-shadow-md hover:scale-105 transition-transform duration-305"
+                      className="object-contain max-h-[160px] drop-shadow-md transition-transform duration-305 scale-[1.45] hover:scale-[1.55]"
                     />
                   </div>
                   <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
@@ -469,7 +500,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 items-center">
                   
                   {/* Card 1 */}
-                  <div className="flex flex-col items-center text-center group cursor-pointer" onClick={() => { setSelectedCategory('Men'); setTimeout(() => handleScrollToShop(), 50); }}>
+                  <div className="flex flex-col items-center text-center group cursor-pointer" onClick={() => { setSelectedCategory('Men'); setCheckedCategories(['Men']); router.push('/categories'); }}>
                     <div className="relative w-full aspect-[4/5] overflow-hidden mb-5 rounded-sm">
                       <Image src="/now/1.png" alt="Elegant Fashion" fill className="object-cover" />
                       {/* Shining Effect Overlay */}
@@ -480,9 +511,9 @@ export default function Home() {
                   </div>
 
                   {/* Card 2 */}
-                  <div className="flex flex-col items-center text-center group cursor-pointer" onClick={() => { setSelectedCategory('Toys'); setTimeout(() => handleScrollToShop(), 50); }}>
+                  <div className="flex flex-col items-center text-center group cursor-pointer" onClick={() => { setSelectedCategory('Toys'); setCheckedCategories(['Toys']); router.push('/categories'); }}>
                     <div className="relative w-full aspect-[4/5] overflow-hidden mb-5 rounded-sm">
-                      <Image src="/now/2.png" alt="Lifestyle Collection" fill className="object-cover" />
+                      <Image src="/now/2.PNG" alt="Lifestyle Collection" fill className="object-cover object-left" />
                       {/* Shining Effect Overlay */}
                       <div className="absolute inset-0 z-10 before:absolute before:inset-0 before:-translate-x-full group-hover:before:animate-[shine_1.2s_ease-in-out] before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent block pointer-events-none"></div>
                     </div>
@@ -497,7 +528,7 @@ export default function Home() {
                       Stay ahead of the curve with our curated collection of the latest fashion trends. Shop now for fresh styles and must-have pieces!
                     </p>
                     <button 
-                      onClick={() => { setSelectedCategory('ALL'); setTimeout(() => handleScrollToShop(), 50); }}
+                      onClick={() => { setSelectedCategory('ALL'); setCheckedCategories([]); router.push('/categories'); }}
                       className="bg-[#212529] hover:bg-black text-white px-8 py-3.5 text-sm font-semibold transition-colors shadow-md rounded-sm"
                     >
                       Shop Now
@@ -555,128 +586,161 @@ export default function Home() {
 
               </div>
 
-              {/* Real Love, Real reviews Section */}
+              {/* Google Reviews Section */}
               <div className="space-y-8 pt-10 border-t border-zinc-200/60" data-aos="fade-up">
-                <h2 className="text-2xl sm:text-3xl font-black text-zinc-950 text-center tracking-tight">
-                  Real Love, Real reviews
-                </h2>
-                
-                <div className="relative flex items-center group px-4">
-
-                  {/* Reviews Cards Scrollable Track */}
-                  <div 
-                    ref={reviewsRef}
-                    className="flex gap-6 overflow-x-auto no-scrollbar pb-6 w-full snap-x scroll-smooth px-1.5"
-                  >
-                    {(reviews && reviews.length > 0 ? reviews.map((r, idx) => ({
-                        image: ["/review_girl_pink.png", "/review_boy_navy.png", "/review_boy_cream.png", "/review_boy_blue.png"][idx % 4],
-                        quote: r.comment,
-                        name: r.user_name,
-                        product: r.product_name || "vdgfashion",
-                        rating: r.rating,
-                        stickers: null
-                    })) : [
-                      {
-                        image: "/review_girl_pink.png",
-                        quote: "Lovely dress..",
-                        name: "Anonymous",
-                        product: "Rose Pink Weave Wrap...",
-                        stickers: null,
-                        rating: 5
-                      },
-                      {
-                        image: "/review_boy_navy.png",
-                        quote: "nice fabric, nice fit",
-                        name: "Preeti.",
-                        product: "Navy Blue Peplum Top",
-                        rating: 5,
-                        stickers: (
-                          <div className="absolute top-3 right-3 bg-[#eab308] text-zinc-950 text-[8.5px] font-black px-1.5 py-0.5 rounded-md rotate-12 select-none pointer-events-none shadow-sm flex items-center gap-0.5">
-                            <span>₹</span>
-                            <span>★</span>
-                          </div>
-                        )
-                      },
-                      {
-                        image: "/review_boy_cream.png",
-                        quote: "Very nice coord set loved it",
-                        name: "Anonymous",
-                        product: "Khaki Cream Crop Top",
-                        stickers: null,
-                        rating: 5
-                      },
-                      {
-                        image: "/review_boy_blue.png",
-                        quote: "I ordered 2 shirts and 2 tops. Love the fabric, it'...",
-                        name: "Gunasekharan Siva",
-                        product: "vdgfashion",
-                        rating: 5,
-                        stickers: (
-                          <div className="absolute top-3 right-3 bg-zinc-950 text-white rounded-full p-1 select-none pointer-events-none animate-pulse">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-yellow-400">
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                            </svg>
-                          </div>
-                        )
-                      },
-                      {
-                        image: "/review_girl_pink.png",
-                        quote: "Perfect fit, fast delivery! The quality of the material is exceptional.",
-                        name: "Sarah M.",
-                        product: "Organic Green T-Shirt",
-                        rating: 5,
-                        stickers: null
-                      }
-                    ]).map((review, idx) => (
-                      <div 
-                        key={idx}
-                        className="group w-[260px] sm:w-[280px] flex-shrink-0 bg-white border border-zinc-150 rounded-3xl p-4 vdgfashion-card-shadow flex flex-col justify-between items-center text-center snap-start transition-all duration-300 hover:shadow-md hover:-translate-y-1"
-                      >
-                        {/* Image with Gold Border & Stickers */}
-                        <div className="relative w-full aspect-square rounded-[1.85rem] overflow-hidden border-3 border-[#facc15] shadow-xs">
-                          <img 
-                            src={review.image} 
-                            alt={`Review ${idx + 1}`} 
-                            className="object-cover w-full h-full select-none transition-transform duration-500 group-hover:scale-110"
-                          />
-                          {review.stickers}
-                        </div>
-                        
-                        {/* Quote & Stars & Customer Details */}
-                        <div className="mt-4 flex flex-col items-center flex-1 w-full justify-between">
-                          <p className="text-sm sm:text-base font-bold text-zinc-800 leading-relaxed line-clamp-2 px-1">
-                            &quot;{review.quote}&quot;
-                          </p>
-                          
-                          <div className="mt-3 flex flex-col items-center">
-                            {/* Stars */}
-                            <div className="flex gap-1 mb-2">
-                              {[...Array(review.rating || 5)].map((_, i) => (
-                                <svg key={i} className="h-6 w-6 fill-[#facc15] text-[#facc15] drop-shadow-xs" viewBox="0 0 24 24">
-                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                                </svg>
-                              ))}
-                            </div>
-                            
-                            {/* Verified Name */}
-                            <div className="flex items-center gap-1">
-                              <span className="text-sm font-extrabold text-zinc-900">{review.name}</span>
-                              <svg className="h-4 w-4 text-zinc-900 fill-current" viewBox="0 0 24 24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                              </svg>
-                            </div>
-                            
-                            {/* Product Name */}
-                            <span className="text-xs text-zinc-500 font-extrabold tracking-wide mt-1 uppercase">
-                              {review.product}
-                            </span>
-                          </div>
-                        </div>
-
+                <div className="bg-[#f8f9fa] border border-zinc-200/80 rounded-[2rem] p-6 sm:p-8 vdgfashion-card-shadow space-y-6 sm:space-y-8">
+                  {/* Google Reviews Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-200/60 pb-6">
+                    <div className="flex flex-col items-center sm:items-start gap-1">
+                      <div className="flex items-center gap-2">
+                        {/* Google Colored Logo */}
+                        <span className="text-2xl sm:text-3xl font-bold tracking-tight select-none">
+                          <span className="text-[#4285F4]">G</span>
+                          <span className="text-[#EA4335]">o</span>
+                          <span className="text-[#FBBC05]">o</span>
+                          <span className="text-[#4285F4]">g</span>
+                          <span className="text-[#34A853]">l</span>
+                          <span className="text-[#EA4335]">e</span>
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-semibold text-[#3c4043] tracking-tight">Reviews</span>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-lg font-bold text-[#202124]">(4.8)</span>
+                        <div className="flex gap-0.5">
+                          {[...Array(4)].map((_, i) => (
+                            <svg key={i} className="h-5 w-5 fill-[#facc15] text-[#facc15]" viewBox="0 0 24 24">
+                              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                          ))}
+                          <svg className="h-5 w-5 text-zinc-300" viewBox="0 0 24 24">
+                            <defs>
+                              <linearGradient id="grad-4.8">
+                                <stop offset="80%" stopColor="#facc15" />
+                                <stop offset="80%" stopColor="#e4e4e7" />
+                              </linearGradient>
+                            </defs>
+                            <path fill="url(#grad-4.8)" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-zinc-500 font-medium">(191 reviews)</span>
+                      </div>
+                    </div>
+                    
+                    {/* Share Feedback Button */}
+                    <button 
+                      onClick={() => alert("Thank you for your interest! Review submissions are currently closed.")}
+                      className="self-center bg-[#1a73e8] hover:bg-[#1557b0] text-white px-5 py-2.5 rounded-lg text-sm font-semibold tracking-wide transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+                    >
+                      Share your feedback
+                    </button>
                   </div>
 
+                  {/* Reviews Carousel Wrapper */}
+                  <div className="relative flex items-center group px-12">
+                    {/* Left Navigation Arrow */}
+                    <button
+                      onClick={() => handleScrollReviews('left')}
+                      className="absolute left-1 top-1/2 -translate-y-1/2 h-10 w-10 bg-white hover:bg-zinc-50 text-zinc-700 rounded-full flex items-center justify-center border border-zinc-200/80 shadow-md transition-all z-30 hover:scale-105 active:scale-95 cursor-pointer pointer-events-auto"
+                      aria-label="Previous Reviews"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+
+                    {/* Reviews Scroll Track */}
+                    <div
+                      ref={reviewsRef}
+                      className="flex gap-6 overflow-x-auto no-scrollbar pb-4 w-full snap-x scroll-smooth px-1"
+                    >
+                      {(reviews && reviews.length > 0 ? reviews.map((r, idx) => ({
+                          image: ["/review_girl_pink.png", "/review_boy_navy.png", "/review_boy_cream.png", "/review_boy_blue.png"][idx % 4],
+                          quote: r.comment,
+                          name: r.user_name,
+                          location: r.product_name || "Verified Buyer",
+                          rating: r.rating || 5
+                      })) : [
+                        {
+                          image: "/review_girl_pink.png",
+                          quote: "Lovely dress. The fit is perfect and the material is really premium. Excellent stitch alignment!",
+                          name: "Gayathri R.",
+                          location: "Rose Pink Weave Wrap Dress",
+                          rating: 5
+                        },
+                        {
+                          image: "/review_boy_navy.png",
+                          quote: "Nice fabric, nice fit. I ordered a size 6 for my kid and it fits perfectly. Stitching is very clean and boutique quality.",
+                          name: "Preeti S.",
+                          location: "Navy Blue Peplum Top",
+                          rating: 5
+                        },
+                        {
+                          image: "/review_boy_cream.png",
+                          quote: "Very nice coord set, loved it. Kids wear should be this comfortable. Fast shipping too!",
+                          name: "Anand Kumar",
+                          location: "Khaki Cream Crop Top",
+                          rating: 5
+                        },
+                        {
+                          image: "/review_boy_blue.png",
+                          quote: "I ordered 2 shirts and 2 tops. Love the fabric, it's very soft and breathable for children.",
+                          name: "Gunasekharan Siva",
+                          location: "Coimbatore, Tamil Nadu",
+                          rating: 5
+                        },
+                        {
+                          image: "/review_girl_pink.png",
+                          quote: "Perfect fit, fast delivery! The quality of the material is exceptional. Will buy again.",
+                          name: "Sarah M.",
+                          location: "Organic Green T-Shirt",
+                          rating: 5
+                        }
+                      ]).map((review, idx) => (
+                        <div
+                          key={idx}
+                          className="w-full sm:w-[340px] flex-shrink-0 bg-white border border-zinc-200/60 rounded-2xl p-5 sm:p-6 snap-start flex flex-col justify-between min-h-[220px] shadow-2xs hover:shadow-xs transition-shadow duration-200"
+                        >
+                          {/* Card Top: Stars */}
+                           <div className="flex gap-0.5 mb-3">
+                            {[...Array(review.rating || 5)].map((_, i) => (
+                              <svg key={i} className="h-4.5 w-4.5 fill-[#facc15] text-[#facc15]" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                              </svg>
+                            ))}
+                          </div>
+
+                          {/* Card Middle: Quote / Comments */}
+                          <div className="flex-1 flex flex-col justify-between">
+                            <p className="text-zinc-700 text-sm sm:text-[14.5px] leading-relaxed line-clamp-4 font-normal">
+                              &quot;{review.quote}&quot;
+                            </p>
+                            <button 
+                              onClick={() => alert(`Review by ${review.name}: \n"${review.quote}"`)}
+                              className="text-zinc-400 hover:text-zinc-655 text-[11px] font-bold text-left mt-2 hover:underline cursor-pointer"
+                            >
+                              Read more
+                            </button>
+                          </div>
+
+                          {/* Card Bottom: User Row */}
+                          <div className="flex items-center gap-3.5 mt-5 pt-4 border-t border-zinc-100">
+                            {getGoogleAvatar(review.name)}
+                            <div className="flex flex-col text-left">
+                              <span className="text-sm font-extrabold text-[#202124]">{review.name}</span>
+                              <span className="text-[10px] text-zinc-500 font-bold tracking-wide mt-0.5 uppercase">{review.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Right Navigation Arrow */}
+                    <button
+                      onClick={() => handleScrollReviews('right')}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 bg-white hover:bg-zinc-50 text-zinc-700 rounded-full flex items-center justify-center border border-zinc-200/80 shadow-md transition-all z-30 hover:scale-105 active:scale-95 cursor-pointer pointer-events-auto"
+                      aria-label="Next Reviews"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Footer Follow Callout */}
@@ -686,8 +750,9 @@ export default function Home() {
                   </h4>
                 </div>
               </div>
-
             </div>
+
+          </div>
           )}
           </div>
           <Footer />
