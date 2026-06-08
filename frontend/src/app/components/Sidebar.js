@@ -111,7 +111,7 @@ export default function Sidebar({ className = '' }) {
           </div>
 
           {/* Shop Now Action Button */}
-          <button
+          <button 
             onClick={() => { setSelectedProduct(null); setSelectedCategory('ALL'); router.push('/categories'); }}
             className="mt-4 self-start bg-white text-[#5c23d4] px-4.5 py-2.5 rounded-full text-[10px] font-black tracking-wide shadow-md transition-all hover:scale-105 active:scale-95 duration-200 shrink-0 cursor-pointer"
           >
