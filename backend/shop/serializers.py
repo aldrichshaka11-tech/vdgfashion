@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner, Review, SiteSettings
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -145,7 +145,7 @@ class HeroBannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HeroBanner
-        fields = ['id', 'title', 'subtitle', 'image', 'src', 'alt', 'link', 'order']
+        fields = ['id', 'title', 'subtitle', 'image', 'src', 'alt', 'link', 'order', 'is_default', 'is_active']
 
     def get_src(self, obj):
         if obj.image:
@@ -154,6 +154,24 @@ class HeroBannerSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+
+class MobileBannerSerializer(serializers.ModelSerializer):
+    src = serializers.SerializerMethodField()
+    image = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = MobileBanner
+        fields = ['id', 'title', 'subtitle', 'image', 'src', 'alt', 'link', 'order', 'is_default', 'is_active']
+
+    def get_src(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
 
 
 class CategoryItemSerializer(serializers.ModelSerializer):

@@ -105,7 +105,7 @@ export default function ProductCard({ product }) {
               src={product.image}
               alt={product.name}
               fill
-              className="object-cover object-top"
+              className={product.image && product.image.toLowerCase().includes('.png') ? "object-contain p-2" : "object-cover"}
               priority
             />
           </div>

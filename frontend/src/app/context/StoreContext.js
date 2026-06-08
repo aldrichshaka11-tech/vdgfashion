@@ -84,23 +84,42 @@ export function StoreProvider({ children }) {
   const defaultBanners = [
     {
       id: 'default-1',
-      src: '/banner/banner1.png',
+      src: '/banner/11.webp',
       alt: 'VGD Fashion Banner 1'
     },
     {
       id: 'default-2',
-      src: '/banner/chat1 (1).png',
+      src: '/banner/12.webp',
       alt: 'VGD Fashion Banner 2'
     },
     {
       id: 'default-3',
-      src: '/banner/chat1 (2).png',
+      src: '/banner/13.webp',
+      alt: 'VGD Fashion Banner 3'
+    }
+  ];
+
+  const defaultMobileBanners = [
+    {
+      id: 'default-mobile-1',
+      src: '/banner/21.webp',
+      alt: 'VGD Fashion Banner 1'
+    },
+    {
+      id: 'default-mobile-2',
+      src: '/banner/22.webp',
+      alt: 'VGD Fashion Banner 2'
+    },
+    {
+      id: 'default-mobile-3',
+      src: '/banner/23.webp',
       alt: 'VGD Fashion Banner 3'
     }
   ];
 
   // Storefront dynamic layouts (CMS components)
   const [heroBanners, setHeroBanners] = useState(defaultBanners);
+  const [mobileBanners, setMobileBanners] = useState(defaultMobileBanners);
   const [categoryItems, setCategoryItems] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
   const [marketingBanners, setMarketingBanners] = useState([]);
@@ -194,8 +213,8 @@ export function StoreProvider({ children }) {
       })
       .catch(() => {});
 
-    // Hero Banners
-    fetch('http://127.0.0.1:8000/api/hero-banners/')
+    // Hero Banners (Desktop)
+    fetch('http://127.0.0.1:8000/api/hero-banners/', { cache: 'no-store' })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         let mergedBanners = [...defaultBanners];
@@ -206,26 +225,46 @@ export function StoreProvider({ children }) {
             if (src && !src.startsWith('http') && !src.startsWith('/')) src = `http://127.0.0.1:8000/media/${src}`;
             
             const index = (b.order || 1) - 1;
-            if (index >= 0 && index < 3 && src) {
-              mergedBanners[index] = { ...mergedBanners[index], ...b, src };
+            if (index >= 0 && index < 3) {
+              mergedBanners[index] = { 
+                ...mergedBanners[index], 
+                ...b, 
+                src: src || mergedBanners[index].src 
+              };
             }
           });
         }
-        // Force the 2nd and 3rd sliders to use custom local images as requested
-        mergedBanners[1] = {
-          ...mergedBanners[1],
-          src: '/banner/chat1 (1).png',
-          alt: 'VGD Fashion Banner 2'
-        };
-        mergedBanners[2] = {
-          ...mergedBanners[2],
-          src: '/banner/chat1 (2).png',
-          alt: 'VGD Fashion Banner 3'
-        };
         setHeroBanners(mergedBanners);
       })
       .catch(() => {
         setHeroBanners(defaultBanners);
+      });
+
+    // Mobile Banners
+    fetch('http://127.0.0.1:8000/api/mobile-banners/', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        let mergedMobileBanners = [...defaultMobileBanners];
+        if (data && data.length > 0) {
+          data.forEach(b => {
+            let src = b.src || b.image;
+            if (src && src.startsWith('/media/')) src = `http://127.0.0.1:8000${src}`;
+            if (src && !src.startsWith('http') && !src.startsWith('/')) src = `http://127.0.0.1:8000/media/${src}`;
+            
+            const index = (b.order || 1) - 1;
+            if (index >= 0 && index < 3) {
+              mergedMobileBanners[index] = { 
+                ...mergedMobileBanners[index], 
+                ...b, 
+                src: src || mergedMobileBanners[index].src
+              };
+            }
+          });
+        }
+        setMobileBanners(mergedMobileBanners);
+      })
+      .catch(() => {
+        setMobileBanners(defaultMobileBanners);
       });
 
     // Categories
@@ -463,6 +502,7 @@ export function StoreProvider({ children }) {
       value={{
         products,
         heroBanners,
+        mobileBanners,
         categoryItems,
         allCategories,
         marketingBanners,

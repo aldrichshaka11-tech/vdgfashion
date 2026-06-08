@@ -9,7 +9,7 @@ django.setup()
 
 from django.core.files import File
 from django.core.cache import cache
-from shop.models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, HeroBanner, CategoryItem, MarketingBanner, Order, Payment, SiteSettings
+from shop.models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Order, Payment, SiteSettings
 
 def clean_database():
     print("--- Cleaning database records ---")
@@ -23,6 +23,7 @@ def clean_database():
     Product.objects.all().delete()
     Category.objects.all().delete()
     HeroBanner.objects.all().delete()
+    MobileBanner.objects.all().delete()
     CategoryItem.objects.all().delete()
     MarketingBanner.objects.all().delete()
     SiteSettings.objects.all().delete()
@@ -404,26 +405,93 @@ def seed_database():
 
     # --- 3. SEED HERO BANNERS ---
     print("Seeding Hero Banners...")
-    banners_data = [
-        {"title": "New Born Collections", "subtitle": "Up to 50% Off on cute organic cotton wear", "filename": "banner1.png", "alt": "New Born Collection Banner", "link": "/shop?category=Apparel", "order": 1},
-        {"title": "Activity Learning Toys", "subtitle": "Creative sensory sets for growing minds", "filename": "banner2.png", "alt": "Montessori Toys Banner", "link": "/shop?category=Toys", "order": 2},
-        {"title": "Premium Kids Accessories", "subtitle": "Durable school bags, shoes, and safety gear", "filename": "banner3.png", "alt": "Kids Accessories Banner", "link": "/shop?category=Accessories", "order": 3},
+    hero_banners_data = [
+        {
+            "title": "New Born Collections", 
+            "subtitle": "Up to 50% Off on cute organic cotton wear", 
+            "filename": "11.webp", 
+            "alt": "New Born Collection Banner", 
+            "link": "/shop?category=Apparel", 
+            "order": 1
+        },
+        {
+            "title": "Activity Learning Toys", 
+            "subtitle": "Creative sensory sets for growing minds", 
+            "filename": "12.webp", 
+            "alt": "Montessori Toys Banner", 
+            "link": "/shop?category=Toys", 
+            "order": 2
+        },
+        {
+            "title": "Premium Kids Accessories", 
+            "subtitle": "Durable school bags, shoes, and safety gear", 
+            "filename": "13.webp", 
+            "alt": "Kids Accessories Banner", 
+            "link": "/shop?category=Accessories", 
+            "order": 3
+        },
     ]
     
-    for ban in banners_data:
+    for ban in hero_banners_data:
         banner = HeroBanner(
             title=ban["title"],
             subtitle=ban["subtitle"],
             alt=ban["alt"],
             link=ban["link"],
-            order=ban["order"]
+            order=ban["order"],
+            is_default=True
         )
         src_img = os.path.join(frontend_banner_dir, ban["filename"])
         file_obj = get_file_object(src_img)
         if file_obj:
             banner.image.save(ban["filename"], file_obj, save=False)
         banner.save()
-        print(f"   Created Banner: {banner.title}")
+        print(f"   Created Desktop HeroBanner: {banner.title}")
+
+    # --- 3b. SEED MOBILE BANNERS ---
+    print("Seeding Mobile Banners...")
+    mobile_banners_data = [
+        {
+            "title": "New Born Collections (Mobile)", 
+            "subtitle": "Up to 50% Off on cute organic cotton wear", 
+            "filename": "21.webp", 
+            "alt": "New Born Collection Banner Mobile", 
+            "link": "/shop?category=Apparel", 
+            "order": 1
+        },
+        {
+            "title": "Activity Learning Toys (Mobile)", 
+            "subtitle": "Creative sensory sets for growing minds", 
+            "filename": "22.webp", 
+            "alt": "Montessori Toys Banner Mobile", 
+            "link": "/shop?category=Toys", 
+            "order": 2
+        },
+        {
+            "title": "Premium Kids Accessories (Mobile)", 
+            "subtitle": "Durable school bags, shoes, and safety gear", 
+            "filename": "23.webp", 
+            "alt": "Kids Accessories Banner Mobile", 
+            "link": "/shop?category=Accessories", 
+            "order": 3
+        },
+    ]
+    
+    for ban in mobile_banners_data:
+        banner = MobileBanner(
+            title=ban["title"],
+            subtitle=ban["subtitle"],
+            alt=ban["alt"],
+            link=ban["link"],
+            order=ban["order"],
+            is_default=True
+        )
+        src_img = os.path.join(frontend_banner_dir, ban["filename"])
+        file_obj = get_file_object(src_img)
+        if file_obj:
+            banner.image.save(ban["filename"], file_obj, save=False)
+        banner.save()
+        print(f"   Created MobileBanner: {banner.title}")
 
     # --- 4. SEED CATEGORY ITEMS ---
     print("Seeding Category Grid Items...")

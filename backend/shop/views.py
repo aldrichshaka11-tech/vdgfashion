@@ -4,10 +4,10 @@ from rest_framework.decorators import action
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, CategoryItem, MarketingBanner, Review, SiteSettings
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings
 from .serializers import (
     CategorySerializer, ProductSerializer, OrderCreateSerializer,
-    HeroBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
+    HeroBannerSerializer, MobileBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
     PaymentSerializer, ReviewSerializer, SiteSettingsSerializer
 )
 
@@ -241,6 +241,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             Category.objects.all().delete()
             Order.objects.all().delete()
             HeroBanner.objects.all().delete()
+            MobileBanner.objects.all().delete()
             return Response({'success': True})
         except Exception as e:
             return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -296,6 +297,28 @@ class HeroBannerViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class MobileBannerViewSet(viewsets.ModelViewSet):
+    queryset = MobileBanner.objects.filter(is_active=True).order_by('order')
+    serializer_class = MobileBannerSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    @action(detail=False, methods=['POST'], url_path='upload-image')
+    def upload_image(self, request):
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            path = _save_file(file_obj, 'banners/mobile')
+            url = f"{settings.MEDIA_URL}{path}" if not path.startswith('/') else path
+            return Response({'success': True, 'path': path, 'url': url})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class CategoryItemViewSet(viewsets.ModelViewSet):
     queryset = CategoryItem.objects.filter(is_active=True).order_by('order')
     serializer_class = CategoryItemSerializer
@@ -324,12 +347,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class SiteSettingsViewSet(viewsets.ViewSet):
     def list(self, request):
         settings_obj, _ = SiteSettings.objects.get_or_create(id=1)
-        serializer = SiteSettingsSerializer(settings_obj)
+        serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
         return Response(serializer.data)
 
     def create(self, request):
         settings_obj, _ = SiteSettings.objects.get_or_create(id=1)
-        serializer = SiteSettingsSerializer(settings_obj, data=request.data, partial=True)
+        serializer = SiteSettingsSerializer(settings_obj, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -344,6 +367,6 @@ class SiteSettingsViewSet(viewsets.ViewSet):
         settings_obj.logo_image = request.FILES['image']
         settings_obj.save()
         
-        serializer = SiteSettingsSerializer(settings_obj)
+        serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
         return Response(serializer.data)
 

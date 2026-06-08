@@ -112,7 +112,7 @@ export default function ProductDetailView() {
                   src={thumb}
                   alt={`Thumbnail ${idx + 1}`}
                   fill
-                  className="object-cover object-top"
+                  className={thumb && thumb.toLowerCase().includes('.png') ? "object-contain p-1" : "object-cover"}
                 />
               </button>
             ))}
@@ -138,7 +138,7 @@ export default function ProductDetailView() {
                 src={thumbnails[currentImageIdx] || selectedProduct.image}
                 alt={selectedProduct.name}
                 fill
-                className="object-cover object-top"
+                className={(thumbnails[currentImageIdx] || selectedProduct.image || '').toLowerCase().includes('.png') ? "object-contain p-4" : "object-cover"}
                 priority
               />
             </div>

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, CategoryItem, MarketingBanner, SiteSettings
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, SiteSettings
 
 class ProductColorInline(admin.TabularInline):
     model = ProductColor
@@ -109,8 +109,21 @@ class OrderAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
+from django.db import models
+from django import forms
+from django.forms.widgets import FileInput
+
+class HeroBannerForm(forms.ModelForm):
+    class Meta:
+        model = HeroBanner
+        fields = '__all__'
+        widgets = {
+            'image': FileInput(),
+        }
+
 @admin.register(HeroBanner)
 class HeroBannerAdmin(admin.ModelAdmin):
+    form = HeroBannerForm
     list_display = ('id', 'title', 'alt', 'image_preview', 'order', 'is_active', 'created_at')
     list_editable = ('order', 'is_active')
     search_fields = ('title', 'alt')
@@ -121,7 +134,7 @@ class HeroBannerAdmin(admin.ModelAdmin):
         ('Content', {
             'fields': ('title', 'subtitle', 'alt', 'link')
         }),
-        ('Image Upload', {
+        ('Desktop Image Upload', {
             'fields': ('image', 'image_preview_detail')
         }),
         ('Display Settings', {
@@ -140,6 +153,91 @@ class HeroBannerAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" style="max-width: 200px; max-height: 200px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; padding: 4px; background: #fff;" />', obj.image.url)
         return format_html('<span style="color: #a0aec0;">No image uploaded yet. Select an image above and click save.</span>')
     image_preview_detail.short_description = 'Current Image Preview'
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and getattr(obj, 'is_default', False):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        non_default_queryset = queryset.filter(is_default=False)
+        if non_default_queryset.count() < queryset.count():
+            self.message_user(request, "Default banners cannot be deleted.", level='warning')
+        super().delete_queryset(request, non_default_queryset)
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    def action_checkbox(self, obj):
+        if getattr(obj, 'is_default', False):
+            return ""
+        return super().action_checkbox(obj)
+
+
+class MobileBannerForm(forms.ModelForm):
+    class Meta:
+        model = MobileBanner
+        fields = '__all__'
+        widgets = {
+            'image': FileInput(),
+        }
+
+@admin.register(MobileBanner)
+class MobileBannerAdmin(admin.ModelAdmin):
+    form = MobileBannerForm
+    list_display = ('id', 'title', 'alt', 'image_preview', 'order', 'is_active', 'created_at')
+    list_editable = ('order', 'is_active')
+    search_fields = ('title', 'alt')
+    list_filter = ('is_active',)
+    readonly_fields = ('image_preview_detail',)
+    
+    fieldsets = (
+        ('Content', {
+            'fields': ('title', 'subtitle', 'alt', 'link')
+        }),
+        ('Mobile Image Upload', {
+            'fields': ('image', 'image_preview_detail')
+        }),
+        ('Display Settings', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" />', obj.image.url)
+        return format_html('<span style="color: #a0aec0; font-size: 11px;">❌ No Image</span>')
+    image_preview.short_description = 'Preview'
+
+    def image_preview_detail(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="max-width: 200px; max-height: 200px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; padding: 4px; background: #fff;" />', obj.image.url)
+        return format_html('<span style="color: #a0aec0;">No image uploaded yet. Select an image above and click save.</span>')
+    image_preview_detail.short_description = 'Current Image Preview'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def delete_queryset(self, request, queryset):
+        pass
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    def action_checkbox(self, obj):
+        return ""
+
+
+
 
 @admin.register(CategoryItem)
 class CategoryItemAdmin(admin.ModelAdmin):

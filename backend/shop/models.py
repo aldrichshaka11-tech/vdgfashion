@@ -232,6 +232,29 @@ class HeroBanner(models.Model):
     alt = models.CharField(max_length=255)
     link = models.CharField(max_length=500, blank=True)
     order = models.IntegerField(default=0)
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title
+
+    def delete(self, *args, **kwargs):
+        self.is_active = False
+        self.save()
+
+
+class MobileBanner(models.Model):
+    title = models.CharField(max_length=255)
+    subtitle = models.CharField(max_length=255, blank=True)
+    image = models.ImageField(upload_to='banners/mobile/', max_length=500)
+    alt = models.CharField(max_length=255)
+    link = models.CharField(max_length=500, blank=True)
+    order = models.IntegerField(default=0)
+    is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

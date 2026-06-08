@@ -8,7 +8,7 @@ import {
   UserCheck, ClipboardList, Search, Bell, Moon, Sun, ChevronRight, ChevronDown,
   ArrowUpRight, RefreshCcw, CheckCircle, Database, Trash2, Edit, Plus, Upload, X,
   ShoppingBag, Wallet, Menu, LogOut, Filter,
-  Clock, Truck, MapPin, XCircle
+  Clock, Truck, MapPin, XCircle, Heart
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
@@ -206,6 +206,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [mobileBanners, setMobileBanners] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [userPage, setUserPage] = useState(1);
@@ -271,7 +272,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const res = await fetch('http://127.0.0.1:8000/api/settings/upload-logo/', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
         },
         body: formData,
       });
@@ -300,49 +301,74 @@ function DashboardPortal({ onLogout, adminUser }) {
   // Analytics states
   const [analyticsChartMetric, setAnalyticsChartMetric] = useState('revenue');
   const [hoveredPointIndex, setHoveredPointIndex] = useState(null);
+  const [analyticsTimeframe, setAnalyticsTimeframe] = useState('week');
+  const [customerGrowthTimeframe, setCustomerGrowthTimeframe] = useState('month');
 
-  // 14 days dynamic analytics calculation
-  const analytics14Days = useMemo(() => {
-    const days = [];
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      days.push({
-        dateStr: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-        dateKey: d.toDateString(),
-        ordersCount: 0,
-        revenue: 0
+  // Dynamic analytics calculation
+  const analyticsData = useMemo(() => {
+    const dataPoints = [];
+    
+    if (analyticsTimeframe === 'year') {
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        dataPoints.push({
+          dateStr: d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+          month: d.getMonth(),
+          year: d.getFullYear(),
+          ordersCount: 0,
+          revenue: 0
+        });
+      }
+      orders.forEach(o => {
+        if (!o.created_at) return;
+        const oDate = new Date(o.created_at);
+        const matchMonth = dataPoints.find(dp => dp.month === oDate.getMonth() && dp.year === oDate.getFullYear());
+        if (matchMonth) {
+          matchMonth.ordersCount += 1;
+          matchMonth.revenue += parseFloat(o.total_amount || 0);
+        }
+      });
+    } else {
+      let daysCount = analyticsTimeframe === 'month' ? 30 : 7;
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dataPoints.push({
+          dateStr: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          dateKey: d.toDateString(),
+          ordersCount: 0,
+          revenue: 0
+        });
+      }
+      orders.forEach(o => {
+        if (!o.created_at) return;
+        const oDate = new Date(o.created_at);
+        const oDateKey = oDate.toDateString();
+        const matchDay = dataPoints.find(d => d.dateKey === oDateKey);
+        if (matchDay) {
+          matchDay.ordersCount += 1;
+          matchDay.revenue += parseFloat(o.total_amount || 0);
+        }
       });
     }
-
-    orders.forEach(o => {
-      if (!o.created_at) return;
-      const oDate = new Date(o.created_at);
-      const oDateKey = oDate.toDateString();
-      const matchDay = days.find(d => d.dateKey === oDateKey);
-      if (matchDay) {
-        matchDay.ordersCount += 1;
-        matchDay.revenue += parseFloat(o.total_amount || 0);
-      }
-    });
-
-    return days;
-  }, [orders]);
+    return dataPoints;
+  }, [orders, analyticsTimeframe]);
 
   const maxChartVal = useMemo(() => {
-    const vals = analytics14Days.map(d => analyticsChartMetric === 'revenue' ? d.revenue : d.ordersCount);
+    const vals = analyticsData.map(d => analyticsChartMetric === 'revenue' ? d.revenue : d.ordersCount);
     const max = Math.max(...vals);
     return max === 0 ? 10 : max;
-  }, [analytics14Days, analyticsChartMetric]);
+  }, [analyticsData, analyticsChartMetric]);
 
   const points = useMemo(() => {
-    return analytics14Days.map((d, i) => {
+    return analyticsData.map((d, i) => {
       const val = analyticsChartMetric === 'revenue' ? d.revenue : d.ordersCount;
-      const x = 40 + (i / 13) * 420;
+      const x = 40 + (i / Math.max(1, analyticsData.length - 1)) * 420;
       const y = 160 - (val / maxChartVal) * 120;
       return { x, y, val, date: d.dateStr };
     });
-  }, [analytics14Days, analyticsChartMetric, maxChartVal]);
+  }, [analyticsData, analyticsChartMetric, maxChartVal]);
 
   const pathD = useMemo(() => {
     return points.length > 0 
@@ -443,23 +469,38 @@ function DashboardPortal({ onLogout, adminUser }) {
     return orders.filter(o => parseFloat(o.discount_amount || 0) > 0).length;
   }, [orders]);
 
-  // Dynamic Category Sales Share calculated from active registry products
+  // Dynamic Category Sales Share calculated from active orders and products
   const categoryShares = useMemo(() => {
-    if (products.length === 0) return [];
-    const groupCounts = {};
-    products.forEach(p => {
-      const cat = p.category_name || 'Apparel';
-      groupCounts[cat] = (groupCounts[cat] || 0) + 1;
+    if (orders.length === 0 || products.length === 0) return [];
+    
+    const catRevenue = {};
+    let totalRevenue = 0;
+    
+    orders.forEach(o => {
+      (o.items || []).forEach(item => {
+        const pid = item.product_id || item.product;
+        const product = products.find(p => p.id === pid);
+        if (product) {
+          const cat = product.category_name || 'Uncategorized';
+          const price = parseFloat(item.price || product.price || 0);
+          const qty = parseInt(item.quantity || 1);
+          const rev = price * qty;
+          
+          catRevenue[cat] = (catRevenue[cat] || 0) + rev;
+          totalRevenue += rev;
+        }
+      });
     });
 
-    const total = products.length;
-    return Object.entries(groupCounts)
-      .map(([name, count]) => {
-        const percentage = Math.round((count / total) * 100);
-        return { name, count, percentage };
+    if (totalRevenue === 0) return [];
+
+    return Object.entries(catRevenue)
+      .map(([name, rev]) => {
+        const percentage = Math.round((rev / totalRevenue) * 100);
+        return { name, count: rev, percentage };
       })
       .sort((a, b) => b.count - a.count);
-  }, [products]);
+  }, [orders, products]);
 
   // SVG Donut slice stroke calculations
   const donutSlices = useMemo(() => {
@@ -515,28 +556,59 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   // Customer Growth Data from real orders only
   const customerGrowthData = useMemo(() => {
-    const ordersByDate = {};
-    orders.forEach(o => {
-      if (o.created_at) {
-        const dateStr = new Date(o.created_at).toISOString().split('T')[0];
-        ordersByDate[dateStr] = (ordersByDate[dateStr] || 0) + 1;
-      }
-    });
     const data = [];
     const now = new Date();
-    for (let i = 14; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const count = ordersByDate[dateStr] || 0;
-      data.push({
-        label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: count,
-        realOrders: count
+    
+    if (customerGrowthTimeframe === 'year') {
+      const ordersByMonth = {};
+      orders.forEach(o => {
+        if (o.created_at) {
+          const d = new Date(o.created_at);
+          const monthStr = `${d.getFullYear()}-${d.getMonth()}`;
+          ordersByMonth[monthStr] = (ordersByMonth[monthStr] || 0) + 1;
+        }
       });
+      
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now);
+        d.setMonth(now.getMonth() - i);
+        const monthStr = `${d.getFullYear()}-${d.getMonth()}`;
+        const count = ordersByMonth[monthStr] || 0;
+        data.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          value: count,
+          realOrders: count
+        });
+      }
+    } else {
+      const ordersByDate = {};
+      orders.forEach(o => {
+        if (o.created_at) {
+          const dateStr = new Date(o.created_at).toISOString().split('T')[0];
+          ordersByDate[dateStr] = (ordersByDate[dateStr] || 0) + 1;
+        }
+      });
+      
+      let daysCount = customerGrowthTimeframe === 'month' ? 30 : 7;
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const count = ordersByDate[dateStr] || 0;
+        data.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: count,
+          realOrders: count
+        });
+      }
     }
     return data;
-  }, [orders]);
+  }, [orders, customerGrowthTimeframe]);
+
+  const maxCustomerGrowthVal = useMemo(() => {
+    const max = Math.max(...customerGrowthData.map(d => d.value));
+    return max === 0 ? 10 : max;
+  }, [customerGrowthData]);
 
   // Dynamic notifications from real data
   const notifications = useMemo(() => {
@@ -616,8 +688,10 @@ function DashboardPortal({ onLogout, adminUser }) {
           setSelectedAdminCategory(prev => prev || rootCats[0].name);
         }
       }
-      const banRes = await fetch('http://127.0.0.1:8000/api/hero-banners/');
+      const banRes = await fetch('http://127.0.0.1:8000/api/hero-banners/', { cache: 'no-store' });
       if (banRes.ok) setBanners(await banRes.json());
+      const mobBanRes = await fetch('http://127.0.0.1:8000/api/mobile-banners/', { cache: 'no-store' });
+      if (mobBanRes.ok) setMobileBanners(await mobBanRes.json());
       const revRes = await fetch('http://127.0.0.1:8000/api/reviews/');
       if (revRes.ok) setReviews(await revRes.json());
       const usersRes = await fetch('http://127.0.0.1:8000/api/auth/users/');
@@ -1047,6 +1121,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
   const [uploadingBannerSlot, setUploadingBannerSlot] = useState(null);
+  const [uploadingMobileBannerSlot, setUploadingMobileBannerSlot] = useState(null);
+  const [bannerTypeTab, setBannerTypeTab] = useState('desktop');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const handleDeleteBanner = async (bannerId) => {
@@ -1086,6 +1162,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             image: data.path,
             order: slotOrder,
             alt: `Banner Slot ${slotOrder}`,
+            is_default: false,
             is_active: true
         };
         const method = existingBanner ? 'PATCH' : 'POST';
@@ -1111,6 +1188,73 @@ function DashboardPortal({ onLogout, adminUser }) {
       showToast('Network error during image upload.', 'warning');
     } finally {
       setUploadingBannerSlot(null);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleDeleteMobileBanner = async (bannerId) => {
+    if (!confirm('Are you sure you want to revert this mobile banner to default?')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/mobile-banners/${bannerId}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast('Mobile banner reverted to default.', 'success');
+        syncData();
+      } else {
+        showToast('Failed to delete mobile banner.', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error.', 'warning');
+    }
+  };
+
+  const handleMobileBannerUpload = async (e, slotOrder) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingMobileBannerSlot(slotOrder);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/mobile-banners/upload-image/', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const existingBanner = mobileBanners.find(b => b.order === slotOrder);
+        const payload = {
+            title: `Mobile Banner ${slotOrder}`,
+            subtitle: '',
+            image: data.path,
+            order: slotOrder,
+            alt: `Mobile Banner Slot ${slotOrder}`,
+            is_default: false,
+            is_active: true
+        };
+        const method = existingBanner ? 'PATCH' : 'POST';
+        const url = existingBanner 
+          ? `http://127.0.0.1:8000/api/mobile-banners/${existingBanner.id}/`
+          : `http://127.0.0.1:8000/api/mobile-banners/`;
+          
+        const saveRes = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (saveRes.ok) {
+            showToast(`Mobile banner slot ${slotOrder} updated!`, 'success');
+            syncData();
+        } else {
+            showToast('Failed to save mobile banner slot.', 'warning');
+        }
+      } else {
+        showToast(data.error || 'Failed to upload image.', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error during image upload.', 'warning');
+    } finally {
+      setUploadingMobileBannerSlot(null);
       if (e.target) e.target.value = '';
     }
   };
@@ -1323,7 +1467,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200'
         }`} onClick={onLogout}>
           <div className="flex items-center gap-3 min-w-0 text-left">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white font-normal text-sm shadow-3xs shrink-0 select-none">
+            <div className="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white font-normal text-sm shadow-3xs shrink-0 select-none">
               {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
             </div>
             <div className="min-w-0">
@@ -1426,7 +1570,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
 
             <div className="flex items-center gap-2 pl-3 border-l border-zinc-200 dark:border-[#cbd5e1]/10">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white font-normal text-xs shadow-3xs shrink-0 select-none">
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-normal text-xs shadow-3xs shrink-0 select-none">
                 {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
               </div>
               <div className="hidden sm:block text-left leading-none">
@@ -1497,7 +1641,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Quick Actions Row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => handleOpenProductModal('add')}
@@ -1534,69 +1678,6 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(orders, null, 2));
-                    const downloadAnchor = document.createElement('a');
-                    downloadAnchor.setAttribute("href", dataStr);
-                    downloadAnchor.setAttribute("download", `orders_report_${new Date().toISOString().split('T')[0]}.json`);
-                    document.body.appendChild(downloadAnchor);
-                    downloadAnchor.click();
-                    downloadAnchor.remove();
-                    showToast('Orders report exported successfully', 'success');
-                  }}
-                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
-                    theme === 'dark' 
-                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-blue-500/50 text-white' 
-                      : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-blue-500/50 shadow-3xs'
-                  }`}
-                >
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
-                    <ArrowUpRight className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-normal text-xs">Export Orders</h4>
-                    <p className="text-[10px] text-zinc-500 font-normal">Download JSON data sheet</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
-                    setLoadingData(true);
-                    try {
-                      const res = await fetch('http://127.0.0.1:8000/api/products/clear-all/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                      });
-                      if (res.ok) {
-                        showToast('Database wiped clean!', 'success');
-                        syncData();
-                      } else {
-                        showToast('Failed to clear database.', 'warning');
-                      }
-                    } catch (e) {
-                      showToast('Network error clearing database.', 'warning');
-                    } finally {
-                      setLoadingData(false);
-                    }
-                  }}
-                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
-                    theme === 'dark' 
-                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-red-500/50 text-white' 
-                      : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-red-500/50 shadow-3xs'
-                  }`}
-                >
-                  <div className="p-2.5 rounded-xl bg-red-500/10 text-red-655 dark:text-red-400 group-hover:scale-105 transition-transform">
-                    <Database className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-normal text-xs text-red-600 dark:text-red-400">Database Reset</h4>
-                    <p className="text-[10px] text-zinc-500 font-normal">Erase all dynamic data</p>
-                  </div>
-                </button>
               </div>
 
               {/* Charts cockpit section */}
@@ -1608,22 +1689,24 @@ function DashboardPortal({ onLogout, adminUser }) {
                 }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales Overview</h3>
-                    <select className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                      theme === 'dark' ? 'border-[#2a3145] text-zinc-300' : 'border-zinc-200 text-zinc-700'
+                    <select 
+                      value={analyticsTimeframe}
+                      onChange={(e) => setAnalyticsTimeframe(e.target.value)}
+                      className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
+                        theme === 'dark' ? 'border-[#2a3145] text-zinc-300' : 'border-zinc-200 text-zinc-700'
                     }`}>
-                      <option>This Week</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                      <option value="year">This Year</option>
                     </select>
                   </div>
                   
                   <div className="flex gap-4 h-64 mt-2 select-none flex-grow">
                     {/* Y-axis Labels */}
-                    <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-normal h-[88%] pb-2 select-none w-8 text-left leading-none">
-                      <span>₹10K</span>
-                      <span>₹8K</span>
-                      <span>₹6K</span>
-                      <span>₹4K</span>
-                      <span>₹2K</span>
-                      <span>₹0</span>
+                    <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-normal h-[88%] pb-2 select-none w-[42px] text-left leading-none">
+                      {[1, 0.8, 0.6, 0.4, 0.2, 0].map(mult => (
+                        <span key={mult}>₹{analyticsChartMetric === 'revenue' ? Math.round(maxChartVal * mult).toLocaleString('en-IN') : Math.round(maxChartVal * mult)}</span>
+                      ))}
                     </div>
                     {/* Line Chart Grid Canvas */}
                     <div className="flex-grow h-full relative">
@@ -1638,20 +1721,27 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </div>
                       
                       {/* Line chart svg overlay */}
-                      <svg className="w-full h-[88%] absolute inset-0" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <svg className="w-full h-[88%] absolute inset-0" viewBox="0 0 500 200" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
                             <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
-                        <path d="M 0 30 Q 15 25 30 20 T 60 18 T 90 22 L 100 24 L 100 40 L 0 40 Z" fill="url(#chartGrad)" />
-                        <path d="M 0 30 Q 15 25 30 20 T 60 18 T 90 22 L 100 24" fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinecap="round" />
+                        {areaD && <path d={areaD} fill="url(#chartGrad)" />}
+                        {pathD && <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
                       </svg>
                       
                       {/* X-axis Labels */}
-                      <div className="flex justify-between text-[9px] text-zinc-400 font-normal absolute bottom-0 left-0 right-0">
-                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                      <div className="flex justify-between text-[9px] text-zinc-400 font-normal absolute bottom-0 left-0 right-0 px-2">
+                        {analyticsData.filter((_, i) => {
+                          if (analyticsTimeframe === 'week') return true;
+                          if (analyticsTimeframe === 'month') return i === 0 || i % 5 === 4;
+                          if (analyticsTimeframe === 'year') return true;
+                          return true;
+                        }).map((d, i) => (
+                          <span key={i}>{d.dateStr}</span>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1696,7 +1786,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             dotColor={slice.dot} 
                             label={slice.name} 
                             pct={`${slice.percentage}%`} 
-                            val={`₹${Math.round(slice.count * 1250).toLocaleString('en-IN')}`} 
+                            val={`₹${Math.round(slice.count).toLocaleString('en-IN')}`} 
                           />
                         ))
                       )}
@@ -1722,14 +1812,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                         const initials = o.customer_name 
                           ? o.customer_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) 
                           : 'C';
-                        const gradients = [
-                          'from-pink-400 to-rose-500',
-                          'from-blue-400 to-indigo-500',
-                          'from-amber-400 to-orange-500',
-                          'from-purple-400 to-indigo-500',
-                          'from-teal-400 to-emerald-500'
+                        const colors = [
+                          'bg-pink-500',
+                          'bg-blue-500',
+                          'bg-amber-500',
+                          'bg-purple-500',
+                          'bg-teal-500'
                         ];
-                        const gradient = gradients[idx % gradients.length];
+                        const avatarColor = colors[idx % colors.length];
                         const status = o.payment_method === 'cod' ? 'Pending' : 'Completed';
                         const orderDate = new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', {
                           day: 'numeric',
@@ -1746,7 +1836,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             amount={`₹${o.total_amount}`} 
                             status={status} 
                             name={o.customer_name} 
-                            gradient={gradient} 
+                            gradient={avatarColor} 
                             initials={initials} 
                           />
                         );
@@ -1809,22 +1899,24 @@ function DashboardPortal({ onLogout, adminUser }) {
                 }`}>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Customer Growth</h3>
-                    <select className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                      theme === 'dark' ? 'border-[#2a3145] text-zinc-355' : 'border-zinc-200 text-zinc-755'
+                    <select 
+                      value={customerGrowthTimeframe}
+                      onChange={(e) => setCustomerGrowthTimeframe(e.target.value)}
+                      className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
+                        theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-200 text-zinc-700'
                     }`}>
-                      <option>This Month</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                      <option value="year">This Year</option>
                     </select>
                   </div>
                   
                   <div className="flex gap-4 h-64 mt-4 select-none">
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-normal h-[88%] pb-4 w-7 text-left leading-none">
-                      <span>300</span>
-                      <span>240</span>
-                      <span>180</span>
-                      <span>120</span>
-                      <span>60</span>
-                      <span>0</span>
+                      {[1, 0.8, 0.6, 0.4, 0.2, 0].map(mult => (
+                        <span key={mult}>{Math.round(maxCustomerGrowthVal * mult)}</span>
+                      ))}
                     </div>
 
                     {/* Chart Area */}
@@ -1836,7 +1928,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             {/* Bar item */}
                             <div 
                               className="w-full rounded-t-md bg-[#8b5cf6] dark:bg-[#a855f7] hover:bg-[#ff007a] transition-all cursor-pointer shadow-3xs" 
-                              style={{ height: customerGrowthData.some(d => d.value > 0) ? `${(day.value / Math.max(...customerGrowthData.map(d => d.value), 1)) * 100}%` : '4px' }}
+                              style={{ height: customerGrowthData.some(d => d.value > 0) ? `${(day.value / maxCustomerGrowthVal) * 100}%` : '4px' }}
                               title={`${day.label}: ${day.value} active users (${day.realOrders} orders)`}
                             />
                           </div>
@@ -1845,10 +1937,14 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                       {/* X-axis labels row (completely separated, no overlapping!) */}
                       <div className="flex justify-between text-[9px] text-zinc-400 font-normal pt-2 px-1">
-                        <span>{customerGrowthData[0]?.label}</span>
-                        <span>{customerGrowthData[4]?.label}</span>
-                        <span>{customerGrowthData[9]?.label}</span>
-                        <span>{customerGrowthData[14]?.label}</span>
+                        {customerGrowthData.filter((_, i) => {
+                          const len = customerGrowthData.length;
+                          if (len <= 7) return true;
+                          if (len === 12) return i % 3 === 0;
+                          return i === 0 || i === Math.floor(len/3) || i === Math.floor(2*len/3) || i === len - 1;
+                        }).map((d, i) => (
+                          <span key={i}>{d.label}</span>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1860,7 +1956,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200'
               }`}>
                 <span>© 2026 vdgfashion Admin. All rights reserved.</span>
-                <span>Made with ❤️ by vdgfashion</span>
+                <span className="flex items-center gap-0.5">Made with <Heart size={10} className="text-red-500 fill-red-500 shrink-0" /> by vdgfashion</span>
               </footer>
             </div>
           )}
@@ -1929,11 +2025,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <span
                               onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))}
                               title="Click to edit stock"
-                              className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-normal border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${
                                 p.stock === 0 ? 'bg-red-600 text-white border-transparent'
                                 : p.stock < 15 ? 'bg-amber-500 text-white border-transparent'
                                 : 'bg-emerald-600 text-white border-transparent'
-                              }`}>{p.stock} units ✏️</span>
+                              }`}
+                            >
+                              {p.stock} units <Edit size={10} strokeWidth={2.5} className="text-white shrink-0 ml-0.5" />
+                            </span>
                           )}
                         </td>
                         <td className="p-4">
@@ -2204,7 +2303,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     {c.image_url || c.image ? (
                                       <img src={getImageUrl(c.image_url || c.image)} alt={c.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#2a3145] p-0.5 bg-white shadow-3xs" />
                                     ) : (
-                                      <span className="text-xl">📁</span>
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+                                        theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-zinc-50 border-zinc-200'
+                                      }`}>
+                                        <Folders size={16} className="text-zinc-400" />
+                                      </div>
                                     )}
                                   </div>
                                 </td>
@@ -2280,7 +2383,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     {sub.image_url || sub.image ? (
                                       <img src={getImageUrl(sub.image_url || sub.image)} alt={sub.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#2a3145] p-0.5 bg-white shadow-3xs" />
                                     ) : (
-                                      <span className="text-xl">📁</span>
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+                                        theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-zinc-50 border-zinc-200'
+                                      }`}>
+                                        <Folders size={16} className="text-zinc-400" />
+                                      </div>
                                     )}
                                   </div>
                                 </td>
@@ -2531,9 +2638,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Statistics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard icon={<Package className="text-indigo-500" />} label="Registry Products" value={products.length} desc="Active SKU variants" theme={theme} />
-                <StatCard icon={<ArrowUpRight className="text-green-500" />} label="Total Stock Units" value={products.reduce((acc, p) => acc + (p.stock || 0), 0)} desc="Items in warehouse" theme={theme} />
-                <StatCard icon={<AlertCircle className="text-red-500" />} label="Low Stock Alerts" value={products.filter(p => (p.stock || 0) < 15).length} desc="SKUs below 15 units" theme={theme} />
+                <StatCard icon={<Package className="text-white" />} label="Registry Products" value={products.length} desc="Active SKU variants" theme={theme} bgClass="bg-indigo-600 text-white" />
+                <StatCard icon={<ArrowUpRight className="text-white" />} label="Total Stock Units" value={products.reduce((acc, p) => acc + (p.stock || 0), 0)} desc="Items in warehouse" theme={theme} bgClass="bg-emerald-600 text-white" />
+                <StatCard icon={<AlertCircle className="text-white" />} label="Low Stock Alerts" value={products.filter(p => (p.stock || 0) < 15).length} desc="SKUs below 15 units" theme={theme} bgClass="bg-rose-600 text-white" />
               </div>
 
               {/* Charts grid */}
@@ -2957,17 +3064,51 @@ function DashboardPortal({ onLogout, adminUser }) {
 
           {activePage === 'hero-banners' && (
             <div className="space-y-6 text-left animate-fade-in admin-banners-container">
-              <div>
-                <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Index Banners</h2>
-                <p className="text-xs text-zinc-500 font-normal mt-1">Manage the 3 main hero banners on the index page.</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Index Banners</h2>
+                  <p className="text-xs text-zinc-500 font-normal mt-1">Manage desktop and mobile hero banners on the index page.</p>
+                </div>
+                
+                {/* Tab Header Navigation */}
+                <div className={`flex border rounded-2xl p-1 gap-2 shrink-0 ${
+                  theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setBannerTypeTab('desktop')}
+                    className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
+                      bannerTypeTab === 'desktop'
+                        ? 'bg-[#8b5cf6] text-white shadow-xs'
+                        : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-855 hover:bg-zinc-100'
+                    }`}
+                  >
+                    Desktop Banners
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBannerTypeTab('mobile')}
+                    className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
+                      bannerTypeTab === 'mobile'
+                        ? 'bg-[#8b5cf6] text-white shadow-xs'
+                        : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-855 hover:bg-zinc-100'
+                    }`}
+                  >
+                    Mobile Banners
+                  </button>
+                </div>
               </div>
               
               {/* Previews Only */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                 {[1, 2, 3].map((slot) => {
-                  const existingBanner = banners.find(b => b.order === slot);
-                  const isUploaded = !!existingBanner;
-                  let imgSrc = `/banner/banner${slot}.png`;
+                  const isMobile = bannerTypeTab === 'mobile';
+                  const activeBanners = isMobile ? mobileBanners : banners;
+                  const existingBanner = activeBanners.find(b => b.order === slot);
+                  const isUploaded = existingBanner && !existingBanner.is_default;
+                  
+                  // Use correct seeded default images: 11/12/13.webp for desktop and 21/22/23.webp for mobile
+                  let imgSrc = isMobile ? `/banner/2${slot}.webp` : `/banner/1${slot}.webp`;
                   
                   if (existingBanner) {
                     imgSrc = existingBanner.src || existingBanner.image;
@@ -2975,10 +3116,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                     if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `http://127.0.0.1:8000/media/${imgSrc}`;
                   }
                   
+                  const isUploading = isMobile ? uploadingMobileBannerSlot === slot : uploadingBannerSlot === slot;
+                  
                   return (
                     <div key={`preview-${slot}`} className={`rounded-3xl border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col items-center gap-4 bg-white dark:bg-[#161b26] shadow-3xs relative overflow-hidden`}>
                       <div className="w-full flex justify-between items-center mb-1 px-1">
-                        <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Banner {slot}</h3>
+                        <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{isMobile ? 'Mobile' : 'Desktop'} Banner {slot}</h3>
                         {isUploaded && (
                           <span className="bg-indigo-500/10 text-indigo-500 text-[9px] font-normal px-2 py-0.5 rounded-md uppercase tracking-wider">Custom</span>
                         )}
@@ -2986,14 +3129,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <span className="bg-zinc-500/10 text-zinc-500 text-[9px] font-normal px-2 py-0.5 rounded-md uppercase tracking-wider">Default</span>
                         )}
                       </div>
-                      <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-inner">
-                        <img src={imgSrc} alt={`Banner Slot ${slot}`} className="w-full h-full object-cover" />
-                        {uploadingBannerSlot === slot && (
+                      <div className={`relative w-full rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-inner ${isMobile ? 'aspect-[2/1]' : 'aspect-[3/1]'}`}>
+                        <img src={imgSrc} alt={`${isMobile ? 'Mobile' : 'Desktop'} Banner Slot ${slot}`} className="w-full h-full object-cover" />
+                        {isUploading && (
                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
                             <Loader2 className="animate-spin text-white w-8 h-8" />
                           </div>
                         )}
                       </div>
+                      <p className="text-[11px] text-zinc-400 font-normal">
+                        Size: {isMobile ? '800 * 400 px' : '1500 * 500 px'}
+                      </p>
                     </div>
                   );
                 })}
@@ -3001,18 +3147,22 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Input Fields Below */}
               <div className={`p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161b26] shadow-3xs mt-6`}>
-                <h3 className={`font-normal text-lg mb-4 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Upload Custom Banners</h3>
+                <h3 className={`font-normal text-lg mb-4 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Upload Custom {bannerTypeTab === 'mobile' ? 'Mobile' : 'Desktop'} Banners</h3>
                 <div className="space-y-4">
                   {[1, 2, 3].map((slot) => {
-                    const existingBanner = banners.find(b => b.order === slot);
-                    const isUploaded = !!existingBanner;
+                    const isMobile = bannerTypeTab === 'mobile';
+                    const activeBanners = isMobile ? mobileBanners : banners;
+                    const existingBanner = activeBanners.find(b => b.order === slot);
+                    const isUploaded = existingBanner && !existingBanner.is_default;
                     
-                    let imgSrc = `/banner/banner${slot}.png`;
+                    let imgSrc = isMobile ? `/banner/2${slot}.webp` : `/banner/1${slot}.webp`;
                     if (existingBanner) {
                       imgSrc = existingBanner.src || existingBanner.image;
                       if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `http://127.0.0.1:8000${imgSrc}`;
                       if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `http://127.0.0.1:8000/media/${imgSrc}`;
                     }
+
+                    const isUploading = isMobile ? uploadingMobileBannerSlot === slot : uploadingBannerSlot === slot;
 
                     return (
                       <div key={`input-${slot}`} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/50' : 'border-zinc-100 bg-zinc-50/50'}`}>
@@ -3020,7 +3170,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         
                         <div className="w-16 h-8 sm:w-20 sm:h-10 rounded overflow-hidden shrink-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative">
                           <img src={imgSrc} alt={`Slot ${slot} thumb`} className="w-full h-full object-cover" />
-                          {uploadingBannerSlot === slot && (
+                          {isUploading && (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
                               <Loader2 className="animate-spin text-white w-4 h-4" />
                             </div>
@@ -3031,14 +3181,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <input 
                             type="file" 
                             accept="image/*" 
-                            onChange={(e) => handleHeroBannerUpload(e, slot)} 
-                            disabled={uploadingBannerSlot === slot}
-                            className={`w-full text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-normal file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-500/10 dark:file:text-indigo-400 cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600'}`}
+                            onChange={(e) => isMobile ? handleMobileBannerUpload(e, slot) : handleHeroBannerUpload(e, slot)} 
+                            disabled={isUploading}
+                            className={`w-full text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-normal file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-500/10 dark:file:text-indigo-400 cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-650'}`}
                           />
                         </div>
                         {isUploaded && (
                           <button
-                            onClick={() => handleDeleteBanner(existingBanner.id)}
+                            onClick={() => isMobile ? handleDeleteMobileBanner(existingBanner.id) : handleDeleteBanner(existingBanner.id)}
                             className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 transition-all text-xs active:scale-95"
                             title="Revert to Default"
                           >
@@ -3740,19 +3890,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
                     Media Assets
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Image path / URL</label>
-                      <input 
-                        type="text" 
-                        value={productForm.image} 
-                        onChange={(e) => setProductForm({ ...productForm, image: e.target.value })} 
-                        placeholder="e.g., products/baby_frock.png"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
                       <div className="relative flex items-center justify-center">
@@ -3762,9 +3900,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                             : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
                         }`}>
                           <div className="flex items-center gap-2">
-                            <Upload size={14} className={uploadingImage ? "animate-spin text-indigo-500" : "animate-pulse text-zinc-400"} />
+                            {uploadingImage ? (
+                              <Upload size={14} className="animate-spin text-indigo-500" />
+                            ) : productForm.image ? (
+                              <CheckCircle size={14} className="text-emerald-500" />
+                            ) : (
+                              <Upload size={14} className="animate-pulse text-zinc-400" />
+                            )}
                             <span className="text-[10.5px] font-normal tracking-wide">
-                              {uploadingImage ? 'Uploading...' : productForm.image ? '✅ File Linked' : 'Choose Local File'}
+                              {uploadingImage ? 'Uploading...' : productForm.image ? 'File Linked' : 'Choose Local File'}
                             </span>
                           </div>
                           <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
@@ -4224,8 +4368,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
                     className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
                   >
-                    <option value="true">🟢 Active</option>
-                    <option value="false">🔴 Inactive</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
                   </select>
                 </div>
 
@@ -4337,8 +4481,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                     onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
                     className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
                   >
-                    <option value="true">🟢 Active</option>
-                    <option value="false">🔴 Inactive</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
                   </select>
                 </div>
 
@@ -4557,7 +4701,7 @@ function OrderRow({ id, date, amount, status, name, gradient, initials, theme })
       theme === 'dark' ? 'border-[#2a3145]/60' : 'border-zinc-100'
     }`}>
       <div className="flex items-center gap-3.5 text-left">
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center font-normal text-[12px] text-white shadow-2xs shrink-0 select-none`}>
+        <div className={`w-10 h-10 rounded-full ${gradient} flex items-center justify-center font-normal text-[12px] text-white shadow-2xs shrink-0 select-none`}>
           {initials}
         </div>
         <div>
@@ -4590,11 +4734,11 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
             className="w-8 h-8 rounded-lg object-cover border border-zinc-200 dark:border-[#2a3145] shadow-3xs" 
           />
         ) : (
-          <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-3xs ${
-            theme === 'dark' ? 'bg-[#161b26] text-white' : 'bg-zinc-100 text-zinc-800'
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-3xs ${
+            theme === 'dark' ? 'bg-[#161b26]' : 'bg-zinc-100'
           }`}>
-            👕
-          </span>
+            <Package size={14} className="text-zinc-400" />
+          </div>
         )}
         <span className={`text-[15.5px] ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{name}</span>
       </td>
@@ -4608,7 +4752,7 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
   );
 }
 
-function StatCard({ icon, label, value, desc, theme }) {
+function StatCard({ icon, label, value, desc, theme, bgClass }) {
   return (
     <div className={`p-6 rounded-3xl border transition-all text-left ${
       theme === 'dark' 
@@ -4617,7 +4761,7 @@ function StatCard({ icon, label, value, desc, theme }) {
     }`}>
       <div className="flex items-center justify-between mb-4">
         <span className="text-[12px] font-normal text-zinc-400 uppercase tracking-wider">{label}</span>
-        <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-[#161b26] flex items-center justify-center">
+        <div className={`p-2.5 rounded-xl ${bgClass || 'bg-indigo-50 dark:bg-[#161b26]'} flex items-center justify-center`}>
           {icon}
         </div>
       </div>

@@ -746,7 +746,7 @@ export default function Home() {
                 {/* Footer Follow Callout */}
                 <div className="text-center pt-2">
                   <h4 className="text-sm sm:text-base font-black text-zinc-900 tracking-tight">
-                    Love fashion? Follow <span className="text-[#e11d48] font-black cursor-pointer hover:underline">@vdgfashion</span> now!
+                    Love fashion? Follow <a href="https://www.instagram.com/vdgfashion" target="_blank" rel="noopener noreferrer" className="text-[#e11d48] font-black cursor-pointer hover:underline">@vdgfashion</a> now!
                   </h4>
                 </div>
               </div>
