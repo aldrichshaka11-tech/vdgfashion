@@ -196,6 +196,11 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='bulk-upload')
     def bulk_upload(self, request):
+        import re
+        import time
+        import requests
+        from django.core.files.base import ContentFile
+
         products_data = request.data
         if not isinstance(products_data, list):
             return Response({'error': 'Payload must be a JSON array'}, status=status.HTTP_400_BAD_REQUEST)
@@ -206,6 +211,29 @@ class ProductViewSet(viewsets.ModelViewSet):
             try:
                 category_name = item.get('category_name', 'General')
                 category, _ = Category.objects.get_or_create(name=category_name)
+                
+                # Check for category image if specified in data
+                cat_image_url = item.get('category_image', '')
+                if cat_image_url and cat_image_url.startswith('http') and not category.image:
+                    drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', cat_image_url)
+                    if not drive_match:
+                        drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', cat_image_url)
+                    if drive_match:
+                        file_id = drive_match.group(1)
+                        cat_image_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+                    try:
+                        r = requests.get(cat_image_url, timeout=10)
+                        if r.status_code == 200:
+                            ext = 'jpg'
+                            if 'png' in r.headers.get('content-type', ''): ext = 'png'
+                            elif 'webp' in r.headers.get('content-type', ''): ext = 'webp'
+                            cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                            path = default_storage.save(cat_filename, ContentFile(r.content))
+                            category.image = path
+                            category.save()
+                    except Exception:
+                        pass
+
                 serializer = self.get_serializer(data={
                     'name': item.get('name'),
                     'slug': item.get('slug'),
@@ -225,8 +253,33 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'status': item.get('status', 'published'),
                 })
                 if serializer.is_valid():
-                    serializer.save()
+                    product_instance = serializer.save()
                     created_count += 1
+                    
+                    # Handle product image download
+                    img_url = item.get('image', '')
+                    if img_url and img_url.startswith('http'):
+                        drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', img_url)
+                        if not drive_match:
+                            drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', img_url)
+                        if drive_match:
+                            file_id = drive_match.group(1)
+                            img_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+                        
+                        try:
+                            r = requests.get(img_url, timeout=15)
+                            if r.status_code == 200:
+                                ext = 'jpg'
+                                content_type = r.headers.get('content-type', '')
+                                if 'png' in content_type: ext = 'png'
+                                elif 'webp' in content_type: ext = 'webp'
+                                
+                                safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
+                                filename = f"products/{safe_name}_{int(time.time())}.{ext}"
+                                path = default_storage.save(filename, ContentFile(r.content))
+                                Product.objects.filter(pk=product_instance.pk).update(image=path)
+                        except Exception:
+                            pass
                 else:
                     errors.append({'index': idx, 'errors': serializer.errors})
             except Exception as e:

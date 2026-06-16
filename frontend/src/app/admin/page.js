@@ -688,6 +688,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   });
 
   const [bulkInput, setBulkInput] = useState('');
+  const [bulkMode, setBulkMode] = useState('sheet'); // 'sheet' or 'json'
 
   const showToast = (message, type = 'info') => {
     const newToast = { id: Date.now(), message, type };
@@ -1080,11 +1081,64 @@ function DashboardPortal({ onLogout, adminUser }) {
     }
   };
 
+  const parseTSV = (text) => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+
+    // Parse headers
+    const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
+    
+    // Find column indices
+    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('title'));
+    const skuIdx = headers.findIndex(h => h.includes('sku') || h.includes('code'));
+    const catIdx = headers.findIndex(h => h.includes('cat') || h.includes('group'));
+    const priceIdx = headers.findIndex(h => h.includes('price') && !h.includes('original') && !h.includes('mrp'));
+    const origPriceIdx = headers.findIndex(h => h.includes('original') || h.includes('mrp'));
+    const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('count'));
+    const imgIdx = headers.findIndex(h => h.includes('image') || h.includes('url') || h.includes('link') || h.includes('drive') || h.includes('photo'));
+    const descIdx = headers.findIndex(h => h.includes('desc') || h.includes('about') || h.includes('info'));
+
+    const parsed = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split('\t');
+      if (cols.length < 1) continue;
+
+      const item = {};
+      if (nameIdx !== -1 && cols[nameIdx]) item.name = cols[nameIdx].trim();
+      if (skuIdx !== -1 && cols[skuIdx]) item.sku = cols[skuIdx].trim();
+      if (catIdx !== -1 && cols[catIdx]) item.category_name = cols[catIdx].trim();
+      if (priceIdx !== -1 && cols[priceIdx]) item.price = parseFloat(cols[priceIdx].trim().replace(/[^0-9.]/g, '')) || 0;
+      if (origPriceIdx !== -1 && cols[origPriceIdx]) item.original_price = parseFloat(cols[origPriceIdx].trim().replace(/[^0-9.]/g, '')) || 0;
+      if (stockIdx !== -1 && cols[stockIdx]) item.stock = parseInt(cols[stockIdx].trim().replace(/[^0-9]/g, '')) || 0;
+      if (imgIdx !== -1 && cols[imgIdx]) item.image = cols[imgIdx].trim();
+      if (descIdx !== -1 && cols[descIdx]) item.description = cols[descIdx].trim();
+
+      // Fill defaults
+      if (!item.name) continue; // Skip items without a name
+      if (item.price === undefined || isNaN(item.price)) item.price = 0;
+      if (item.original_price === undefined || isNaN(item.original_price) || item.original_price === 0) item.original_price = item.price;
+      if (!item.category_name) item.category_name = 'General';
+      if (item.stock === undefined || isNaN(item.stock)) item.stock = 50;
+
+      parsed.push(item);
+    }
+    return parsed;
+  };
+
   const handleBulkUpload = async (e) => {
     e.preventDefault();
     setLoadingData(true);
     try {
-      const parsedData = JSON.parse(bulkInput);
+      let parsedData;
+      if (bulkMode === 'sheet') {
+        parsedData = parseTSV(bulkInput);
+        if (parsedData.length === 0) {
+          throw new Error('No valid products parsed. Make sure to copy columns including a header row.');
+        }
+      } else {
+        parsedData = JSON.parse(bulkInput);
+      }
+      
       const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1100,7 +1154,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         showToast(`Import completed with errors. Failures: ${result.failed_count}`, 'warning');
       }
     } catch (err) {
-      showToast('Invalid JSON structure. Please verify formatting.', 'warning');
+      showToast(err.message || 'Invalid structure. Please check input formatting.', 'warning');
     } finally {
       setLoadingData(false);
     }
@@ -1534,6 +1588,39 @@ function DashboardPortal({ onLogout, adminUser }) {
   const lowStockCount = useMemo(() => {
     return products.filter(p => p.stock > 0 && p.stock < 15).length;
   }, [products]);
+
+  // Bulk input TSV live preview parser
+  const parsedBulkPreview = useMemo(() => {
+    if (bulkMode !== 'sheet' || !bulkInput.trim()) return [];
+    try {
+      const lines = bulkInput.trim().split('\n');
+      if (lines.length < 2) return [];
+      const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
+      
+      const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('title'));
+      const skuIdx = headers.findIndex(h => h.includes('sku') || h.includes('code'));
+      const catIdx = headers.findIndex(h => h.includes('cat') || h.includes('group'));
+      const priceIdx = headers.findIndex(h => h.includes('price') && !h.includes('original') && !h.includes('mrp'));
+      const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('count'));
+      const imgIdx = headers.findIndex(h => h.includes('image') || h.includes('url') || h.includes('link') || h.includes('drive') || h.includes('photo'));
+
+      const parsed = [];
+      for (let i = 1; i < Math.min(lines.length, 6); i++) {
+        const cols = lines[i].split('\t');
+        const item = {};
+        if (nameIdx !== -1) item.name = cols[nameIdx]?.trim();
+        if (skuIdx !== -1) item.sku = cols[skuIdx]?.trim();
+        if (catIdx !== -1) item.category_name = cols[catIdx]?.trim();
+        if (priceIdx !== -1) item.price = cols[priceIdx]?.trim();
+        if (stockIdx !== -1) item.stock = cols[stockIdx]?.trim();
+        if (imgIdx !== -1) item.image = cols[imgIdx]?.trim();
+        if (item.name) parsed.push(item);
+      }
+      return parsed;
+    } catch {
+      return [];
+    }
+  }, [bulkInput, bulkMode]);
 
   return (
     <div className={`flex h-screen overflow-hidden font-sans admin-portal-font-boost transition-colors duration-200 ${
@@ -5322,28 +5409,113 @@ function DashboardPortal({ onLogout, adminUser }) {
             )}
 
             {modalType === 'bulk' && (
-              <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal">
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Products JSON Array</label>
-                    <span className={`text-[10px] ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>(Array of JSON objects)</span>
-                  </div>
-                  <textarea 
-                    required
-                    value={bulkInput} 
-                    onChange={(e) => setBulkInput(e.target.value)} 
-                    placeholder='[&#10;  {"name": "Bulk Product A", "price": 499.00, "category_name": "T-Shirts", "stock": 80},&#10;  {"name": "Bulk Product B", "price": 899.00, "category_name": "Apparel", "stock": 50}&#10;]'
-                    className={`w-full h-48 p-3 rounded-xl border transition-all focus:outline-none resize-none font-mono text-[10px] ${
-                      theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
+              <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal text-left">
+                {/* Mode Switcher */}
+                <div className="flex rounded-xl p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => { setBulkMode('sheet'); setBulkInput(''); }}
+                    className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${
+                      bulkMode === 'sheet'
+                        ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
                     }`}
-                  />
+                  >
+                    Google Sheets / Excel Paste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBulkMode('json'); setBulkInput(''); }}
+                    className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${
+                      bulkMode === 'json'
+                        ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
+                    }`}
+                  >
+                    Advanced JSON Mode
+                  </button>
                 </div>
-                <div className="flex gap-3 justify-end pt-2">
+
+                {bulkMode === 'sheet' ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
+                      <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">How to import from Google Sheets:</h4>
+                      <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU, Price, MRP, Category, Stock, Image, Description</b>).</li>
+                        <li>For images in Google Drive, simply paste the Drive <b>Share link</b> directly in the Image column. We will download it automatically!</li>
+                        <li>Select and copy (Ctrl+C) your rows, then paste (Ctrl+V) them in the text box below.</li>
+                      </ol>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Copied Cells Here</label>
+                      <textarea 
+                        required
+                        value={bulkInput} 
+                        onChange={(e) => setBulkInput(e.target.value)} 
+                        placeholder="Name&#9;SKU&#9;Price&#9;Category&#9;Stock&#9;Image&#10;Blue Denim Jeans&#9;JEAN-01&#9;999&#9;Apparel&#9;45&#9;https://drive.google.com/file/d/xxxx/view&#10;Pink Cotton Kurti&#9;KURTI-02&#9;1299&#9;Ethnic&#9;80&#9;https://drive.google.com/file/d/yyyy/view"
+                        className={`w-full h-36 p-3 rounded-xl border transition-all focus:outline-none resize-none font-mono text-[9.5px] ${
+                          theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
+                        }`}
+                      />
+                    </div>
+
+                    {parsedBulkPreview.length > 0 && (
+                      <div className="space-y-1.5">
+                        <label className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Parsed Preview (First 5 Items)</label>
+                        <div className={`border rounded-xl overflow-hidden overflow-x-auto text-[10px] ${theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-200 bg-zinc-50'}`}>
+                          <table className="w-full text-left min-w-[500px]">
+                            <thead className={`font-semibold border-b ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-650'}`}>
+                              <tr>
+                                <th className="p-2">Name</th>
+                                <th className="p-2">SKU</th>
+                                <th className="p-2">Category</th>
+                                <th className="p-2 text-right">Price</th>
+                                <th className="p-2 text-right">Stock</th>
+                                <th className="p-2">Image Link</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200/50 dark:divide-[#1e293b]/60">
+                              {parsedBulkPreview.map((item, idx) => (
+                                <tr key={idx} className="hover:bg-white/2">
+                                  <td className="p-2 font-semibold truncate max-w-[120px]">{item.name}</td>
+                                  <td className="p-2 font-mono">{item.sku || 'N/A'}</td>
+                                  <td className="p-2">{item.category_name}</td>
+                                  <td className="p-2 text-right">₹{item.price}</td>
+                                  <td className="p-2 text-right">{item.stock}</td>
+                                  <td className="p-2 truncate max-w-[150px] font-mono text-[9px] text-zinc-450">{item.image || 'N/A'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Products JSON Array</label>
+                      <span className={`text-[10px] ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>(Array of JSON objects)</span>
+                    </div>
+                    <textarea 
+                      required
+                      value={bulkInput} 
+                      onChange={(e) => setBulkInput(e.target.value)} 
+                      placeholder='[&#10;  {"name": "Bulk Product A", "price": 499.00, "category_name": "T-Shirts", "stock": 80, "image": "https://drive.google.com/file/d/xxx/view"},&#10;  {"name": "Bulk Product B", "price": 899.00, "category_name": "Apparel", "stock": 50}&#10;]'
+                      className={`w-full h-48 p-3 rounded-xl border transition-all focus:outline-none resize-none font-mono text-[10px] ${
+                        theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
+                      }`}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 justify-end pt-2 border-t border-zinc-150 dark:border-zinc-800/80">
                   <button type="button" onClick={() => setModalType(null)} className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}>Cancel</button>
                   <button 
-              type="submit" 
-              className={`py-2.5 px-4 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
-            >
+                    type="submit" 
+                    className={`py-2.5 px-4 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+                  >
                     <Upload size={12} /> Execute Bulk Import
                   </button>
                 </div>
