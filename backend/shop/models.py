@@ -325,9 +325,24 @@ class Review(models.Model):
     def __str__(self):
         return f"Review by {self.user_name} on {self.product.name}"
 
+    def _update_product_stats(self):
+        """Recalculate and save product rating and reviews_count from active reviews."""
+        from django.db.models import Avg, Count
+        stats = Review.objects.filter(product=self.product, is_active=True).aggregate(
+            avg=Avg('rating'), count=Count('id')
+        )
+        Product.objects.filter(pk=self.product_id).update(
+            rating=round(stats['avg'] or 0, 1),
+            reviews_count=stats['count'] or 0
+        )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._update_product_stats()
+
     def delete(self, *args, **kwargs):
         self.is_active = False
-        self.save()
+        self.save()  # triggers _update_product_stats via save()
 
 
 

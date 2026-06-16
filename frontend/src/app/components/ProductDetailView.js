@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Star, Heart, Plus, Minus, ShoppingBag, Truck, RefreshCw, CheckCircle2, ChevronDown, X, Info } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import Image from 'next/image';
 import { formatINR } from '../utils/currency';
+import { API_BASE } from '../../lib/api';
 
 export default function ProductDetailView() {
+  const router = useRouter();
   const {
     selectedProduct,
     setSelectedProduct,
@@ -412,7 +415,7 @@ function ProductReviewsSection({ productId }) {
   const [successMsg, setSuccessMsg] = useState('');
 
   const fetchReviews = () => {
-    fetch(`http://127.0.0.1:8000/api/reviews/?product=${productId}`)
+    fetch(`${API_BASE}/api/reviews/?product=${productId}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => {
         // Double-check filter on frontend for current product
@@ -443,9 +446,13 @@ function ProductReviewsSection({ productId }) {
 
     setSubmitting(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/reviews/', {
+      const headers = { 'Content-Type': 'application/json' };
+      if (user && user.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
+      const res = await fetch(`${API_BASE}/api/reviews/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({
           product: productId,
           user_name: user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username,
@@ -583,7 +590,7 @@ function ProductReviewsSection({ productId }) {
               <button 
                 type="button"
                 onClick={() => {
-                  window.location.href = '/account';
+                  router.push('/account');
                 }}
                 className="w-full mt-2.5 py-3 bg-zinc-950 hover:bg-zinc-800 text-white text-[10px] font-extrabold rounded-xl tracking-wider uppercase shadow-md transition-colors cursor-pointer"
               >

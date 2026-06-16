@@ -43,7 +43,8 @@ export default function CartPage() {
     removeCoupon,
     couponDiscount,
     shippingFee,
-    cartTotal
+    cartTotal,
+    settings
   } = useStore();
 
   const [couponInput, setCouponInput] = useState('');
@@ -213,11 +214,11 @@ export default function CartPage() {
                 )}
               </div>
 
-              {appliedCoupon === 'TREND10' ? (
+              {appliedCoupon ? (
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 flex items-center justify-between" data-aos="fade-up" data-aos-delay="120">
                   <p className="text-xs sm:text-sm font-semibold text-emerald-800 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-bounce" />
-                    Code <span className="text-[#7c3aed] font-black">TREND10</span> applied successfully! 10% OFF added.
+                    Code <span className="text-[#7c3aed] font-black">{appliedCoupon}</span> applied successfully! {settings?.activePromoDiscount || 10}% OFF added.
                   </p>
                   <button 
                     onClick={() => removeCoupon()}
@@ -228,9 +229,9 @@ export default function CartPage() {
                 </div>
               ) : (
                 <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in" data-aos="fade-up" data-aos-delay="120">
-                  <p className="text-xs sm:text-sm font-normal text-zinc-600 flex items-center gap-2">
+                  <p className="text-xs sm:text-sm font-normal text-zinc-650 flex items-center gap-2">
                     <BadgePercent className="h-4.5 w-4.5 text-[#7c3aed]" />
-                    Use code <span className="text-[#7c3aed] font-semibold">TREND10</span> to get 10% OFF on your order!
+                    Use code <span className="text-[#7c3aed] font-semibold">{settings?.activePromoCode || 'TREND10'}</span> to get {settings?.activePromoDiscount || 10}% OFF on your order!
                   </p>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <input 
@@ -242,7 +243,8 @@ export default function CartPage() {
                     />
                     <button 
                       onClick={() => {
-                        const res = applyCoupon(couponInput || 'TREND10');
+                        const codeToApply = couponInput.trim() || settings?.activePromoCode || 'TREND10';
+                        const res = applyCoupon(codeToApply);
                         if (!res.success) {
                           alert(res.message);
                         }

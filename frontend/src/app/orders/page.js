@@ -10,6 +10,7 @@ import CartDrawer from '../components/CartDrawer';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { useStore } from '../context/StoreContext';
+import { API_BASE } from '../../lib/api';
 import { 
   Search, 
   SlidersHorizontal, 
@@ -48,35 +49,34 @@ export default function MyOrdersPage() {
       if (user && user.token) {
         headers['Authorization'] = `Bearer ${user.token}`;
       }
-      const res = await fetch('http://127.0.0.1:8000/api/orders/', { headers });
+      const res = await fetch(`${API_BASE}/api/orders/`, { headers });
       if (res.ok) {
         const data = await res.json();
-        // Filter by user email or username if logged in
-        const filtered = user 
-          ? data.filter(o => o.email === user.email || o.customer_name === user.username)
-          : data;
-
-        const mapped = filtered.map(o => ({
+        // Backend already filters by authenticated user — use data directly
+        const mapped = data.map(o => ({
           id: o.id,
           orderId: o.order_id,
           date: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
           totalAmount: parseFloat(o.total_amount),
           paymentMethod: o.payment_method === 'card' ? 'Credit Card' : o.payment_method === 'upi' ? 'UPI Transfer' : 'Cash on Delivery',
           cardLast4: o.payment_method === 'card' ? 'CARD' : o.payment_method === 'upi' ? 'UPI' : 'COD',
-          status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Pending',
+          rawStatus: o.status || 'pending',
+          status: o.status
+            ? (o.status === 'out_for_delivery' ? 'Out for Delivery' : o.status.charAt(0).toUpperCase() + o.status.slice(1))
+            : 'Pending',
           statusDate: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
           shippingAddress: `${o.street_address}, ${o.city}, ${o.state} - ${o.pin_code}`,
           subtotal: parseFloat(o.subtotal),
           discount: parseFloat(o.discount_amount),
           shippingFee: parseFloat(o.shipping_fee),
           items: (o.items || []).map(item => {
-            const productObj = products.find(p => p.id === item.product_id);
+            const productObj = products.find(p => p.id === (item.product || item.product_id));
             const resolvedImage = productObj && productObj.image ? productObj.image : '/products/accessories_category.png';
             return {
               name: item.product_name,
               qty: item.quantity,
               price: parseFloat(item.price),
-              size: item.selected_size || 'M',
+              size: item.selected_size || '-',
               colorHex: item.selected_color || '#e6fcf5',
               image: resolvedImage
             };
@@ -96,7 +96,7 @@ export default function MyOrdersPage() {
       if (user && user.token) {
         headers['Authorization'] = `Bearer ${user.token}`;
       }
-      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/orders/${id}/`, {
         method: 'DELETE',
         headers
       });
@@ -127,7 +127,16 @@ export default function MyOrdersPage() {
 
     // Status Filter
     if (activeTab !== 'All') {
-      result = result.filter(o => o.status.toLowerCase() === activeTab.toLowerCase());
+      // Map display tab names to backend status values
+      const tabStatusMap = {
+        'Processing': ['pending', 'confirmed', 'packed'],
+        'Shipped': ['shipped', 'out_for_delivery'],
+        'Delivered': ['delivered'],
+        'Cancelled': ['cancelled'],
+        'Returned': ['returned', 'refunded'],
+      };
+      const allowedStatuses = tabStatusMap[activeTab] || [activeTab.toLowerCase()];
+      result = result.filter(o => allowedStatuses.includes(o.rawStatus));
     }
 
     // Search Query Filter (Search by order number or item name)
@@ -169,12 +178,16 @@ export default function MyOrdersPage() {
           descColor: 'text-emerald-700 font-bold'
         };
       case 'Shipped':
+      case 'Out for Delivery':
         return {
           bg: 'bg-indigo-600 text-white border-indigo-600 shadow-xs',
           icon: Truck,
           descColor: 'text-indigo-700 font-bold'
         };
       case 'Processing':
+      case 'Pending':
+      case 'Confirmed':
+      case 'Packed':
         return {
           bg: 'bg-amber-500 text-white border-amber-500 shadow-xs',
           icon: Package,
@@ -187,6 +200,7 @@ export default function MyOrdersPage() {
           descColor: 'text-rose-700 font-bold'
         };
       case 'Returned':
+      case 'Refunded':
         return {
           bg: 'bg-purple-600 text-white border-purple-600 shadow-xs',
           icon: RotateCcw,

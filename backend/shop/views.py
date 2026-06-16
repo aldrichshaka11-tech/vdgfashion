@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.core.files.storage import default_storage
@@ -234,7 +234,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return Response({'success': True, 'created_count': created_count, 'failed_count': len(errors), 'errors': errors}, status=status.HTTP_201_CREATED)
 
-    @action(detail=False, methods=['POST'], url_path='clear-all')
+    @action(detail=False, methods=['POST'], url_path='clear-all', permission_classes=[permissions.IsAdminUser])
     def clear_all(self, request):
         try:
             Product.objects.all().delete()
@@ -342,6 +342,12 @@ class MarketingBannerViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.filter(is_active=True).order_by('-created_at')
     serializer_class = ReviewSerializer
+
+    def get_permissions(self):
+        # Anyone can read reviews; only authenticated users can create/edit/delete
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
 
 class SiteSettingsViewSet(viewsets.ViewSet):

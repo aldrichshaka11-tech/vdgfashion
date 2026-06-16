@@ -133,13 +133,13 @@ export default function OrderSuccessPage() {
               <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
                 <button
                   onClick={() => router.push('/')}
-                  className="rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white px-6 py-3.5 text-sm sm:text-base font-black tracking-wider uppercase transition-colors shadow-md active:scale-98 cursor-pointer flex-1 sm:flex-none"
+                  className="rounded-xl bg-[#e11d48] hover:bg-[#be123c] !text-white px-6 py-3.5 text-sm sm:text-base font-black tracking-wider uppercase transition-colors shadow-md active:scale-98 cursor-pointer flex-1 sm:flex-none"
                 >
                   Continue Shopping
                 </button>
                 <button
                   onClick={() => router.push('/account')}
-                  className="rounded-xl border border-zinc-250 bg-white hover:bg-zinc-50 text-zinc-850 px-6 py-3.5 text-sm sm:text-base font-black tracking-wider uppercase transition-colors shadow-2xs active:scale-98 cursor-pointer flex-1 sm:flex-none"
+                  className="rounded-xl border border-zinc-250 bg-white hover:bg-zinc-50 text-zinc-800 px-6 py-3.5 text-sm sm:text-base font-black tracking-wider uppercase transition-colors shadow-2xs active:scale-98 cursor-pointer flex-1 sm:flex-none"
                 >
                   Track Order Status
                 </button>

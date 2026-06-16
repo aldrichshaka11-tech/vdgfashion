@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
@@ -11,6 +11,7 @@ import {
   Clock, Truck, MapPin, XCircle, Heart
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { API_BASE, mediaUrl } from '../../lib/api';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', bg: 'bg-amber-500 text-white border-amber-600', dot: 'bg-amber-500', icon: Clock },
@@ -37,7 +38,7 @@ export default function AdminRoute() {
     const activeToken = token || sessionStorage.getItem('access_token');
     if (!activeToken) return;
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/auth/profile/', {
+      const res = await fetch(`${API_BASE}/api/auth/profile/`, {
         headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       if (res.ok) {
@@ -63,7 +64,7 @@ export default function AdminRoute() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+      const res = await fetch(`${API_BASE}/api/auth/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -176,7 +177,7 @@ export default function AdminRoute() {
             </button>
           </form>
           <p className="text-[10px] text-center text-zinc-400 font-normal pt-4">
-            © 2026 vdgfashion Admin. All rights reserved.
+            Â© 2026 vdgfashion Admin. All rights reserved.
           </p>
         </div>
       </div>
@@ -196,6 +197,14 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [toasts, setToasts] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   const handlePageChange = (page) => {
     setActivePage(page);
@@ -269,7 +278,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     formData.append('image', file);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/settings/upload-logo/', {
+      const res = await fetch(`${API_BASE}/api/settings/upload-logo/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
@@ -547,7 +556,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         name: p.name,
         category: p.category_name || 'Uncategorized',
         sold: soldMap[p.id] || 0,
-        rev: `₹${((soldMap[p.id] || 0) * parseFloat(p.price || 0)).toLocaleString('en-IN')}`,
+        rev: `â‚¹${((soldMap[p.id] || 0) * parseFloat(p.price || 0)).toLocaleString('en-IN')}`,
         image: p.image
       }))
       .sort((a, b) => b.sold - a.sold)
@@ -633,13 +642,35 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [selectedItem, setSelectedItem] = useState(null);
 
+  // Success Popup state
+  const [successPopup, setSuccessPopup] = useState({ show: false, title: '', message: '' });
+
+  const showSuccessPopup = (title, message) => {
+    setSuccessPopup({ show: true, title, message });
+  };
+
+  const closeSuccessPopup = () => {
+    setSuccessPopup({ show: false, title: '', message: '' });
+  };
+
+  // Delete Popup state
+  const [deletePopup, setDeletePopup] = useState({ show: false, title: 'Deleted!', message: 'The item has been deleted successfully.' });
+
+  const showDeletePopup = (title = 'Deleted!', message = 'The item has been deleted successfully.') => {
+    setDeletePopup({ show: true, title, message });
+  };
+
+  const closeDeletePopup = () => {
+    setDeletePopup({ show: false, title: 'Deleted!', message: 'The item has been deleted successfully.' });
+  };
+
   // Forms inputs
   const [productForm, setProductForm] = useState({
     name: '', slug: '', unit: 'pc', sku: '', price: '', original_price: '',
     discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
     cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
     width: '', height: '', length: '', product_type: 'simple', status: 'published',
-    category: '', parent_category: 'New Born (0–3 Months)', image: ''
+    category: '', parent_category: 'New Born (0â€“3 Months)', image: ''
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -657,7 +688,11 @@ function DashboardPortal({ onLogout, adminUser }) {
     setToasts((prev) => [...prev, newToast]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
-    }, 4000);
+    }, 5000);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const getImageUrl = (urlOrPath) => {
@@ -666,20 +701,20 @@ function DashboardPortal({ onLogout, adminUser }) {
       return urlOrPath;
     }
     if (urlOrPath.startsWith('/media/')) {
-      return `http://127.0.0.1:8000${urlOrPath}`;
+      return `${API_BASE}${urlOrPath}`;
     }
     // Bare path like 'products/xx.png' or 'categories/xx.png'
-    return `http://127.0.0.1:8000/media/${urlOrPath}`;
+    return `${API_BASE}/media/${urlOrPath}`;
   };
 
   const syncData = useCallback(async () => {
     setLoadingData(true);
     try {
-      const prodRes = await fetch('http://127.0.0.1:8000/api/products/');
+      const prodRes = await fetch(`${API_BASE}/api/products/`);
       if (prodRes.ok) setProducts(await prodRes.json());
-      const orderRes = await fetch('http://127.0.0.1:8000/api/orders/');
+      const orderRes = await fetch(`${API_BASE}/api/orders/`);
       if (orderRes.ok) setOrders(await orderRes.json());
-      const catRes = await fetch('http://127.0.0.1:8000/api/categories/');
+      const catRes = await fetch(`${API_BASE}/api/categories/`);
       if (catRes.ok) {
         const catData = await catRes.json();
         setCategories(catData);
@@ -688,13 +723,13 @@ function DashboardPortal({ onLogout, adminUser }) {
           setSelectedAdminCategory(prev => prev || rootCats[0].name);
         }
       }
-      const banRes = await fetch('http://127.0.0.1:8000/api/hero-banners/', { cache: 'no-store' });
+      const banRes = await fetch(`${API_BASE}/api/hero-banners/`, { cache: 'no-store' });
       if (banRes.ok) setBanners(await banRes.json());
-      const mobBanRes = await fetch('http://127.0.0.1:8000/api/mobile-banners/', { cache: 'no-store' });
+      const mobBanRes = await fetch(`${API_BASE}/api/mobile-banners/`, { cache: 'no-store' });
       if (mobBanRes.ok) setMobileBanners(await mobBanRes.json());
-      const revRes = await fetch('http://127.0.0.1:8000/api/reviews/');
+      const revRes = await fetch(`${API_BASE}/api/reviews/`);
       if (revRes.ok) setReviews(await revRes.json());
-      const usersRes = await fetch('http://127.0.0.1:8000/api/auth/users/');
+      const usersRes = await fetch(`${API_BASE}/api/auth/users/`);
       if (usersRes.ok) setUsersList(await usersRes.json());
 
     } catch (e) {
@@ -714,8 +749,8 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     const url = modalMode === 'edit'
-      ? `http://127.0.0.1:8000/api/products/${selectedItem.id}/`
-      : 'http://127.0.0.1:8000/api/products/';
+      ? `${API_BASE}/api/products/${selectedItem.id}/`
+      : '${API_BASE}/api/products/';
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
@@ -762,6 +797,12 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       if (res.ok) {
         showToast(modalMode === 'edit' ? 'Product updated successfully' : 'Product created successfully', 'success');
+        showSuccessPopup(
+          modalMode === 'edit' ? 'Product Updated!' : 'Product Added!',
+          modalMode === 'edit'
+            ? `"${productForm.name}" has been updated successfully.`
+            : `"${productForm.name}" has been added to your store.`
+        );
         setModalType(null);
         syncData();
       } else {
@@ -783,8 +824,8 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleSaveUser = async (e) => {
     e.preventDefault();
     const url = modalMode === 'edit'
-      ? `http://127.0.0.1:8000/api/auth/users/${selectedItem.id}/`
-      : 'http://127.0.0.1:8000/api/auth/register/';
+      ? `${API_BASE}/api/auth/users/${selectedItem.id}/`
+      : '${API_BASE}/api/auth/register/';
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
@@ -833,11 +874,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/auth/users/${id}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
         showToast('User deleted successfully', 'success');
+        showDeletePopup('User Deleted!', 'The user has been deleted successfully.');
         syncData();
       } else {
         showToast('Failed to delete user', 'warning');
@@ -849,7 +891,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleToggleUserStaff = async (user) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${user.id}/`, {
+      const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_staff: !user.is_staff })
@@ -867,7 +909,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleToggleUserActive = async (user) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${user.id}/`, {
+      const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !user.is_active })
@@ -913,11 +955,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteProduct = async (id) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/products/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/products/${id}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
         showToast('Product deleted successfully', 'success');
+        showDeletePopup('Product Deleted!', 'The product has been removed from your store.');
         syncData();
       } else {
         showToast('Failed to delete product', 'warning');
@@ -934,8 +977,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       return;
     }
     const url = modalMode === 'edit'
-      ? `http://127.0.0.1:8000/api/categories/${selectedItem.id}/`
-      : 'http://127.0.0.1:8000/api/categories/';
+      ? `${API_BASE}/api/categories/${selectedItem.id}/`
+      : '${API_BASE}/api/categories/';
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
@@ -954,6 +997,12 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       if (res.ok) {
         showToast(modalMode === 'edit' ? 'Category updated successfully' : 'Category created successfully', 'success');
+        showSuccessPopup(
+          modalMode === 'edit' ? 'Category Updated!' : 'Category Added!',
+          modalMode === 'edit'
+            ? `"${categoryForm.name}" has been updated successfully.`
+            : `"${categoryForm.name}" has been added to your store.`
+        );
         setModalType(null);
         syncData();
       } else {
@@ -975,11 +1024,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteCategory = async (id) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/categories/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/categories/${id}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
         showToast('Category deleted successfully', 'success');
+        showDeletePopup('Category Deleted!', 'The category has been removed from your store.');
         syncData();
       } else {
         showToast('Failed to delete category', 'warning');
@@ -992,11 +1042,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteReview = async (id) => {
     if (!confirm('Are you sure you want to delete this review?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/reviews/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/reviews/${id}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
         showToast('Review deleted successfully', 'success');
+        showDeletePopup('Review Deleted!', 'The review has been removed successfully.');
         syncData();
       } else {
         showToast('Failed to delete review', 'warning');
@@ -1011,7 +1062,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     setLoadingData(true);
     try {
       const parsedData = JSON.parse(bulkInput);
-      const res = await fetch('http://127.0.0.1:8000/api/products/bulk-upload/', {
+      const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(parsedData)
@@ -1038,7 +1089,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleInlineStockSave = async (productId, newStock) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/products/${productId}/`, {
+      const res = await fetch(`${API_BASE}/api/products/${productId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: parseInt(newStock) })
@@ -1053,7 +1104,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleOrderStatusChange = async (orderId, newStatus) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/orders/${orderId}/`, {
+      const res = await fetch(`${API_BASE}/api/orders/${orderId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -1068,11 +1119,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteOrder = async (id) => {
     if (!confirm('Are you sure you want to delete this order?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/orders/${id}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
         showToast('Order deleted successfully', 'success');
+        showDeletePopup('Order Deleted!', 'The order has been removed from the system.');
         syncData();
       } else {
         showToast('Failed to delete order', 'warning');
@@ -1101,7 +1153,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     formData.append('file', file);
     
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/products/upload-image/', {
+      const res = await fetch(`${API_BASE}/api/products/upload-image/`, {
         method: 'POST',
         body: formData
       });
@@ -1128,7 +1180,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteBanner = async (bannerId) => {
     if (!confirm('Are you sure you want to revert this banner to default?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/hero-banners/${bannerId}/`, {
+      const res = await fetch(`${API_BASE}/api/hero-banners/${bannerId}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -1149,7 +1201,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/hero-banners/upload-image/', {
+      const res = await fetch(`${API_BASE}/api/hero-banners/upload-image/`, {
         method: 'POST',
         body: formData
       });
@@ -1167,8 +1219,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         };
         const method = existingBanner ? 'PATCH' : 'POST';
         const url = existingBanner 
-          ? `http://127.0.0.1:8000/api/hero-banners/${existingBanner.id}/`
-          : `http://127.0.0.1:8000/api/hero-banners/`;
+          ? `${API_BASE}/api/hero-banners/${existingBanner.id}/`
+          : `${API_BASE}/api/hero-banners/`;
           
         const saveRes = await fetch(url, {
             method,
@@ -1195,7 +1247,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteMobileBanner = async (bannerId) => {
     if (!confirm('Are you sure you want to revert this mobile banner to default?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/mobile-banners/${bannerId}/`, {
+      const res = await fetch(`${API_BASE}/api/mobile-banners/${bannerId}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -1216,7 +1268,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/mobile-banners/upload-image/', {
+      const res = await fetch(`${API_BASE}/api/mobile-banners/upload-image/`, {
         method: 'POST',
         body: formData
       });
@@ -1234,8 +1286,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         };
         const method = existingBanner ? 'PATCH' : 'POST';
         const url = existingBanner 
-          ? `http://127.0.0.1:8000/api/mobile-banners/${existingBanner.id}/`
-          : `http://127.0.0.1:8000/api/mobile-banners/`;
+          ? `${API_BASE}/api/mobile-banners/${existingBanner.id}/`
+          : `${API_BASE}/api/mobile-banners/`;
           
         const saveRes = await fetch(url, {
             method,
@@ -1266,7 +1318,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/categories/upload-image/', {
+      const res = await fetch(`${API_BASE}/api/categories/upload-image/`, {
         method: 'POST',
         body: formData
       });
@@ -1407,17 +1459,398 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   return (
     <div className={`flex h-screen overflow-hidden font-sans admin-portal-font-boost transition-colors duration-200 ${
-      theme === 'dark' ? 'bg-[#0a0c10] text-[#e8eaf0]' : 'bg-[#f8fafc] text-[#0f172a]'
+      theme === 'dark' ? 'bg-[#080c14] text-[#e8eaf0]' : 'bg-[#f8fafc] text-[#0f172a]'
     }`}>
       {/* Side Toasts Notifications */}
-      <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
-        {toasts.map((t) => (
-          <div key={t.id} className="p-4 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-normal border bg-white border-zinc-200 text-zinc-800 pointer-events-auto">
-            <CheckCircle className="h-4.5 w-4.5 text-green-500" />
-            <span>{t.message}</span>
-          </div>
-        ))}
+      <div className="fixed top-5 right-5 z-[998] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: 360 }}>
+        {toasts.map((t) => {
+          const isDelete = t.message.toLowerCase().includes('deleted');
+          const isWarning = t.type === 'warning';
+          const isError = t.type === 'error';
+          const isSuccess = !isWarning && !isError;
+
+          // Determine colors
+          const bgColor = isDelete || isError ? '#fff5f5' : isWarning ? '#fffbeb' : '#f0fdf4';
+          const borderColor = isDelete || isError ? '#fecaca' : isWarning ? '#fde68a' : '#bbf7d0';
+          const iconColor = isDelete || isError ? '#ef4444' : isWarning ? '#f59e0b' : '#22c55e';
+          const textColor = isDelete || isError ? '#991b1b' : isWarning ? '#92400e' : '#166534';
+          const subColor = isDelete || isError ? '#dc2626' : isWarning ? '#d97706' : '#16a34a';
+
+          return (
+            <div
+              key={t.id}
+              className="relative pointer-events-auto rounded-2xl border shadow-lg overflow-hidden"
+              style={{
+                background: bgColor,
+                borderColor: borderColor,
+                animation: 'toastSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
+                minWidth: 280
+              }}
+            >
+              {/* Progress bar at top */}
+              <div
+                className="absolute top-0 left-0 h-[3px] rounded-t-2xl"
+                style={{
+                  background: iconColor,
+                  width: '100%',
+                  animation: 'toastProgress 5s linear both',
+                  transformOrigin: 'left'
+                }}
+              />
+
+              <div className="flex items-start gap-3 p-4 pt-5">
+                {/* Icon */}
+                <div
+                  className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: iconColor + '20' }}
+                >
+                  {isDelete ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                  ) : isWarning ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </div>
+
+                {/* Message text */}
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <p className="text-xs font-bold" style={{ color: textColor }}>
+                    {isDelete ? 'Deleted Successfully' : isWarning ? 'Warning' : 'Success'}
+                  </p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: subColor }}>
+                    {t.message}
+                  </p>
+                </div>
+
+                {/* Close X button */}
+                <button
+                  onClick={() => removeToast(t.id)}
+                  className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-110"
+                  style={{ color: iconColor, background: iconColor + '15' }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="1" y1="1" x2="9" y2="9" />
+                    <line x1="9" y1="1" x2="1" y2="9" />
+                  </svg>
+                </button>
+              </div>
+
+              <style>{`
+                @keyframes toastSlideIn {
+                  from { opacity: 0; transform: translateX(60px) scale(0.9); }
+                  to { opacity: 1; transform: translateX(0) scale(1); }
+                }
+                @keyframes toastProgress {
+                  from { transform: scaleX(1); }
+                  to { transform: scaleX(0); }
+                }
+              `}</style>
+            </div>
+          );
+        })}
       </div>
+
+      {/* Success Popup Modal */}
+      {successPopup.show && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4" style={{ backdropFilter: 'blur(6px)', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div
+            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-[420px] p-8 flex flex-col items-center gap-5 overflow-hidden"
+            style={{ animation: 'successPopupIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
+          >
+            {/* Close X button */}
+            <button
+              onClick={closeSuccessPopup}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer p-1 rounded-full hover:bg-zinc-100"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Floating particles */}
+            {[
+              { top: '15%', left: '12%', size: 8, color: '#4ade80', delay: '0s' },
+              { top: '20%', right: '15%', size: 6, color: '#86efac', delay: '0.1s' },
+              { top: '65%', left: '8%', size: 5, color: '#bbf7d0', delay: '0.2s' },
+              { top: '70%', right: '10%', size: 7, color: '#4ade80', delay: '0.15s' },
+              { top: '40%', left: '5%', size: 4, color: '#86efac', delay: '0.3s' },
+              { top: '35%', right: '6%', size: 5, color: '#4ade80', delay: '0.05s' },
+              { top: '55%', left: '18%', size: 4, color: '#bbf7d0', delay: '0.25s' },
+              { top: '50%', right: '18%', size: 6, color: '#86efac', delay: '0.18s' },
+            ].map((p, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  top: p.top, left: p.left, right: p.right,
+                  width: p.size, height: p.size,
+                  backgroundColor: p.color,
+                  animation: `successParticle 2.5s ease-in-out ${p.delay} infinite alternate`,
+                  opacity: 0.7
+                }}
+              />
+            ))}
+
+            {/* Checkmark circle */}
+            <div
+              className="relative flex items-center justify-center"
+              style={{ width: 110, height: 110 }}
+            >
+              {/* Outer glow ring */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(74,222,128,0.18) 0%, rgba(74,222,128,0.04) 70%, transparent 100%)',
+                  animation: 'successGlow 2s ease-in-out infinite alternate'
+                }}
+              />
+              {/* Circle border */}
+              <svg width="110" height="110" viewBox="0 0 110 110" className="absolute inset-0">
+                <circle
+                  cx="55" cy="55" r="48"
+                  fill="none"
+                  stroke="#4ade80"
+                  strokeWidth="3"
+                  strokeDasharray="302"
+                  strokeDashoffset="0"
+                  strokeLinecap="round"
+                  style={{ animation: 'successCircle 0.6s ease-out 0.1s both' }}
+                />
+              </svg>
+              {/* Green fill circle */}
+              <div
+                className="rounded-full flex items-center justify-center"
+                style={{
+                  width: 86, height: 86,
+                  background: 'linear-gradient(135deg, #4ade80, #22c55e)',
+                  boxShadow: '0 8px 32px rgba(74,222,128,0.35)',
+                  animation: 'successCheckIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s both'
+                }}
+              >
+                <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+                  <path
+                    d="M8 20L16 28L30 11"
+                    stroke="white"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ animation: 'successCheckDraw 0.4s ease-out 0.4s both', strokeDasharray: 40, strokeDashoffset: 40 }}
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Text */}
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-black text-zinc-900" style={{ animation: 'successFadeUp 0.5s ease-out 0.3s both', opacity: 0 }}>
+                {successPopup.title}
+              </h3>
+              <p className="text-sm text-zinc-500 font-normal leading-relaxed" style={{ animation: 'successFadeUp 0.5s ease-out 0.4s both', opacity: 0 }}>
+                {successPopup.message}
+              </p>
+            </div>
+
+            {/* Got it button */}
+            <button
+              onClick={closeSuccessPopup}
+              className="w-full py-3.5 rounded-2xl font-bold text-base text-white cursor-pointer transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                boxShadow: '0 6px 20px rgba(34,197,94,0.35)',
+                animation: 'successFadeUp 0.5s ease-out 0.5s both',
+                opacity: 0
+              }}
+            >
+              Got it!
+            </button>
+
+            {/* CSS keyframes injected inline */}
+            <style>{`
+              @keyframes successPopupIn {
+                from { opacity: 0; transform: scale(0.7) translateY(30px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+              }
+              @keyframes successParticle {
+                0% { transform: translateY(0px) scale(1); opacity: 0.5; }
+                100% { transform: translateY(-12px) scale(1.3); opacity: 1; }
+              }
+              @keyframes successGlow {
+                from { transform: scale(0.9); opacity: 0.6; }
+                to { transform: scale(1.1); opacity: 1; }
+              }
+              @keyframes successCircle {
+                from { stroke-dashoffset: 302; opacity: 0; }
+                to { stroke-dashoffset: 0; opacity: 1; }
+              }
+              @keyframes successCheckIn {
+                from { transform: scale(0); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+              }
+              @keyframes successCheckDraw {
+                from { stroke-dashoffset: 40; }
+                to { stroke-dashoffset: 0; }
+              }
+              @keyframes successFadeUp {
+                from { opacity: 0; transform: translateY(12px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+            `}</style>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Popup Modal */}
+      {deletePopup.show && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4" style={{ backdropFilter: 'blur(6px)', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div
+            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-[420px] p-8 flex flex-col items-center gap-5 overflow-hidden"
+            style={{ animation: 'dpopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
+          >
+            {/* Close X button */}
+            <button
+              onClick={closeDeletePopup}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer p-1 rounded-full hover:bg-zinc-100"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Floating red particles */}
+            {[
+              { top: '12%', left: '10%', size: 8, color: '#f87171', delay: '0s', shape: 'circle' },
+              { top: '18%', right: '12%', size: 5, color: '#fca5a5', delay: '0.1s', shape: 'circle' },
+              { top: '60%', left: '7%', size: 6, color: '#f87171', delay: '0.2s', shape: 'circle' },
+              { top: '72%', right: '9%', size: 7, color: '#fca5a5', delay: '0.15s', shape: 'circle' },
+              { top: '38%', left: '4%', size: 4, color: '#fecaca', delay: '0.3s', shape: 'square' },
+              { top: '32%', right: '5%', size: 5, color: '#f87171', delay: '0.05s', shape: 'square' },
+              { top: '52%', left: '17%', size: 4, color: '#fca5a5', delay: '0.25s', shape: 'circle' },
+              { top: '48%', right: '16%', size: 6, color: '#f87171', delay: '0.18s', shape: 'circle' },
+            ].map((p, i) => (
+              <div
+                key={i}
+                className="absolute pointer-events-none"
+                style={{
+                  top: p.top, left: p.left, right: p.right,
+                  width: p.size, height: p.size,
+                  backgroundColor: p.color,
+                  borderRadius: p.shape === 'circle' ? '50%' : '2px',
+                  animation: `dpart 2.5s ease-in-out ${p.delay} infinite alternate`,
+                  opacity: 0.75
+                }}
+              />
+            ))}
+
+            {/* Trash icon circle */}
+            <div
+              className="relative flex items-center justify-center"
+              style={{ width: 110, height: 110 }}
+            >
+              {/* Outer glow ring */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(248,113,113,0.18) 0%, rgba(248,113,113,0.04) 70%, transparent 100%)',
+                  animation: 'dglow 2s ease-in-out infinite alternate'
+                }}
+              />
+              {/* Circle border */}
+              <svg width="110" height="110" viewBox="0 0 110 110" className="absolute inset-0">
+                <circle
+                  cx="55" cy="55" r="48"
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="3"
+                  strokeDasharray="302"
+                  strokeDashoffset="0"
+                  strokeLinecap="round"
+                  style={{ animation: 'dcircle 0.6s ease-out 0.1s both' }}
+                />
+              </svg>
+              {/* Red fill circle with trash icon */}
+              <div
+                className="rounded-full flex items-center justify-center"
+                style={{
+                  width: 86, height: 86,
+                  background: 'linear-gradient(135deg, #f87171, #ef4444)',
+                  boxShadow: '0 8px 32px rgba(239,68,68,0.35)',
+                  animation: 'dcheckin 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s both'
+                }}
+              >
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ animation: 'dfadeup 0.4s ease-out 0.4s both' }}
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Text */}
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-black text-zinc-900" style={{ animation: 'dfadeup 0.5s ease-out 0.35s both' }}>
+                {deletePopup.title}
+              </h3>
+              <p className="text-sm text-zinc-500 font-normal leading-relaxed" style={{ animation: 'dfadeup 0.5s ease-out 0.45s both' }}>
+                {deletePopup.message}
+              </p>
+            </div>
+
+            {/* OK, Got it! button */}
+            <button
+              onClick={closeDeletePopup}
+              className="w-full py-3.5 rounded-2xl font-bold text-base text-white cursor-pointer transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #f87171, #ef4444)',
+                boxShadow: '0 6px 20px rgba(239,68,68,0.35)',
+                animation: 'dfadeup 0.5s ease-out 0.55s both'
+              }}
+            >
+              OK, Got it!
+            </button>
+
+            {/* All keyframes self-contained â€” no dependency on success popup */}
+            <style>{`
+              @keyframes dpopIn {
+                from { opacity: 0; transform: scale(0.7) translateY(30px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+              }
+              @keyframes dpart {
+                0% { transform: translateY(0px) scale(1); opacity: 0.5; }
+                100% { transform: translateY(-12px) scale(1.3); opacity: 1; }
+              }
+              @keyframes dglow {
+                from { transform: scale(0.9); opacity: 0.6; }
+                to { transform: scale(1.15); opacity: 1; }
+              }
+              @keyframes dcircle {
+                from { stroke-dashoffset: 302; opacity: 0; }
+                to { stroke-dashoffset: 0; opacity: 1; }
+              }
+              @keyframes dcheckin {
+                from { transform: scale(0); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+              }
+              @keyframes dfadeup {
+                from { opacity: 0; transform: translateY(12px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+            `}</style>
+          </div>
+        </div>
+      )}
 
       {/* Backdrop overlay for mobile sidebar */}
       {isSidebarOpen && (
@@ -1431,9 +1864,9 @@ function DashboardPortal({ onLogout, adminUser }) {
       <aside className={`fixed inset-y-0 left-0 z-50 w-[290px] lg:static lg:translate-x-0 flex-shrink-0 flex flex-col border-r transition-transform duration-300 ease-in-out ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } ${
-        theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200'
+        theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200'
       }`}>
-        <div className={`p-6 border-b flex items-center gap-3.5 ${theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-100'}`}>
+        <div className={`p-6 border-b flex items-center gap-3.5 ${theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-100'}`}>
           <div className="flex items-center justify-center w-full">
             <img src="/logo.png" alt="vdgfashion logo" className="h-12 object-contain" />
           </div>
@@ -1450,11 +1883,15 @@ function DashboardPortal({ onLogout, adminUser }) {
           <NavItem theme={theme} icon={<Megaphone size={20} />} label="Index Banners" active={activePage === 'hero-banners'} onClick={() => handlePageChange('hero-banners')} />
           <NavItem theme={theme} icon={<Settings size={20} />} label="Settings" active={activePage === 'settings'} onClick={() => handlePageChange('settings')} />
           
-          <hr className="border-dashed my-2 opacity-50 border-zinc-200 dark:border-[#2a3145]" />
+          <hr className="border-dashed my-2 opacity-50 border-zinc-200 dark:border-[#1e293b]" />
 
           <button 
             onClick={onLogout}
-            className="w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+            className={`w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 text-rose-500 ${
+              theme === 'dark' 
+                ? 'hover:bg-rose-950/15' 
+                : 'hover:bg-rose-50'
+            }`}
           >
             <LogOut size={20} />
             <span>Log Out</span>
@@ -1463,18 +1900,20 @@ function DashboardPortal({ onLogout, adminUser }) {
         </nav>
 
         {/* Footer info profile cockpit */}
-        <div className={`p-5 border-t flex items-center justify-between gap-3 hover:bg-zinc-50 dark:hover:bg-white/5 cursor-pointer transition-colors ${
-          theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200'
+        <div className={`p-5 border-t flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+          theme === 'dark' 
+            ? 'border-[#1e293b] hover:bg-[#172033]/70' 
+            : 'border-zinc-200 hover:bg-zinc-50'
         }`} onClick={onLogout}>
           <div className="flex items-center gap-3 min-w-0 text-left">
-            <div className="w-11 h-11 rounded-full bg-indigo-600 flex items-center justify-center text-white font-normal text-sm shadow-3xs shrink-0 select-none">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] flex items-center justify-center text-white font-semibold text-sm shadow-2xs shrink-0 border border-white/10 select-none">
               {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
             </div>
             <div className="min-w-0">
-              <p className={`font-normal text-[17px] truncate ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>
+              <p className={`font-semibold text-[17px] truncate ${theme === 'dark' ? 'text-slate-100' : 'text-[#0f172a]'}`}>
                 {adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}`.trim() : adminUser?.username || 'Admin User'}
               </p>
-              <p className="text-[14px] text-zinc-400 truncate">
+              <p className="text-[14px] text-zinc-400 dark:text-zinc-300 truncate">
                 {adminUser?.email || 'admin@vdgfashion.com'}
               </p>
             </div>
@@ -1487,7 +1926,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header bar */}
         <header className={`px-4 sm:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b gap-4 ${
-          theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200'
+          theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200'
         }`}>
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Hamburger mobile menu button */}
@@ -1495,7 +1934,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               onClick={() => setIsSidebarOpen(true)}
               className={`p-2 rounded-xl border lg:hidden cursor-pointer transition-colors shrink-0 ${
                 theme === 'dark' 
-                  ? 'bg-[#161b26] border-[#2a3145] text-zinc-400 hover:text-white' 
+                  ? 'bg-[#172033] border-[#1e293b] text-zinc-400 hover:text-white' 
                   : 'bg-zinc-50 border-zinc-200 text-zinc-650 hover:text-[#0f172a]'
               }`}
             >
@@ -1511,7 +1950,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 placeholder="Search for products, categories..."
                 className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 border ${
                   theme === 'dark' 
-                    ? 'bg-[#161b26] border-[#2a3145] text-white placeholder-zinc-500' 
+                    ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
                     : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
                 }`}
               />
@@ -1542,8 +1981,8 @@ function DashboardPortal({ onLogout, adminUser }) {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className={`absolute right-0 mt-3.5 w-80 rounded-2xl border shadow-xl z-50 p-4 max-h-[350px] overflow-y-auto text-left flex flex-col divide-y divide-zinc-100 dark:divide-[#2a3145]/60 ${
-                    theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/60' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
+                  <div className={`absolute right-0 mt-3.5 w-80 rounded-2xl border shadow-xl z-50 p-4 max-h-[350px] overflow-y-auto text-left flex flex-col divide-y divide-zinc-100 dark:divide-[#1e293b]/60 ${
+                    theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/60' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
                   }`}>
                     <div className="pb-2 flex justify-between items-center">
                       <span className="font-normal text-[12px] uppercase tracking-wider text-indigo-500">Notifications ({notifications.length})</span>
@@ -1570,14 +2009,14 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
 
             <div className="flex items-center gap-2 pl-3 border-l border-zinc-200 dark:border-[#cbd5e1]/10">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-normal text-xs shadow-3xs shrink-0 select-none">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] flex items-center justify-center text-white font-bold text-xs shadow-xs shrink-0 border border-white/10 select-none">
                 {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
               </div>
-              <div className="hidden sm:block text-left leading-none">
-                <p className={`font-normal text-[11px] ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+              <div className="hidden sm:block text-left leading-tight">
+                <p className={`font-semibold text-xs ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                   {adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}`.trim() : adminUser?.username || 'Admin User'}
                 </p>
-                <p className="text-[9px] text-zinc-500 font-normal mt-0.5">
+                <p className="text-[10px] font-semibold mt-0.5 text-zinc-500 dark:text-indigo-400">
                   {adminUser?.is_staff ? 'Super Admin' : 'Staff Admin'}
                 </p>
               </div>
@@ -1600,7 +2039,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme={theme}
                   color="bg-purple-600 text-white dark:bg-purple-500 shadow-purple-500/10" 
                   label="Total Sales" 
-                  value={orders.length > 0 ? `₹${Math.round(totalSalesVal).toLocaleString('en-IN')}` : "₹0"} 
+                  value={orders.length > 0 ? `â‚¹${Math.round(totalSalesVal).toLocaleString('en-IN')}` : "â‚¹0"} 
                   icon={<ShoppingBag className="h-5.5 w-5.5" />} 
                 />
                 <GridStat 
@@ -1628,7 +2067,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme={theme}
                   color="bg-teal-600 text-white dark:bg-teal-500 shadow-teal-500/10" 
                   label="Revenue" 
-                  value={orders.length > 0 ? `₹${Math.round(totalRevenueVal).toLocaleString('en-IN')}` : "₹0"} 
+                  value={orders.length > 0 ? `â‚¹${Math.round(totalRevenueVal).toLocaleString('en-IN')}` : "â‚¹0"} 
                   icon={<Wallet className="h-5.5 w-5.5" />} 
                 />
                 <GridStat 
@@ -1647,7 +2086,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   onClick={() => handleOpenProductModal('add')}
                   className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
                     theme === 'dark' 
-                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-purple-500/50 text-white' 
+                      ? 'bg-[#0f1626] border-[#1e293b] hover:bg-zinc-900 hover:border-purple-500/50 text-white' 
                       : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-purple-500/50 shadow-3xs'
                   }`}
                 >
@@ -1665,7 +2104,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   onClick={() => handleOpenCategoryModal('add')}
                   className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
                     theme === 'dark' 
-                      ? 'bg-[#10141c] border-[#2a3145] hover:bg-zinc-900 hover:border-pink-500/50 text-white' 
+                      ? 'bg-[#0f1626] border-[#1e293b] hover:bg-zinc-900 hover:border-pink-500/50 text-white' 
                       : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-pink-500/50 shadow-3xs'
                   }`}
                 >
@@ -1685,7 +2124,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* Sales Overview Line Chart Area */}
                 <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales Overview</h3>
@@ -1693,11 +2132,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                       value={analyticsTimeframe}
                       onChange={(e) => setAnalyticsTimeframe(e.target.value)}
                       className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                        theme === 'dark' ? 'border-[#2a3145] text-zinc-300' : 'border-zinc-200 text-zinc-700'
+                        theme === 'dark' ? 'border-[#1e293b] text-zinc-300' : 'border-zinc-200 text-zinc-700'
                     }`}>
-                      <option value="week">This Week</option>
-                      <option value="month">This Month</option>
-                      <option value="year">This Year</option>
+                      <option value="week" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Week</option>
+                      <option value="month" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Month</option>
+                      <option value="year" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Year</option>
                     </select>
                   </div>
                   
@@ -1705,7 +2144,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-normal h-[88%] pb-2 select-none w-[42px] text-left leading-none">
                       {[1, 0.8, 0.6, 0.4, 0.2, 0].map(mult => (
-                        <span key={mult}>₹{analyticsChartMetric === 'revenue' ? Math.round(maxChartVal * mult).toLocaleString('en-IN') : Math.round(maxChartVal * mult)}</span>
+                        <span key={mult}>â‚¹{analyticsChartMetric === 'revenue' ? Math.round(maxChartVal * mult).toLocaleString('en-IN') : Math.round(maxChartVal * mult)}</span>
                       ))}
                     </div>
                     {/* Line Chart Grid Canvas */}
@@ -1749,7 +2188,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Sales By Category Donut Area */}
                 <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <h3 className={`font-normal text-sm mb-4 text-left ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales by Category</h3>
                   <div className="flex items-center justify-between gap-6 h-64 mt-2 flex-grow">
@@ -1786,7 +2225,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             dotColor={slice.dot} 
                             label={slice.name} 
                             pct={`${slice.percentage}%`} 
-                            val={`₹${Math.round(slice.count).toLocaleString('en-IN')}`} 
+                            val={`â‚¹${Math.round(slice.count).toLocaleString('en-IN')}`} 
                           />
                         ))
                       )}
@@ -1796,7 +2235,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Recent Orders List panel */}
                 <div className={`p-5 rounded-3xl border transition-all ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Recent Orders</h3>
@@ -1833,7 +2272,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             theme={theme} 
                             id={`#${o.order_id}`} 
                             date={orderDate} 
-                            amount={`₹${o.total_amount}`} 
+                            amount={`â‚¹${o.total_amount}`} 
                             status={status} 
                             name={o.customer_name} 
                             gradient={avatarColor} 
@@ -1851,7 +2290,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* Top Selling Products List Card */}
                 <div className={`lg:col-span-2 p-5 rounded-3xl border transition-all ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Top Selling Products</h3>
@@ -1859,7 +2298,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[500px] text-left text-sm font-normal">
-                      <thead className={`font-normal tracking-normal border-b pb-2.5 text-[12px] ${theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'}`}>
+                      <thead className={`font-normal tracking-normal border-b pb-2.5 text-[12px] ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-100 text-black'}`}>
                         <tr>
                           <th className="pb-3">Product</th>
                           <th className="pb-3">Category</th>
@@ -1868,7 +2307,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <th className="pb-3 text-center">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-100 dark:divide-[#2a3145]/60 text-zinc-700 dark:text-zinc-300">
+                      <tbody className="divide-y divide-zinc-100 dark:divide-[#1e293b]/60 text-zinc-700 dark:text-zinc-300">
                         {topSellingProducts.length === 0 ? (
                           <tr>
                             <td colSpan="5" className="py-8 text-center text-xs font-normal text-zinc-400">
@@ -1895,7 +2334,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Customer Growth Bar Chart Card */}
                 <div className={`p-5 rounded-3xl border transition-all ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Customer Growth</h3>
@@ -1903,11 +2342,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                       value={customerGrowthTimeframe}
                       onChange={(e) => setCustomerGrowthTimeframe(e.target.value)}
                       className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                        theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-200 text-zinc-700'
+                        theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-700'
                     }`}>
-                      <option value="week">This Week</option>
-                      <option value="month">This Month</option>
-                      <option value="year">This Year</option>
+                      <option value="week" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Week</option>
+                      <option value="month" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Month</option>
+                      <option value="year" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Year</option>
                     </select>
                   </div>
                   
@@ -1953,9 +2392,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Clean elegant dashboard footer */}
               <footer className={`pt-6 border-t flex items-center justify-between text-[10px] text-zinc-400 font-normal ${
-                theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200'
+                theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200'
               }`}>
-                <span>© 2026 vdgfashion Admin. All rights reserved.</span>
+                <span>Â© 2026 vdgfashion Admin. All rights reserved.</span>
                 <span className="flex items-center gap-0.5">Made with <Heart size={10} className="text-red-500 fill-red-500 shrink-0" /> by vdgfashion</span>
               </footer>
             </div>
@@ -1968,7 +2407,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setModalType('bulk')}
-                    className="py-2.5 px-4 bg-[#161b26] hover:bg-[#20293a] text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-colors border border-[#2a3145] cursor-pointer"
+                    className="py-2.5 px-4 bg-[#172033] hover:bg-[#20293a] text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-colors border border-[#1e293b] cursor-pointer"
                   >
                     <Upload size={14} /> Bulk Upload
                   </button>
@@ -1981,9 +2420,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
               </div>
 
-              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
+              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[800px] text-left text-sm">
-                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4.5">Product Name</th>
                       <th className="p-4.5">Category</th>
@@ -1992,15 +2431,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <th className="p-4.5 text-center">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
                     {paginatedProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-white/2 transition-colors">
                         <td className="p-4 font-normal flex items-center gap-2.5">
-                          {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#2a3145]" />}
+                          {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#1e293b]" />}
                           <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</span>
                         </td>
                         <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
-                        <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
+                        <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>â‚¹{p.price}</td>
                         <td className="p-4 text-right">
                           {inlineStockEdit[p.id] !== undefined ? (
                             <div className="flex items-center justify-end gap-1">
@@ -2010,7 +2449,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 onChange={(e) => setInlineStockEdit(prev => ({ ...prev, [p.id]: e.target.value }))}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); if (e.key === 'Escape') setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; }); }}
                                 className={`w-16 px-2 py-1 rounded-lg border text-xs font-normal text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                  theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white' : 'bg-white border-zinc-300 text-zinc-800'
+                                  theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white' : 'bg-white border-zinc-300 text-zinc-800'
                                 }`}
                                 autoFocus
                               />
@@ -2069,9 +2508,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <button 
                       disabled={productPage === 1}
                       onClick={() => setProductPage(prev => Math.max(1, prev - 1))}
-                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
+                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                     >
-                      ◀ Prev
+                      â—€ Prev
                     </button>
                     {[...Array(totalProductPages)].map((_, idx) => {
                       const pageNum = idx + 1;
@@ -2092,9 +2531,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <button 
                       disabled={productPage === totalProductPages}
                       onClick={() => setProductPage(prev => Math.min(totalProductPages, prev + 1))}
-                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
+                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                     >
-                      Next ▶
+                      Next â–¶
                     </button>
                   </div>
                 </div>
@@ -2128,7 +2567,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               {/* 4 Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
                     <Folders className="h-6 w-6" />
@@ -2140,14 +2579,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </h3>
                     <div className="flex items-center gap-1.5 text-[9px] font-normal mt-1.5 leading-none">
                       <span className="text-emerald-500">Active: {rootCategories.filter(c => c.is_active).length}</span>
-                      <span className="text-zinc-350 dark:text-zinc-700">•</span>
+                      <span className="text-zinc-350 dark:text-zinc-700">â€¢</span>
                       <span className="text-rose-500">Inactive: {rootCategories.filter(c => !c.is_active).length}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
                     <Folders className="h-6 w-6 rotate-90" />
@@ -2159,14 +2598,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </h3>
                     <div className="flex items-center gap-1.5 text-[9px] font-normal mt-1.5 leading-none">
                       <span className="text-emerald-500">Active: {subCategories.filter(c => c.is_active).length}</span>
-                      <span className="text-zinc-350 dark:text-zinc-700">•</span>
+                      <span className="text-zinc-350 dark:text-zinc-700">â€¢</span>
                       <span className="text-rose-500">Inactive: {subCategories.filter(c => !c.is_active).length}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-500/20">
                     <Package className="h-6 w-6" />
@@ -2181,7 +2620,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
                     <Package className="h-6 w-6" />
@@ -2198,7 +2637,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Table Card */}
               <div className={`p-6 rounded-3xl border ${
-                theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
               }`}>
                 {/* Tabs & Search / Filter Header */}
                 <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-800/80 mb-6">
@@ -2206,10 +2645,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="flex gap-6 border-b border-transparent">
                     <button
                       onClick={() => setCategoriesActiveTab('categories')}
-                      className={`pb-2.5 text-sm font-normal relative transition-all cursor-pointer ${
+                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${
                         categoriesActiveTab === 'categories'
-                          ? 'text-indigo-600 dark:text-indigo-400'
-                          : 'text-zinc-450 hover:text-zinc-800 dark:hover:text-white'
+                          ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
+                          : theme === 'dark'
+                            ? 'text-zinc-450 hover:text-white'
+                            : 'text-zinc-550 hover:text-zinc-850'
                       }`}
                     >
                       Categories
@@ -2219,10 +2660,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </button>
                     <button
                       onClick={() => setCategoriesActiveTab('subcategories')}
-                      className={`pb-2.5 text-sm font-normal relative transition-all cursor-pointer ${
+                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${
                         categoriesActiveTab === 'subcategories'
-                          ? 'text-indigo-600 dark:text-indigo-400'
-                          : 'text-zinc-450 hover:text-zinc-800 dark:hover:text-white'
+                          ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
+                          : theme === 'dark'
+                            ? 'text-zinc-450 hover:text-white'
+                            : 'text-zinc-550 hover:text-zinc-850'
                       }`}
                     >
                       Subcategories
@@ -2235,7 +2678,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   {/* Search and Filters */}
                   <div className="flex items-center gap-3">
                     <div className={`relative flex items-center bg-zinc-50 border rounded-2xl px-3.5 py-1.5 focus-within:border-indigo-500 w-52 sm:w-64 transition-all ${
-                      theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-zinc-50 border-zinc-200'
+                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
                     }`}>
                       <Search className="h-4 w-4 text-zinc-400 shrink-0" />
                       <input 
@@ -2250,8 +2693,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                       )}
                     </div>
                     
-                    <button className={`py-1.5 px-3.5 border rounded-2xl text-xs font-normal flex items-center gap-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all cursor-pointer ${
-                      theme === 'dark' ? 'border-[#2a3145] text-zinc-455' : 'border-zinc-200 text-zinc-650'
+                    <button className={`py-1.5 px-3.5 border rounded-2xl text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                      theme === 'dark' 
+                        ? 'border-[#1e293b] text-zinc-300 hover:bg-[#172033] hover:text-white' 
+                        : 'border-zinc-200 text-zinc-650 hover:bg-zinc-50 hover:text-zinc-900'
                     }`}>
                       <Filter className="h-3.5 w-3.5" />
                       Filter
@@ -2264,7 +2709,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[700px] text-left text-sm">
                       <thead className={`font-normal tracking-normal border-b text-[12px] ${
-                        theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
+                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
                       }`}>
                         <tr>
                           <th className="p-4 w-12 text-center">#</th>
@@ -2276,7 +2721,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <th className="p-4 text-center">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
                         {rootCategories
                           .filter(c => c.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
                           .map((c, index) => {
@@ -2301,10 +2746,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
                                     {c.image_url || c.image ? (
-                                      <img src={getImageUrl(c.image_url || c.image)} alt={c.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#2a3145] p-0.5 bg-white shadow-3xs" />
+                                      <img src={getImageUrl(c.image_url || c.image)} alt={c.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
                                     ) : (
                                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
-                                        theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-zinc-50 border-zinc-200'
+                                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
                                       }`}>
                                         <Folders size={16} className="text-zinc-400" />
                                       </div>
@@ -2351,7 +2796,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="overflow-x-auto no-scrollbar animate-fade-in">
                     <table className="w-full min-w-[700px] text-left text-sm">
                       <thead className={`font-normal tracking-normal border-b text-[12px] ${
-                        theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
+                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
                       }`}>
                         <tr>
                           <th className="p-4 w-12 text-center">#</th>
@@ -2363,7 +2808,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <th className="p-4 text-center">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
                         {subCategories
                           .filter(sub => sub.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
                           .map((sub, index) => {
@@ -2381,10 +2826,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
                                     {sub.image_url || sub.image ? (
-                                      <img src={getImageUrl(sub.image_url || sub.image)} alt={sub.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#2a3145] p-0.5 bg-white shadow-3xs" />
+                                      <img src={getImageUrl(sub.image_url || sub.image)} alt={sub.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
                                     ) : (
                                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
-                                        theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-zinc-50 border-zinc-200'
+                                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
                                       }`}>
                                         <Folders size={16} className="text-zinc-400" />
                                       </div>
@@ -2442,7 +2887,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     onChange={(e) => setOrderSearch(e.target.value)}
                     placeholder="Search by order ID, name, phone..."
                     className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
-                      theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
                     }`}
                   />
                 </div>
@@ -2452,7 +2897,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[['All', orders.length, 'bg-indigo-600'], ['Pending', orders.filter(o=>o.status==='pending'||(!o.status&&o.payment_method==='cod')).length, 'bg-amber-500'], ['Delivered', orders.filter(o=>o.status==='delivered').length, 'bg-emerald-600'], ['Cancelled', orders.filter(o=>o.status==='cancelled').length, 'bg-red-600']].map(([label, count, color]) => (
                   <div key={label} className={`p-4 rounded-2xl border flex items-center gap-3 ${
-                    theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                    theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                   }`}>
                     <div className={`w-9 h-9 rounded-xl ${color} text-white flex items-center justify-center font-normal text-sm`}>{count}</div>
                     <span className={`text-xs font-normal ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>{label}</span>
@@ -2460,9 +2905,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                 ))}
               </div>
 
-              <div className={`border rounded-2xl overflow-x-auto min-h-[420px] ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
+              <div className={`border rounded-2xl overflow-x-auto min-h-[420px] ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[850px] text-left text-xs">
-                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Order ID</th>
                       <th className="p-4">Customer</th>
@@ -2474,7 +2919,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <th className="p-4 text-center">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
                     {filteredOrders.length === 0 ? (
                       <tr><td colSpan="8" className="p-8 text-center text-zinc-400 font-normal">No orders found.</td></tr>
                     ) : (
@@ -2486,7 +2931,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
                             <td className="p-4 text-zinc-400 font-normal">{o.phone || '---'}</td>
                             <td className="p-4 uppercase text-zinc-500 font-normal">{o.payment_method}</td>
-                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
+                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>â‚¹{o.total_amount}</td>
                             <td className="p-4 text-center relative">
                               <div className="inline-block text-left">
                                 {/* Custom Dropdown Toggle Button */}
@@ -2510,7 +2955,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                      />
                                      <div className={`absolute left-1/2 -translate-x-1/2 mt-1.5 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${
                                        theme === 'dark' 
-                                         ? 'bg-[#141a24] border-[#2a3145] text-white shadow-black/85' 
+                                         ? 'bg-[#172033] border-[#1e293b] text-white shadow-black/85' 
                                          : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
                                      }`}>
                                        <div className="max-h-[220px] overflow-y-auto no-scrollbar py-0.5 space-y-0.5">
@@ -2567,9 +3012,9 @@ function DashboardPortal({ onLogout, adminUser }) {
             <div className="space-y-4 text-left animate-fade-in">
               <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Customer Product Reviews</h3>
 
-              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
+              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[850px] text-left text-xs">
-                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4">Customer Name</th>
                       <th className="p-4">Email</th>
@@ -2580,7 +3025,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <th className="p-4 text-center">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
                     {reviews.length === 0 ? (
                       <tr>
                         <td colSpan="7" className="p-8 text-center text-zinc-500 font-normal">
@@ -2648,7 +3093,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* Sales & Orders Trend Card */}
                 <div className={`p-6 rounded-3xl border transition-all lg:col-span-2 relative flex flex-col justify-between ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
@@ -2658,7 +3103,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Daily performance tracking over the last 14 days.</p>
                     </div>
                     <div className={`flex rounded-xl p-0.5 border ${
-                      theme === 'dark' ? 'bg-zinc-900 border-[#2a3145]' : 'bg-zinc-150 border-zinc-200'
+                      theme === 'dark' ? 'bg-zinc-900 border-[#1e293b]' : 'bg-zinc-150 border-zinc-200'
                     }`}>
                       <button
                         type="button"
@@ -2688,11 +3133,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="relative h-56 w-full flex select-none flex-grow">
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-normal h-[85%] pb-2 select-none w-10 text-left leading-none">
-                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal).toLocaleString('en-IN')}` : Math.round(maxChartVal)}</span>
-                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.75).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.75)}</span>
-                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.5).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.5)}</span>
-                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.25).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.25)}</span>
-                      <span>₹0</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal).toLocaleString('en-IN')}` : Math.round(maxChartVal)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal * 0.75).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.75)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal * 0.5).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.5)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal * 0.25).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.25)}</span>
+                      <span>â‚¹0</span>
                     </div>
 
                     {/* Chart Canvas */}
@@ -2750,7 +3195,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               cy={points[hoveredPointIndex].y} 
                               r="6" 
                               fill="#8b5cf6" 
-                              stroke={theme === 'dark' ? '#10141c' : '#ffffff'} 
+                              stroke={theme === 'dark' ? '#0f1626' : '#ffffff'} 
                               strokeWidth="2" 
                             />
                           </>
@@ -2795,7 +3240,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <p className="font-normal text-zinc-400">{points[hoveredPointIndex].date}</p>
                           <p className="font-normal text-xs text-white">
                             {analyticsChartMetric === 'revenue' 
-                              ? `₹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
+                              ? `â‚¹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
                               : `${points[hoveredPointIndex].val} Orders`}
                           </p>
                         </div>
@@ -2806,7 +3251,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Status Distribution Donut Card */}
                 <div className={`p-6 rounded-3xl border transition-all flex flex-col justify-between ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
                   <div>
                     <h4 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Order Statuses</h4>
@@ -2863,7 +3308,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Stock Inventory Section */}
               <div className={`p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
               }`}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
@@ -2879,9 +3324,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </button>
                 </div>
 
-                <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#2a3145] bg-zinc-950/20' : 'border-zinc-150 bg-white'}`}>
+                <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#1e293b] bg-zinc-950/20' : 'border-zinc-150 bg-white'}`}>
                   <table className="w-full min-w-[700px] text-left text-xs">
-                    <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                    <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-450' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                       <tr>
                         <th className="p-4">SKU / Item</th>
                         <th className="p-4">Category</th>
@@ -2890,11 +3335,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <th className="p-4 text-center">Quick Action</th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#2a3145]' : 'divide-zinc-200'}`}>
+                    <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
                       {paginatedAnalyticsProducts.map((p) => (
                         <tr key={p.id} className="hover:bg-white/2 transition-colors">
                           <td className="p-4 font-normal flex items-center gap-2.5">
-                            {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#2a3145]" />}
+                            {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#1e293b]" />}
                             <div>
                               <p className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</p>
                               <p className="text-[10px] text-zinc-500">PROD-00{p.id}</p>
@@ -2913,7 +3358,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   if (isNaN(val) || val < 0) return;
                                   if (val === p.stock) return;
                                   try {
-                                    const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
+                                    const res = await fetch(`${API_BASE}/api/products/${p.id}/`, {
                                       method: 'PATCH',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ stock: val })
@@ -2935,7 +3380,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 }}
                                 className={`w-16 p-1.5 text-center rounded-lg border outline-none text-xs font-normal transition-all ${
                                   theme === 'dark' 
-                                    ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                                    ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                                     : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                                 }`}
                               />
@@ -2945,12 +3390,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <td className="p-4">
                             <div className="flex flex-col items-center gap-1.5">
                               {/* Stock Warning Badge */}
-                              <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-normal uppercase tracking-wider border transition-all ${
+                              <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border-none shadow-sm transition-all ${
                                 p.stock === 0
-                                  ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                  ? 'bg-red-500 text-white'
                                   : p.stock < 15
-                                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                  : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  ? 'bg-amber-400 text-white'
+                                  : 'bg-emerald-400 text-white'
                               }`}>{p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock'}</span>
 
                               {/* Publication Status Dropdown */}
@@ -2959,7 +3404,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 onChange={async (e) => {
                                   const newStatus = e.target.value;
                                   try {
-                                    const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
+                                    const res = await fetch(`${API_BASE}/api/products/${p.id}/`, {
                                       method: 'PATCH',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ status: newStatus })
@@ -2974,14 +3419,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     showToast('Network error during status update', 'warning');
                                   }
                                 }}
-                                className={`text-[9px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                                  theme === 'dark' 
-                                    ? 'border-[#2a3145] text-zinc-300 bg-zinc-950' 
-                                    : 'border-zinc-200 text-zinc-750 bg-white'
+                                className={`text-[9px] font-normal px-3 py-1 rounded-full outline-none cursor-pointer border-none shadow-sm appearance-none transition-all ${
+                                  (p.status || 'published') === 'published'
+                                    ? 'bg-indigo-500 text-white'
+                                    : 'bg-amber-400 text-white'
                                 }`}
                               >
-                                <option value="published" className={theme === 'dark' ? 'bg-[#10141c] text-white font-normal' : 'bg-white text-zinc-950 font-normal'}>Published</option>
-                                <option value="draft" className={theme === 'dark' ? 'bg-[#10141c] text-white font-normal' : 'bg-white text-zinc-950 font-normal'}>Draft</option>
+                                <option value="published" style={{ background: '#fff', color: '#000' }}>Published</option>
+                                <option value="draft" style={{ background: '#fff', color: '#000' }}>Draft</option>
                               </select>
                             </div>
                           </td>
@@ -2990,7 +3435,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               type="button"
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`http://127.0.0.1:8000/api/products/${p.id}/`, {
+                                  const res = await fetch(`${API_BASE}/api/products/${p.id}/`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ stock: 100 })
@@ -3025,9 +3470,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                         type="button"
                         disabled={analyticsPage === 1}
                         onClick={() => setAnalyticsPage(prev => Math.max(1, prev - 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-normal active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        ◀ Prev
+                        â—€ Prev
                       </button>
                       {[...Array(totalAnalyticsPages)].map((_, idx) => {
                         const pageNum = idx + 1;
@@ -3050,9 +3495,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                         type="button"
                         disabled={analyticsPage === totalAnalyticsPages}
                         onClick={() => setAnalyticsPage(prev => Math.min(totalAnalyticsPages, prev + 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#2a3145] font-normal active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        Next ▶
+                        Next â–¶
                       </button>
                     </div>
                   </div>
@@ -3072,7 +3517,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* Tab Header Navigation */}
                 <div className={`flex border rounded-2xl p-1 gap-2 shrink-0 ${
-                  theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'
+                  theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
                 }`}>
                   <button
                     type="button"
@@ -3112,14 +3557,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                   
                   if (existingBanner) {
                     imgSrc = existingBanner.src || existingBanner.image;
-                    if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `http://127.0.0.1:8000${imgSrc}`;
-                    if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `http://127.0.0.1:8000/media/${imgSrc}`;
+                    if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `${API_BASE}${imgSrc}`;
+                    if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `${API_BASE}/media/${imgSrc}`;
                   }
                   
                   const isUploading = isMobile ? uploadingMobileBannerSlot === slot : uploadingBannerSlot === slot;
                   
                   return (
-                    <div key={`preview-${slot}`} className={`rounded-3xl border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col items-center gap-4 bg-white dark:bg-[#161b26] shadow-3xs relative overflow-hidden`}>
+                    <div key={`preview-${slot}`} className={`rounded-3xl border p-3 flex flex-col items-center gap-4 shadow-3xs relative overflow-hidden ${
+                      theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+                    }`}>
                       <div className="w-full flex justify-between items-center mb-1 px-1">
                         <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{isMobile ? 'Mobile' : 'Desktop'} Banner {slot}</h3>
                         {isUploaded && (
@@ -3145,8 +3592,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                 })}
               </div>
 
-              {/* Input Fields Below */}
-              <div className={`p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#161b26] shadow-3xs mt-6`}>
+              <div className={`p-6 rounded-3xl border shadow-3xs mt-6 ${
+                theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+              }`}>
                 <h3 className={`font-normal text-lg mb-4 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Upload Custom {bannerTypeTab === 'mobile' ? 'Mobile' : 'Desktop'} Banners</h3>
                 <div className="space-y-4">
                   {[1, 2, 3].map((slot) => {
@@ -3158,17 +3606,21 @@ function DashboardPortal({ onLogout, adminUser }) {
                     let imgSrc = isMobile ? `/banner/2${slot}.webp` : `/banner/1${slot}.webp`;
                     if (existingBanner) {
                       imgSrc = existingBanner.src || existingBanner.image;
-                      if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `http://127.0.0.1:8000${imgSrc}`;
-                      if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `http://127.0.0.1:8000/media/${imgSrc}`;
+                      if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `${API_BASE}${imgSrc}`;
+                      if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `${API_BASE}/media/${imgSrc}`;
                     }
 
                     const isUploading = isMobile ? uploadingMobileBannerSlot === slot : uploadingBannerSlot === slot;
 
                     return (
-                      <div key={`input-${slot}`} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border ${theme === 'dark' ? 'border-zinc-800 bg-zinc-900/50' : 'border-zinc-100 bg-zinc-50/50'}`}>
+                      <div key={`input-${slot}`} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border ${
+                        theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-100 bg-zinc-50/50'
+                      }`}>
                         <span className={`w-16 font-normal text-sm shrink-0 ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slot {slot}</span>
                         
-                        <div className="w-16 h-8 sm:w-20 sm:h-10 rounded overflow-hidden shrink-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative">
+                        <div className={`w-16 h-8 sm:w-20 sm:h-10 rounded overflow-hidden shrink-0 shadow-sm relative border ${
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-100 border-zinc-200'
+                        }`}>
                           <img src={imgSrc} alt={`Slot ${slot} thumb`} className="w-full h-full object-cover" />
                           {isUploading && (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
@@ -3214,7 +3666,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Tab Header Navigation */}
               <div className={`flex flex-wrap border rounded-2xl p-1 gap-2 ${
-                theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'
+                theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
               }`}>
                 <button
                   type="button"
@@ -3264,13 +3716,13 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Tab Contents */}
               <form onSubmit={handleSaveSettings} className={`p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-[#10141c] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
               }`}>
                 {settingsTab === 'general' && (
                   <div className="space-y-4 animate-fade-in">
                     <div>
                       {/* Logo Upload Section */}
-                      <div className={`mb-6 p-4 border rounded-xl ${theme === 'dark' ? 'border-[#2a3145] bg-[#10141c]' : 'border-zinc-200 bg-white'}`}>
+                      <div className={`mb-6 p-4 border rounded-xl ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'}`}>
                         <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
                           <div className="shrink-0">
                             <h4 className={`text-sm font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Logo</h4>
@@ -3280,7 +3732,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <div className="flex-1 flex items-center gap-4">
                             {settings?.logoImage ? (
                               <div className="h-12 w-auto bg-zinc-100 dark:bg-zinc-800 rounded p-1 border border-zinc-200 dark:border-zinc-700">
-                                 <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`} alt="Store Logo" className="h-full w-auto object-contain" />
+                                 <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `${API_BASE}${settings.logoImage}`} alt="Store Logo" className="h-full w-auto object-contain" />
                               </div>
                             ) : (
                               <div className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800 rounded flex items-center justify-center border border-zinc-200 dark:border-zinc-700">
@@ -3321,7 +3773,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           required
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3336,7 +3788,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           required
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3353,7 +3805,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         required
                         className={`w-full p-3 rounded-xl border outline-none text-xs ${
                           theme === 'dark' 
-                            ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                            ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                             : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                         }`}
                       />
@@ -3369,7 +3821,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         required
                         className={`w-full p-3 rounded-xl border outline-none text-xs ${
                           theme === 'dark' 
-                            ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                            ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                             : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                         }`}
                       />
@@ -3385,7 +3837,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           placeholder="https://facebook.com/..."
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3399,7 +3851,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           placeholder="https://instagram.com/..."
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3413,7 +3865,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           placeholder="https://youtube.com/..."
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3440,7 +3892,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           required
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3456,13 +3908,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                           required
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (₹)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (â‚¹)</label>
                         <input
                           type="number"
                           min="0"
@@ -3471,13 +3923,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                           required
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (₹)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (â‚¹)</label>
                         <input
                           type="number"
                           min="0"
@@ -3486,7 +3938,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           required
                           className={`w-full p-3 rounded-xl border outline-none text-xs ${
                             theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#2a3145] text-white focus:border-purple-500' 
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
                           }`}
                         />
@@ -3509,7 +3961,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${
                           settingsForm.isStoreOpen
                             ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400'
-                            : theme === 'dark' ? 'border-[#2a3145] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
+                            : theme === 'dark' ? 'border-[#1e293b] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
                         }`}
                       >
                         <CheckCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
@@ -3525,7 +3977,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${
                           !settingsForm.isStoreOpen
                             ? 'border-rose-500 bg-rose-500/5 text-rose-600 dark:text-rose-400'
-                            : theme === 'dark' ? 'border-[#2a3145] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
+                            : theme === 'dark' ? 'border-[#1e293b] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
                         }`}
                       >
                         <XCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
@@ -3558,7 +4010,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
                           setLoadingData(true);
                           try {
-                            const res = await fetch('http://127.0.0.1:8000/api/products/clear-all/', {
+                            const res = await fetch(`${API_BASE}/api/products/clear-all/`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' }
                             });
@@ -3584,7 +4036,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* Save Button for active config tabs */}
                 {settingsTab !== 'danger' && (
-                  <div className="mt-6 pt-4 border-t border-zinc-150 dark:border-[#2a3145] flex justify-end">
+                  <div className="mt-6 pt-4 border-t border-zinc-150 dark:border-[#1e293b] flex justify-end">
                     <button
                       type="submit"
                       className="py-2.5 px-5 bg-[#8b5cf6] hover:bg-purple-650 text-white text-xs font-normal rounded-xl transition-colors cursor-pointer active:scale-95 shadow-md shadow-purple-500/10"
@@ -3609,7 +4061,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               {/* 4 Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
                     <Users className="h-6 w-6" />
@@ -3621,7 +4073,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-500/20">
                     <UserCheck className="h-6 w-6" />
@@ -3633,7 +4085,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
                     <Users className="h-6 w-6 animate-pulse" />
@@ -3645,7 +4097,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
                 }`}>
                   <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
                     <UserCheck className="h-6 w-6" />
@@ -3659,7 +4111,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Table Card */}
               <div className={`p-6 rounded-3xl border ${
-                theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
               }`}>
                 {/* Search Header */}
                 <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-800/80 mb-6">
@@ -3676,7 +4128,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       placeholder="Search users by name, email..."
                       className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
                         theme === 'dark' 
-                          ? 'bg-[#161b26] border-[#2a3145] text-white placeholder-zinc-500' 
+                          ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
                           : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
                       }`}
                     />
@@ -3687,7 +4139,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className="overflow-x-auto no-scrollbar">
                   <table className="w-full min-w-[900px] text-left text-sm font-normal">
                     <thead className={`font-normal tracking-normal border-b pb-2.5 text-[11px] ${
-                      theme === 'dark' ? 'border-[#2a3145] text-zinc-400' : 'border-zinc-100 text-black'
+                      theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-100 text-black'
                     }`}>
                       <tr>
                         <th className="pb-3.5">User Identity</th>
@@ -3698,7 +4150,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <th className="pb-3.5 text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100 dark:divide-[#2a3145]/60 text-zinc-700 dark:text-zinc-300">
+                    <tbody className="divide-y divide-zinc-100 dark:divide-[#1e293b]/60 text-zinc-700 dark:text-zinc-300">
                       {paginatedUsers.length === 0 ? (
                         <tr>
                           <td colSpan="6" className="py-12 text-center text-xs font-normal text-zinc-400">
@@ -3816,9 +4268,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button 
                         disabled={userPage === 1}
                         onClick={() => setUserPage(prev => Math.max(1, prev - 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        ◀ Prev
+                        â—€ Prev
                       </button>
                       {[...Array(totalUserPages)].map((_, idx) => {
                         const pageNum = idx + 1;
@@ -3839,9 +4291,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button 
                         disabled={userPage === totalUserPages}
                         onClick={() => setUserPage(prev => Math.min(totalUserPages, prev + 1))}
-                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#2a3145] font-normal active:scale-95"
+                        className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        Next ▶
+                        Next â–¶
                       </button>
                     </div>
                   </div>
@@ -3857,7 +4309,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       {loadingData && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-normal border ${
-            theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
           }`}>
             <Loader2 size={14} className="animate-spin text-indigo-500" />
             Syncing data...
@@ -3869,11 +4321,11 @@ function DashboardPortal({ onLogout, adminUser }) {
       {modalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className={`w-full ${modalType === 'product' ? 'max-w-[780px]' : 'max-w-[500px]'} rounded-3xl border shadow-2xl overflow-hidden transition-all duration-200 ${
-            theme === 'dark' ? 'bg-[#10141c] border-[#2a3145] text-white shadow-black/85' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
+            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/85' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
           }`}>
             <div className="max-h-[90vh] overflow-y-auto p-6 space-y-4 text-left custom-scrollbar">
-            <div className={`flex justify-between items-center pb-4 border-b ${theme === 'dark' ? 'border-[#2a3145]' : 'border-zinc-200/65'}`}>
-              <h3 className={`text-base font-normal ${modalType === 'category' || modalType === 'subcategory' ? 'text-[20px] font-normal text-zinc-900 dark:text-white capitalize tracking-tight font-sans' : 'uppercase tracking-wider'}`}>
+            <div className={`flex justify-between items-center pb-4 border-b ${theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200/65'}`}>
+              <h3 className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-900'} ${modalType === 'category' || modalType === 'subcategory' ? 'text-[20px] capitalize tracking-tight font-sans' : 'uppercase tracking-wider'}`}>
                 {modalMode === 'edit' ? 'Edit' : 'Create New'} {modalType === 'product' ? 'Product' : modalType === 'category' ? 'Category' : modalType === 'subcategory' ? 'Subcategory' : modalType === 'user' ? 'User Account' : modalType}
               </h3>
               <button onClick={() => setModalType(null)} className={`cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-800'}`}><X size={modalType === 'category' || modalType === 'subcategory' ? 20 : 16} /></button>
@@ -3884,9 +4336,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                 
                 {/* 1. Featured Image & Gallery Section */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
                     Media Assets
                   </h4>
@@ -3896,7 +4348,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <div className="relative flex items-center justify-center">
                         <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${
                           theme === 'dark' 
-                            ? 'bg-[#161b26] border-[#2a3145] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40' 
+                            ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40' 
                             : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
                         }`}>
                           <div className="flex items-center gap-2">
@@ -3923,7 +4375,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={productForm.color_hex} 
                           onChange={(e) => setProductForm({ ...productForm, color_hex: e.target.value })} 
                           className={`w-12 h-[46px] p-1.5 rounded-xl border cursor-pointer shrink-0 ${
-                            theme === 'dark' ? 'bg-[#161b26] border-[#2a3145]' : 'bg-white border-zinc-200 shadow-3xs'
+                            theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                           }`}
                         />
                         <input 
@@ -3932,7 +4384,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           onChange={(e) => setProductForm({ ...productForm, color_hex: e.target.value })} 
                           placeholder="#ffffff"
                           className={`flex-1 min-w-0 p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                            theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                           }`}
                         />
                       </div>
@@ -3942,9 +4394,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 2. Group & Categories Section */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
                     Group & Classification
                   </h4>
@@ -3964,12 +4416,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                           }));
                         }}
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       >
-                        <option value="">Select Category...</option>
+                        <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                         {rootCategories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
+                          <option key={c.id} value={c.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                         ))}
                       </select>
                     </div>
@@ -3981,17 +4433,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.parent_category}
                         onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value }))}
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         } ${!productForm.category ? 'opacity-50' : ''}`}
                         disabled={!productForm.category}
                       >
-                        <option value="">Select Subcategory...</option>
+                        <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
                         {(() => {
                           const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
                           return subCategories
                             .filter(sc => sc.parent_category === selectedCatName)
                             .map(sc => (
-                              <option key={sc.id} value={sc.name}>{sc.name}</option>
+                              <option key={sc.id} value={sc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
                             ));
                         })()}
                       </select>
@@ -4007,15 +4459,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.tag_type} 
                         onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value })}
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       >
-                        <option value="new">New</option>
-                        <option value="trending">Trending</option>
-                        <option value="popular">Popular</option>
-                        <option value="sale">Sale</option>
-                        <option value="casual">Casual</option>
-                        <option value="sporty">Sporty</option>
+                        <option value="new" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>New</option>
+                        <option value="trending" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Trending</option>
+                        <option value="popular" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Popular</option>
+                        <option value="sale" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Sale</option>
+                        <option value="casual" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Casual</option>
+                        <option value="sporty" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Sporty</option>
                       </select>
                     </div>
                   </div>
@@ -4023,9 +4475,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 3. Description & Core Attributes */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">3</span>
                     Product Details
                   </h4>
@@ -4038,7 +4490,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.name} 
                         onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} 
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4051,7 +4503,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })} 
                         placeholder="e.g., pc, pack, box"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4065,7 +4517,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, slug: e.target.value })} 
                         placeholder="Auto-generated if left blank"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4077,7 +4529,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, discount: e.target.value })} 
                         placeholder="e.g., -25% OFF" 
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4089,7 +4541,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       value={productForm.description} 
                       onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} 
                       className={`w-full p-3 h-20 rounded-xl border transition-all focus:outline-none resize-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                        theme === 'dark' ? 'bg-[#161b26] text-white border-[#2a3145] focus:border-indigo-500' : 'bg-white text-zinc-800 border-zinc-200 focus:border-indigo-500 focus:bg-white'
+                        theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-zinc-800 border-zinc-200 focus:border-indigo-500 focus:bg-white'
                       }`}
                     />
                   </div>
@@ -4097,9 +4549,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 4. Product Type & Dimensions */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">4</span>
                     Product Configuration & Dimensions
                   </h4>
@@ -4110,11 +4562,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.product_type} 
                         onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value })}
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       >
-                        <option value="simple">Simple Product</option>
-                        <option value="variable">Variable Product</option>
+                        <option value="simple" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Simple Product</option>
+                        <option value="variable" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Variable Product</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -4125,7 +4577,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, width: e.target.value })} 
                         placeholder="0.0"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4137,7 +4589,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, height: e.target.value })} 
                         placeholder="0.0"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4149,7 +4601,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, length: e.target.value })} 
                         placeholder="0.0"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4158,9 +4610,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 5. Simple Product Information (Pricing & Stock) */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">5</span>
                     Pricing & Inventory
                   </h4>
@@ -4173,7 +4625,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.price} 
                         onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} 
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4184,7 +4636,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.original_price} 
                         onChange={(e) => setProductForm({ ...productForm, original_price: e.target.value })} 
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4196,7 +4648,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.stock} 
                         onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} 
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4208,7 +4660,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} 
                         placeholder="e.g., TS-GRN-001"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#161b26] border-[#2a3145] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
                       />
                     </div>
@@ -4217,9 +4669,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                 {/* 6. Status Selection */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#161b26]/50 border-[#2a3145]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
-                  <h4 className="text-[13px] font-normal flex items-center gap-2.5 text-zinc-950 dark:text-zinc-50">
+                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">6</span>
                     Publishing Control
                   </h4>
@@ -4228,26 +4680,26 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onClick={() => setProductForm({ ...productForm, status: 'published' })}
                       className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between shadow-3xs hover:shadow-2xs ${
                         productForm.status === 'published'
-                          ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
-                          : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40 dark:bg-[#161b26]'
+                          ? (theme === 'dark' ? 'border-emerald-500 bg-emerald-950/20' : 'border-emerald-500 bg-emerald-50/50')
+                          : (theme === 'dark' ? 'border-[#1e293b] hover:border-indigo-500/40 bg-[#172033]' : 'border-zinc-200 hover:border-indigo-500/40 bg-white')
                       }`}
                     >
                       <div className="flex flex-col text-left">
-                        <span className={`font-normal text-[12.5px] ${
+                        <span className={`font-semibold text-[12.5px] ${
                           productForm.status === 'published'
-                            ? 'text-emerald-950 dark:text-emerald-50'
-                            : 'text-zinc-800 dark:text-white'
+                            ? (theme === 'dark' ? 'text-emerald-200' : 'text-emerald-950')
+                            : (theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700')
                         }`}>Published</span>
                         <span className={`text-[10px] font-normal ${
                           productForm.status === 'published'
-                            ? 'text-emerald-700/80 dark:text-emerald-400'
-                            : 'text-zinc-400'
+                            ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700')
+                            : (theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500')
                         }`}>Live on Website catalog</span>
                       </div>
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                         productForm.status === 'published'
                           ? 'border-emerald-500 bg-emerald-500 text-white'
-                          : 'border-zinc-300 border-2'
+                          : (theme === 'dark' ? 'border-zinc-700' : 'border-zinc-300 border-2')
                       }`}>
                         {productForm.status === 'published' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
@@ -4257,26 +4709,26 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onClick={() => setProductForm({ ...productForm, status: 'draft' })}
                       className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between shadow-3xs hover:shadow-2xs ${
                         productForm.status === 'draft'
-                          ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
-                          : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40 dark:bg-[#161b26]'
+                          ? (theme === 'dark' ? 'border-emerald-500 bg-emerald-950/20' : 'border-emerald-500 bg-emerald-50/50')
+                          : (theme === 'dark' ? 'border-[#1e293b] hover:border-indigo-500/40 bg-[#172033]' : 'border-zinc-200 hover:border-indigo-500/40 bg-white')
                       }`}
                     >
                       <div className="flex flex-col text-left">
-                        <span className={`font-normal text-[12.5px] ${
+                        <span className={`font-semibold text-[12.5px] ${
                           productForm.status === 'draft'
-                            ? 'text-emerald-950 dark:text-emerald-50'
-                            : 'text-zinc-800 dark:text-white'
+                            ? (theme === 'dark' ? 'text-emerald-200' : 'text-emerald-950')
+                            : (theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700')
                         }`}>Draft Mode</span>
                         <span className={`text-[10px] font-normal ${
                           productForm.status === 'draft'
-                            ? 'text-emerald-700/80 dark:text-emerald-400'
-                            : 'text-zinc-400'
+                            ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700')
+                            : (theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500')
                         }`}>Offline Sandbox preview</span>
                       </div>
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                         productForm.status === 'draft'
                           ? 'border-emerald-500 bg-emerald-500 text-white'
-                          : 'border-zinc-300 border-2'
+                          : (theme === 'dark' ? 'border-zinc-700' : 'border-zinc-300 border-2')
                       }`}>
                         {productForm.status === 'draft' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
@@ -4288,13 +4740,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-6 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-300 rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs"
+                    className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="py-3 px-8 bg-linear-to-r from-indigo-600 to-violet-600 hover:opacity-95 text-white font-normal rounded-xl transition-all active:scale-95 shadow-md shadow-indigo-500/10 cursor-pointer text-xs uppercase tracking-wider"
+                    className={`py-3 px-8 text-white font-normal rounded-xl transition-all active:scale-95 shadow-md cursor-pointer text-xs uppercase tracking-wider bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
                   >
                     Save Changes
                   </button>
@@ -4311,11 +4763,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                     Category image <span className="text-red-500 ml-1">*</span>
                   </label>
                   
-                  <div className={`flex items-center p-6 bg-zinc-50/50 dark:bg-zinc-900/30 border border-dashed border-indigo-200 dark:border-zinc-700 rounded-2xl gap-5 transition-all ${
+                  <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${
+                    theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
+                  } ${
                     uploadingCategoryImage ? 'opacity-80' : ''
                   }`}>
                     {/* Left side preview */}
-                    <div className="w-16 h-16 rounded-2xl border border-zinc-200/60 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0 shadow-3xs">
+                    <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${
+                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
+                    }`}>
                       {categoryForm.imagePreview || categoryForm.image ? (
                         <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
@@ -4335,7 +4791,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Category Image' : 'Upload Category Image'}
                         </span>
                       </div>
-                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal mt-1">
+                      <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
                         JPG, PNG or WEBP. Max size 2MB.
                       </span>
                       <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
@@ -4354,7 +4810,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
                     placeholder="Enter category name"
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white transition-all shadow-3xs"
+                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
                   />
                 </div>
 
@@ -4366,10 +4822,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <select
                     value={categoryForm.is_active ? 'true' : 'false'}
                     onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
+                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                   >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
+                    <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
+                    <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
                   </select>
                 </div>
 
@@ -4378,17 +4834,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-6 bg-white hover:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-700 rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs"
+                    className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     disabled={uploadingCategoryImage || !categoryForm.image}
-                    className={`py-3 px-8 text-white rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs cursor-pointer ${
+                    className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${
                       uploadingCategoryImage || !categoryForm.image
-                        ? 'bg-zinc-350 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed shadow-none'
-                        : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10'
+                        ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
+                        : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
                     }`}
                   >
                     {uploadingCategoryImage ? 'Uploading...' : 'Save Category'}
@@ -4406,11 +4862,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                     Subcategory image <span className="text-red-500 ml-1">*</span>
                   </label>
                   
-                  <div className={`flex items-center p-6 bg-zinc-50/50 dark:bg-zinc-900/30 border border-dashed border-indigo-200 dark:border-zinc-700 rounded-2xl gap-5 transition-all ${
+                  <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${
+                    theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
+                  } ${
                     uploadingCategoryImage ? 'opacity-80' : ''
                   }`}>
                     {/* Left side preview */}
-                    <div className="w-16 h-16 rounded-2xl border border-zinc-200/60 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0 shadow-3xs">
+                    <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${
+                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
+                    }`}>
                       {categoryForm.imagePreview || categoryForm.image ? (
                         <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
@@ -4430,7 +4890,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Subcategory Image' : 'Upload Subcategory Image'}
                         </span>
                       </div>
-                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal mt-1">
+                      <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
                         JPG, PNG or WEBP. Max size 2MB.
                       </span>
                       <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
@@ -4447,11 +4907,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     required
                     value={categoryForm.parent_category}
                     onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
+                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                   >
-                    <option value="">Select Category...</option>
+                    <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                     {rootCategories.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                      <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                     ))}
                   </select>
                 </div>
@@ -4467,7 +4927,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
                     placeholder="Enter subcategory name"
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white transition-all shadow-3xs"
+                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
                   />
                 </div>
 
@@ -4479,10 +4939,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <select
                     value={categoryForm.is_active ? 'true' : 'false'}
                     onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white cursor-pointer transition-all shadow-3xs font-normal"
+                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                   >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
+                    <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
+                    <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
                   </select>
                 </div>
 
@@ -4491,17 +4951,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-6 bg-white hover:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-750 dark:text-zinc-350 border border-zinc-200 dark:border-zinc-700 rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs"
+                    className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     disabled={uploadingCategoryImage || !categoryForm.image}
-                    className={`py-3 px-8 text-white rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs cursor-pointer ${
+                    className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${
                       uploadingCategoryImage || !categoryForm.image
-                        ? 'bg-zinc-350 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed shadow-none'
-                        : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10'
+                        ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
+                        : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
                     }`}
                   >
                     {uploadingCategoryImage ? 'Uploading...' : 'Save Subcategory'}
@@ -4515,7 +4975,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
                     <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Products JSON Array</label>
-                    <span className="text-[10px] text-zinc-500">(Array of JSON objects)</span>
+                    <span className={`text-[10px] ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>(Array of JSON objects)</span>
                   </div>
                   <textarea 
                     required
@@ -4523,13 +4983,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                     onChange={(e) => setBulkInput(e.target.value)} 
                     placeholder='[&#10;  {"name": "Bulk Product A", "price": 499.00, "category_name": "T-Shirts", "stock": 80},&#10;  {"name": "Bulk Product B", "price": 899.00, "category_name": "Apparel", "stock": 50}&#10;]'
                     className={`w-full h-48 p-3 rounded-xl border transition-all focus:outline-none resize-none font-mono text-[10px] ${
-                      theme === 'dark' ? 'bg-[#161b26] text-white border-[#2a3145] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
+                      theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
                     }`}
                   />
                 </div>
                 <div className="flex gap-3 justify-end pt-2">
-                  <button type="button" onClick={() => setModalType(null)} className="py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl cursor-pointer">Cancel</button>
-                  <button type="submit" className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl cursor-pointer flex items-center gap-1.5">
+                  <button type="button" onClick={() => setModalType(null)} className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}>Cancel</button>
+                  <button 
+              type="submit" 
+              className={`py-2.5 px-4 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+            >
                     <Upload size={12} /> Execute Bulk Import
                   </button>
                 </div>
@@ -4539,13 +5002,13 @@ function DashboardPortal({ onLogout, adminUser }) {
             {modalType === 'user' && (
               <form onSubmit={handleSaveUser} className="space-y-4 text-left text-sm">
                 
-                <div className="p-4 bg-zinc-50 dark:bg-[#161b26] border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-1">
+                <div className={`p-4 rounded-xl border space-y-1 ${theme === "dark" ? "bg-[#172033] border-[#1e293b]" : "bg-zinc-50 border-zinc-200"}`}>
                   <span className="text-[10px] text-zinc-400 font-normal uppercase tracking-wider">Username (Immutable)</span>
                   <p className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{userForm.username}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[14px] font-normal text-zinc-800 dark:text-zinc-200">
+                  <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
                     Email Address <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -4554,29 +5017,29 @@ function DashboardPortal({ onLogout, adminUser }) {
                     value={userForm.email}
                     onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                     placeholder="e.g. john@example.com"
-                    className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white transition-all shadow-3xs"
+                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[14px] font-normal text-zinc-800 dark:text-zinc-200">First Name</label>
+                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>First Name</label>
                     <input
                       type="text"
                       value={userForm.first_name}
                       onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
                       placeholder="John"
-                      className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white transition-all shadow-3xs"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[14px] font-normal text-zinc-800 dark:text-zinc-200">Last Name</label>
+                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Last Name</label>
                     <input
                       type="text"
                       value={userForm.last_name}
                       onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
                       placeholder="Doe"
-                      className="w-full p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 bg-white dark:bg-[#161b26] text-zinc-800 dark:text-white transition-all shadow-3xs"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
                     />
                   </div>
                 </div>
@@ -4590,7 +5053,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setUserForm({ ...userForm, is_staff: e.target.checked })}
                       className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
-                    <label htmlFor="form_is_staff" className="text-xs font-normal text-zinc-800 dark:text-zinc-200 select-none cursor-pointer">
+                    <label htmlFor="form_is_staff" className={`text-xs font-semibold select-none cursor-pointer ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
                       Is Staff Admin
                     </label>
                   </div>
@@ -4602,7 +5065,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setUserForm({ ...userForm, is_active: e.target.checked })}
                       className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
-                    <label htmlFor="form_is_active" className="text-xs font-normal text-zinc-800 dark:text-zinc-200 select-none cursor-pointer">
+                    <label htmlFor="form_is_active" className={`text-xs font-semibold select-none cursor-pointer ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
                       Account Active
                     </label>
                   </div>
@@ -4612,13 +5075,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <button 
                     type="button" 
                     onClick={() => setModalType(null)} 
-                    className="py-3 px-5 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-normal rounded-xl cursor-pointer text-xs transition-colors active:scale-95"
+                    className={`py-3 px-5 border rounded-xl font-normal cursor-pointer text-xs transition-all active:scale-95 ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="py-3 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                    className={`py-3 px-5 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
                   >
                     {modalMode === 'edit' ? 'Save Changes' : 'Create Account'}
                   </button>
@@ -4641,7 +5104,7 @@ function NavItem({ icon, label, active, onClick, theme }) {
         active 
           ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md shadow-purple-500/10' 
           : theme === 'dark'
-            ? 'text-zinc-400 hover:bg-[#161b26] hover:text-white'
+            ? 'text-zinc-400 hover:bg-[#172033] hover:text-white'
             : 'text-zinc-500 hover:bg-zinc-50 hover:text-[#0f172a]'
       }`}
     >
@@ -4655,7 +5118,7 @@ function GridStat({ color, label, value, icon, theme }) {
   return (
     <div className={`p-5 rounded-3xl border transition-all duration-300 ease-out transform hover:scale-[1.04] text-left shadow-2xs hover:shadow-lg ${
       theme === 'dark' 
-        ? 'bg-[#10141c] border-[#2a3145] text-white hover:shadow-purple-500/5' 
+        ? 'bg-[#0f1626] border-[#1e293b] text-white hover:shadow-purple-500/5' 
         : 'bg-white border-zinc-200 text-[#0f172a] hover:shadow-zinc-300/30'
     }`}>
       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-normal text-sm ${color} mb-4 shadow-md transition-transform duration-300 hover:rotate-6`}>
@@ -4698,7 +5161,7 @@ function OrderRow({ id, date, amount, status, name, gradient, initials, theme })
 
   return (
     <div className={`flex items-center justify-between border-b py-3.5 last:border-b-0 ${
-      theme === 'dark' ? 'border-[#2a3145]/60' : 'border-zinc-100'
+      theme === 'dark' ? 'border-[#1e293b]/60' : 'border-zinc-100'
     }`}>
       <div className="flex items-center gap-3.5 text-left">
         <div className={`w-10 h-10 rounded-full ${gradient} flex items-center justify-center font-normal text-[12px] text-white shadow-2xs shrink-0 select-none`}>
@@ -4723,7 +5186,7 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
   return (
     <tr className={`transition-colors border-b last:border-b-0 ${
       theme === 'dark' 
-        ? 'hover:bg-white/2 border-[#2a3145]/60' 
+        ? 'hover:bg-white/2 border-[#1e293b]/60' 
         : 'hover:bg-zinc-50/50 border-zinc-150'
     }`}>
       <td className="py-3.5 font-normal flex items-center gap-3">
@@ -4731,11 +5194,11 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
           <img 
             src={image} 
             alt={name} 
-            className="w-8 h-8 rounded-lg object-cover border border-zinc-200 dark:border-[#2a3145] shadow-3xs" 
+            className="w-8 h-8 rounded-lg object-cover border border-zinc-200 dark:border-[#1e293b] shadow-3xs" 
           />
         ) : (
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-3xs ${
-            theme === 'dark' ? 'bg-[#161b26]' : 'bg-zinc-100'
+            theme === 'dark' ? 'bg-[#172033]' : 'bg-zinc-100'
           }`}>
             <Package size={14} className="text-zinc-400" />
           </div>
@@ -4756,12 +5219,12 @@ function StatCard({ icon, label, value, desc, theme, bgClass }) {
   return (
     <div className={`p-6 rounded-3xl border transition-all text-left ${
       theme === 'dark' 
-        ? 'bg-[#10141c] border-[#2a3145] text-white' 
+        ? 'bg-[#0f1626] border-[#1e293b] text-white' 
         : 'bg-white border-zinc-200 text-[#0f172a] shadow-3xs'
     }`}>
       <div className="flex items-center justify-between mb-4">
         <span className="text-[12px] font-normal text-zinc-400 uppercase tracking-wider">{label}</span>
-        <div className={`p-2.5 rounded-xl ${bgClass || 'bg-indigo-50 dark:bg-[#161b26]'} flex items-center justify-center`}>
+        <div className={`p-2.5 rounded-xl ${bgClass || 'bg-indigo-50 dark:bg-[#172033]'} flex items-center justify-center`}>
           {icon}
         </div>
       </div>

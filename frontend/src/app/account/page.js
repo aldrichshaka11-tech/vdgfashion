@@ -10,9 +10,10 @@ import CartDrawer from '../components/CartDrawer';
 import { User, ShoppingBag, MapPin, ChevronRight, X, UserCheck, ShieldCheck, HelpCircle, Phone, Eye, EyeOff } from 'lucide-react';
 import { formatINR } from '../utils/currency';
 import { useStore } from '../context/StoreContext';
+import { API_BASE } from '../../lib/api';
 
 export default function AccountPage() {
-  const { user, loginUser, registerUser, logoutUser } = useStore();
+  const { user, loginUser, registerUser, logoutUser, products } = useStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders'); // 'profile' | 'orders' | 'addresses'
 
@@ -61,26 +62,30 @@ export default function AccountPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/orders/');
+      const headers = {};
+      if (user && user.token) headers['Authorization'] = `Bearer ${user.token}`;
+      const res = await fetch(`${API_BASE}/api/orders/`, { headers });
       if (res.ok) {
         const data = await res.json();
-        const filtered = user 
-          ? data.filter(o => o.email === user.email || o.customer_name === user.username)
-          : data;
-
-        const mapped = filtered.map(o => ({
+        const mapped = data.map(o => ({
           id: o.id,
           orderId: o.order_id,
           date: new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
           total: parseFloat(o.total_amount),
-          status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Pending',
-          items: (o.items || []).map(item => ({
-            name: item.product_name,
-            qty: item.quantity,
-            price: parseFloat(item.price),
-            size: item.selected_size || 'M',
-            img: '/products/accessories_category.png'
-          }))
+          status: o.status
+            ? (o.status === 'out_for_delivery' ? 'Out for Delivery' : o.status.charAt(0).toUpperCase() + o.status.slice(1))
+            : 'Pending',
+          items: (o.items || []).map(item => {
+            const productObj = products?.find(p => p.id === (item.product || item.product_id));
+            const resolvedImage = productObj && productObj.image ? productObj.image : '/products/accessories_category.png';
+            return {
+              name: item.product_name,
+              qty: item.quantity,
+              price: parseFloat(item.price),
+              size: item.selected_size || '-',
+              img: resolvedImage
+            };
+          })
         }));
         setMockOrders(mapped);
       }
@@ -92,7 +97,7 @@ export default function AccountPage() {
   const handleDeleteOrder = async (id) => {
     if (!confirm('Are you sure you want to delete/cancel this order?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}/`, {
+      const res = await fetch(`${API_BASE}/api/orders/${id}/`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -118,7 +123,7 @@ export default function AccountPage() {
     } else {
       setMockOrders([]);
     }
-  }, [user]);
+  }, [user, products]);
 
   useEffect(() => {
     AOS.init({ duration: 700, once: true });
@@ -154,12 +159,22 @@ export default function AccountPage() {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Delivered':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+        return 'bg-emerald-600 text-white border-emerald-600 shadow-xs font-bold';
       case 'Processing':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-150 animate-pulse';
+      case 'Confirmed':
+      case 'Packed':
+        return 'bg-amber-500 text-white border-amber-500 shadow-xs font-bold animate-pulse';
       case 'Shipped':
+      case 'Out for Delivery':
+        return 'bg-indigo-600 text-white border-indigo-600 shadow-xs font-bold';
+      case 'Cancelled':
+        return 'bg-rose-600 text-white border-rose-600 shadow-xs font-bold';
+      case 'Returned':
+      case 'Refunded':
+        return 'bg-purple-600 text-white border-purple-600 shadow-xs font-bold';
+      case 'Pending':
       default:
-        return 'bg-amber-50 text-amber-700 border-amber-100';
+        return 'bg-amber-600 text-white border-amber-600 shadow-xs font-bold';
     }
   };
 
@@ -487,7 +502,11 @@ export default function AccountPage() {
                         {savedAddresses.map((addr) => (
                           <div key={addr.id} className="border border-zinc-150 rounded-2xl p-5 shadow-2xs space-y-3 relative hover:border-zinc-300 transition-colors">
                             <div className="flex justify-between items-center">
-                              <span className="px-2.5 py-0.5 rounded-md bg-zinc-100 text-[10px] font-bold text-zinc-600 border border-zinc-200">
+                              <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold text-white border shadow-3xs ${
+                                addr.type.toLowerCase().includes('default')
+                                  ? 'bg-[#e5484d] border-[#e5484d]'
+                                  : 'bg-[#5c51db] border-[#5c51db]'
+                              }`}>
                                 {addr.type}
                               </span>
                               <button className="text-xs font-semibold text-rose-500 hover:text-rose-600">Edit</button>

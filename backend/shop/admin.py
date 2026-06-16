@@ -100,11 +100,59 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('order_id', 'customer_name', 'phone', 'payment_method', 'total_amount', 'created_at')
-    readonly_fields = ('order_id', 'customer_name', 'email', 'phone', 'street_address', 'city', 'state', 'pin_code', 'payment_method', 'subtotal', 'discount_amount', 'shipping_fee', 'total_amount', 'created_at')
+    list_display = ('order_id', 'customer_name', 'phone', 'email', 'payment_method', 'total_amount', 'status_badge', 'created_at')
+    list_editable = ()
+    list_filter = ('status', 'payment_method', 'created_at')
     search_fields = ('order_id', 'customer_name', 'phone', 'email')
-    list_filter = ('payment_method', 'created_at')
     inlines = [OrderItemInline]
+    ordering = ('-created_at',)
+
+    readonly_fields = (
+        'order_id', 'customer_name', 'email', 'phone',
+        'street_address', 'city', 'state', 'pin_code',
+        'payment_method', 'subtotal', 'discount_amount',
+        'shipping_fee', 'total_amount', 'created_at', 'user'
+    )
+
+    fieldsets = (
+        ('🧾 Order Info', {
+            'fields': ('order_id', 'created_at', 'user')
+        }),
+        ('👤 Customer Details', {
+            'fields': ('customer_name', 'email', 'phone')
+        }),
+        ('📦 Shipping Address', {
+            'fields': ('street_address', 'city', 'state', 'pin_code')
+        }),
+        ('💳 Payment & Totals', {
+            'fields': ('payment_method', 'subtotal', 'discount_amount', 'shipping_fee', 'total_amount')
+        }),
+        ('🚚 Order Status', {
+            'fields': ('status',),
+            'description': 'Update the order status here. This is visible to the customer in their account.'
+        }),
+    )
+
+    def status_badge(self, obj):
+        colors = {
+            'pending':          ('#f59e0b', '#fffbeb'),
+            'confirmed':        ('#3b82f6', '#eff6ff'),
+            'packed':           ('#8b5cf6', '#f5f3ff'),
+            'shipped':          ('#06b6d4', '#ecfeff'),
+            'out_for_delivery': ('#f97316', '#fff7ed'),
+            'delivered':        ('#10b981', '#ecfdf5'),
+            'cancelled':        ('#ef4444', '#fef2f2'),
+            'returned':         ('#6b7280', '#f9fafb'),
+            'refunded':         ('#ec4899', '#fdf2f8'),
+        }
+        color, bg = colors.get(obj.status, ('#6b7280', '#f9fafb'))
+        label = obj.get_status_display()
+        return format_html(
+            '<span style="background:{};color:{};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid {}22;">{}</span>',
+            bg, color, color, label
+        )
+    status_badge.short_description = 'Status'
+    status_badge.admin_order_field = 'status'
 
     def has_add_permission(self, request):
         return False

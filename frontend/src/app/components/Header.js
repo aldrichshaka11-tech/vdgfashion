@@ -5,6 +5,7 @@ import { Search, User, Heart, ShoppingBag, Menu, Home, Package, Headphones, Gift
 import { useStore } from '../context/StoreContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { formatINR } from '../utils/currency';
+import { API_BASE } from '../../lib/api';
 
 export default function Header({ onMobileMenuToggle }) {
   const router = useRouter();
@@ -186,7 +187,7 @@ export default function Header({ onMobileMenuToggle }) {
                 className="flex items-center cursor-pointer"
                 onClick={() => { setSelectedProduct(null); setSelectedCategory('ALL'); router.push('/'); }}
               >
-                <img src={settings?.logoImage ? (settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`) : "/logo.png"} alt="vdgfashion logo" className="h-12 w-auto object-contain" />
+                <img src={settings?.logoImage ? (settings.logoImage.startsWith('http') ? settings.logoImage : `${API_BASE}${settings.logoImage}`) : "/logo.png"} alt="vdgfashion logo" className="h-12 w-auto object-contain" />
               </div>
             </div>
 
@@ -196,7 +197,7 @@ export default function Header({ onMobileMenuToggle }) {
                 className="flex items-center cursor-pointer mr-2 shrink-0"
                 onClick={() => { setSelectedProduct(null); setSelectedCategory('ALL'); router.push('/'); }}
               >
-                <img src={settings?.logoImage ? (settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`) : "/logo.png"} alt="vdgfashion logo" className="h-14 xl:h-16 w-auto object-contain" />
+                <img src={settings?.logoImage ? (settings.logoImage.startsWith('http') ? settings.logoImage : `${API_BASE}${settings.logoImage}`) : "/logo.png"} alt="vdgfashion logo" className="h-14 xl:h-16 w-auto object-contain" />
               </div>
 
               {/* Navigation links */}

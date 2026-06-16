@@ -11,6 +11,7 @@ import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
 import { CreditCard, Truck, ShieldCheck, CheckCircle2, ChevronRight, X, User, Phone, MapPin, Mail, Landmark, Info } from 'lucide-react';
 import { formatINR } from '../utils/currency';
+import { API_BASE } from '../../lib/api';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -24,7 +25,8 @@ export default function CheckoutPage() {
     shippingFee,
     cartTotal,
     settings,
-    user
+    user,
+    logoutUser
   } = useStore();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -51,6 +53,18 @@ export default function CheckoutPage() {
       easing: 'ease-out-cubic',
     });
   }, []);
+
+  // Pre-fill form with authenticated user details
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: prev.name || (user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username || ''),
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phone || ''
+      }));
+    }
+  }, [user]);
 
   // Redirect to home if cart is empty
   useEffect(() => {
@@ -111,13 +125,24 @@ export default function CheckoutPage() {
       }
 
       // Perform actual fetch to Django API
-      fetch('http://127.0.0.1:8000/api/orders/', {
+      fetch(`${API_BASE}/api/orders/`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(orderPayload)
       })
-      .then(res => {
-        if (!res.ok) throw new Error('API server failed to save order');
+      .then(async res => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            logoutUser();
+            throw new Error('Your session has expired. You have been logged out. Please try placing the order again to checkout as a guest, or log in again.');
+          }
+          let errorDetail = `Status ${res.status}`;
+          try {
+            const errData = await res.json();
+            errorDetail = typeof errData === 'object' ? JSON.stringify(errData) : errData;
+          } catch {}
+          throw new Error(errorDetail);
+        }
         return res.json();
       })
       .then(data => {
@@ -143,28 +168,10 @@ export default function CheckoutPage() {
         }, 1000);
       })
       .catch(err => {
-        console.warn('API order failed, falling back to offline checkout flow:', err);
-        // Fallback offline flow
-        setProcessStep('Connecting to secure payment gateway...');
-        setTimeout(() => {
-          setProcessStep('Confirming final order details...');
-          setTimeout(() => {
-            const orderDetails = {
-              orderId: generatedOrderId,
-              customerName: formData.name,
-              itemsCount: cartCount,
-              totalAmount: cartTotal,
-              shippingAddress: `${formData.street}, ${formData.city}, ${formData.state} - ${formData.pinCode}`,
-              paymentMethod: paymentMethod === 'card' ? 'Credit Card' : paymentMethod === 'upi' ? 'UPI Transfer' : 'Cash on Delivery',
-              date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-            };
-            
-            sessionStorage.setItem('vdgfashion_last_order', JSON.stringify(orderDetails));
-            clearCart();
-            setIsProcessing(false);
-            router.push('/order-success');
-          }, 1000);
-        }, 1200);
+        console.error('Order placement failed:', err);
+        setIsProcessing(false);
+        setProcessStep('');
+        alert(`⚠️ Order could not be placed. Error: ${err.message}`);
       });
     }, 1000);
   };
@@ -521,7 +528,7 @@ export default function CheckoutPage() {
                           <span className="text-zinc-800 font-normal">{formatINR(cartSubtotal)}</span>
                         </div>
                         <div className="flex items-center justify-between text-zinc-650 font-normal">
-                          <span>Boutique Discount ({appliedCoupon || 'TREND10'})</span>
+                          <span>Boutique Discount {appliedCoupon ? `(${appliedCoupon})` : ''}</span>
                           <span className="text-rose-600 font-normal">- {formatINR(discountValue)}</span>
                         </div>
                         <div className="flex items-center justify-between text-zinc-650 font-normal">
@@ -538,7 +545,7 @@ export default function CheckoutPage() {
                     <div className="space-y-3 pt-4">
                       <button
                         type="submit"
-                        className="w-full py-4 bg-[#5c51db] hover:bg-[#4b41ca] text-white text-sm sm:text-base font-black tracking-wider uppercase rounded-xl transition-all shadow-md active:scale-98 cursor-pointer"
+                        className="w-full py-4 bg-[#5c51db] hover:bg-[#4b41ca] !text-white text-sm sm:text-base font-black tracking-wider uppercase rounded-xl transition-all shadow-md active:scale-98 cursor-pointer"
                       >
                         Place Order • {formatINR(finalTotal)}
                       </button>

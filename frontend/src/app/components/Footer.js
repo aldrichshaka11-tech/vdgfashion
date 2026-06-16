@@ -3,6 +3,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useStore } from '../context/StoreContext';
+import { API_BASE } from '../../lib/api';
 import { 
   Grid, 
   Sparkles, 
@@ -125,7 +126,7 @@ export default function Footer() {
             {/* Colorful custom vdgfashion logo */}
             {settings?.logoImage ? (
               <div className="flex items-center gap-2.5 lg:gap-3">
-                <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `http://127.0.0.1:8000${settings.logoImage}`} alt="Store Logo" className="h-16 md:h-20 w-auto object-contain" />
+                <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `${API_BASE}${settings.logoImage}`} alt="Store Logo" className="h-16 md:h-20 w-auto object-contain" />
               </div>
             ) : (
               <div className="flex items-center gap-2.5 lg:gap-3">

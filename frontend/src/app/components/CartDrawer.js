@@ -18,15 +18,17 @@ export default function CartDrawer() {
     cartSubtotal,
     clearCart,
     shippingFee,
-    cartTotal
+    cartTotal,
+    settings
   } = useStore();
+
+  const freeShipThreshold = parseFloat(settings?.freeShippingThreshold || 3000);
+  const remainingForFreeShipping = Math.max(0, freeShipThreshold - cartSubtotal);
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
 
   if (!isCartOpen) return null;
-
-  const remainingForFreeShipping = Math.max(0, 3000 - cartSubtotal);
 
   const handleCheckout = () => {
     setIsCheckingOut(true);
@@ -103,7 +105,7 @@ export default function CartDrawer() {
                     <div className="w-full bg-zinc-200 h-2 rounded-full mt-2 overflow-hidden">
                       <div
                         className="bg-linear-to-r from-[#ff008a] to-[#6a00ff] h-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (cartSubtotal / 3000) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (cartSubtotal / freeShipThreshold) * 100)}%` }}
                       />
                     </div>
                   </div>
