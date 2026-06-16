@@ -2718,7 +2718,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   >
                     <option value="all" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>All Stock Status</option>
                     <option value="instock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>In Stock (15+ units)</option>
-                    <option value="lowstock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>Low Stock (< 15 units)</option>
+                    <option value="lowstock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>Low Stock (&lt; 15 units)</option>
                     <option value="outofstock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>Out of Stock (0 units)</option>
                   </select>
                 </div>
