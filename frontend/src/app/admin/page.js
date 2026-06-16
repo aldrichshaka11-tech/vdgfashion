@@ -220,6 +220,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [usersList, setUsersList] = useState([]);
   const [userPage, setUserPage] = useState(1);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  
+  // Inventory state variables
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventorySearchQuery, setInventorySearchQuery] = useState('');
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState('all');
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('all');
   const [userForm, setUserForm] = useState({
     username: '',
     email: '',
@@ -1480,6 +1486,55 @@ function DashboardPortal({ onLogout, adminUser }) {
     return filteredUsers.slice(startIndex, startIndex + USERS_ITEMS_PER_PAGE);
   }, [filteredUsers, userPage]);
 
+  // Inventory filters and pagination
+  const filteredInventoryProducts = useMemo(() => {
+    return products.filter((p) => {
+      // 1. Search query filter
+      const matchesSearch = 
+        p.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()) || 
+        (p.sku || '').toLowerCase().includes(inventorySearchQuery.toLowerCase()) ||
+        (p.category_name || '').toLowerCase().includes(inventorySearchQuery.toLowerCase());
+
+      // 2. Status filter
+      let matchesStatus = true;
+      if (inventoryStatusFilter === 'outofstock') {
+        matchesStatus = p.stock === 0;
+      } else if (inventoryStatusFilter === 'lowstock') {
+        matchesStatus = p.stock > 0 && p.stock < 15;
+      } else if (inventoryStatusFilter === 'instock') {
+        matchesStatus = p.stock >= 15;
+      }
+
+      // 3. Category filter
+      let matchesCategory = true;
+      if (inventoryCategoryFilter !== 'all') {
+        matchesCategory = p.category_name === inventoryCategoryFilter;
+      }
+
+      return matchesSearch && matchesStatus && matchesCategory;
+    });
+  }, [products, inventorySearchQuery, inventoryStatusFilter, inventoryCategoryFilter]);
+
+  const INVENTORY_ITEMS_PER_PAGE = 10;
+  const totalInventoryPages = Math.ceil(filteredInventoryProducts.length / INVENTORY_ITEMS_PER_PAGE) || 1;
+  const paginatedInventoryProducts = useMemo(() => {
+    const startIndex = (inventoryPage - 1) * INVENTORY_ITEMS_PER_PAGE;
+    return filteredInventoryProducts.slice(startIndex, startIndex + INVENTORY_ITEMS_PER_PAGE);
+  }, [filteredInventoryProducts, inventoryPage]);
+
+  // Inventory stats derivations
+  const totalInventoryVal = useMemo(() => {
+    return products.reduce((acc, p) => acc + (p.stock * parseFloat(p.price || 0)), 0);
+  }, [products]);
+
+  const outOfStockCount = useMemo(() => {
+    return products.filter(p => p.stock === 0).length;
+  }, [products]);
+
+  const lowStockCount = useMemo(() => {
+    return products.filter(p => p.stock > 0 && p.stock < 15).length;
+  }, [products]);
+
   return (
     <div className={`flex h-screen overflow-hidden font-sans admin-portal-font-boost transition-colors duration-200 ${
       theme === 'dark' ? 'bg-[#080c14] text-[#e8eaf0]' : 'bg-[#f8fafc] text-[#0f172a]'
@@ -1898,6 +1953,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
           <NavItem theme={theme} icon={<LayoutDashboard size={20} />} label="Dashboard" active={activePage === 'dashboard'} onClick={() => handlePageChange('dashboard')} />
           <NavItem theme={theme} icon={<Package size={20} />} label="Products" active={activePage === 'products'} onClick={() => handlePageChange('products')} />
+          <NavItem theme={theme} icon={<ClipboardList size={20} />} label="Inventory" active={activePage === 'inventory'} onClick={() => handlePageChange('inventory')} />
           <NavItem theme={theme} icon={<Folders size={20} />} label="Categories" active={activePage === 'categories'} onClick={() => handlePageChange('categories')} />
           <NavItem theme={theme} icon={<ShoppingCart size={20} />} label="Orders" active={activePage === 'orders'} onClick={() => handlePageChange('orders')} />
           <NavItem theme={theme} icon={<Star size={20} />} label="Reviews" active={activePage === 'reviews'} onClick={() => handlePageChange('reviews')} />
@@ -2555,6 +2611,274 @@ function DashboardPortal({ onLogout, adminUser }) {
                       disabled={productPage === totalProductPages}
                       onClick={() => setProductPage(prev => Math.min(totalProductPages, prev + 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activePage === 'inventory' && (
+            <div className="space-y-6 text-left animate-fade-in">
+              <div>
+                <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Inventory Control Centre</h2>
+                <p className="text-xs text-zinc-500 font-normal mt-1">Monitor stock status, record replenishment, and review inventory valuation.</p>
+              </div>
+
+              {/* Grid Statistics Metrics */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[10px] font-normal uppercase tracking-wider">Total Items</p>
+                    <h3 className={`text-xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{products.length}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Wallet size={20} />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[10px] font-normal uppercase tracking-wider">Stock Valuation</p>
+                    <h3 className={`text-xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>₹{Math.round(totalInventoryVal).toLocaleString('en-IN')}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="w-11 h-11 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                    <XCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[10px] font-normal uppercase tracking-wider">Out of Stock</p>
+                    <h3 className={`text-xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{outOfStockCount}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[10px] font-normal uppercase tracking-wider">Low Stock Alert</p>
+                    <h3 className={`text-xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{lowStockCount}</h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters Panel */}
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="relative w-full max-w-[320px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <input 
+                    type="text" 
+                    value={inventorySearchQuery}
+                    onChange={(e) => { setInventorySearchQuery(e.target.value); setInventoryPage(1); }}
+                    placeholder="Search inventory by name, SKU..."
+                    className={`w-full rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
+                      theme === 'dark' 
+                        ? 'bg-[#0f1626] border-[#1e293b] text-white placeholder-zinc-500' 
+                        : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                    }`}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center justify-end">
+                  <select 
+                    value={inventoryCategoryFilter}
+                    onChange={(e) => { setInventoryCategoryFilter(e.target.value); setInventoryPage(1); }}
+                    className={`text-xs font-normal p-2.5 bg-transparent border rounded-xl outline-none cursor-pointer max-w-[160px] ${
+                      theme === 'dark' ? 'border-[#1e293b] text-zinc-300 bg-[#0f1626]' : 'border-zinc-200 text-zinc-700 bg-white'
+                    }`}
+                  >
+                    <option value="all" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>All Categories</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>{c.name}</option>
+                    ))}
+                  </select>
+
+                  <select 
+                    value={inventoryStatusFilter}
+                    onChange={(e) => { setInventoryStatusFilter(e.target.value); setInventoryPage(1); }}
+                    className={`text-xs font-normal p-2.5 bg-transparent border rounded-xl outline-none cursor-pointer ${
+                      theme === 'dark' ? 'border-[#1e293b] text-zinc-300 bg-[#0f1626]' : 'border-zinc-200 text-zinc-700 bg-white'
+                    }`}
+                  >
+                    <option value="all" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>All Stock Status</option>
+                    <option value="instock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>In Stock (15+ units)</option>
+                    <option value="lowstock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>Low Stock (< 15 units)</option>
+                    <option value="outofstock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>Out of Stock (0 units)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'}`}>
+                <table className="w-full min-w-[800px] text-left text-sm">
+                  <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
+                    <tr>
+                      <th className="p-4.5">Product Name</th>
+                      <th className="p-4.5">Category</th>
+                      <th className="p-4.5 text-right">Price</th>
+                      <th className="p-4.5 text-center">Stock Level Status</th>
+                      <th className="p-4.5 text-center">Quick Adjust</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
+                    {paginatedInventoryProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="p-8 text-center text-zinc-400 font-normal">
+                          No matching inventory items found.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedInventoryProducts.map((p) => {
+                        const stockProgress = Math.min(100, (p.stock / 100) * 100);
+                        const progressColor = p.stock === 0 ? 'bg-rose-500' : p.stock < 15 ? 'bg-amber-500' : 'bg-emerald-500';
+                        const textStatus = p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock';
+                        const textBadgeColor = p.stock === 0 ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : p.stock < 15 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+
+                        return (
+                          <tr key={p.id} className="hover:bg-white/2 transition-colors">
+                            <td className="p-4 font-normal flex items-center gap-2.5">
+                              {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-9 h-9 rounded-xl object-cover border border-[#1e293b]" />}
+                              <div>
+                                <span className={`font-semibold block ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{p.name}</span>
+                                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">SKU: {p.sku || 'N/A'}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
+                            <td className="p-4 text-center">
+                              <div className="flex flex-col items-center gap-1.5 justify-center">
+                                <div className="flex items-center justify-between w-full max-w-[130px] text-[10px] text-zinc-400 font-semibold px-0.5">
+                                  <span>{p.stock} units</span>
+                                  <span className={`px-1.5 py-0.5 text-[8px] font-bold rounded-md border uppercase tracking-wider ${textBadgeColor}`}>{textStatus}</span>
+                                </div>
+                                <div className="w-full max-w-[130px] bg-zinc-150 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                                  <div className={`h-full ${progressColor} transition-all duration-300`} style={{ width: `${stockProgress}%` }}></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button 
+                                  onClick={() => handleInlineStockSave(p.id, Math.max(0, p.stock - 5))} 
+                                  className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-rose-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
+                                  title="Decrease stock by 5"
+                                >
+                                  -5
+                                </button>
+                                <button 
+                                  onClick={() => handleInlineStockSave(p.id, Math.max(0, p.stock - 1))} 
+                                  className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-rose-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
+                                  title="Decrease stock by 1"
+                                >
+                                  -1
+                                </button>
+                                
+                                {inlineStockEdit[p.id] !== undefined ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      value={inlineStockEdit[p.id]}
+                                      onChange={(e) => setInlineStockEdit(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                      onKeyDown={(e) => { 
+                                        if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); 
+                                        if (e.key === 'Escape') setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; }); 
+                                      }}
+                                      className={`w-14 px-1.5 py-1 rounded-lg border text-xs font-semibold text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white' : 'bg-white border-zinc-300 text-zinc-805'
+                                      }`}
+                                      autoFocus
+                                    />
+                                    <button onClick={() => handleInlineStockSave(p.id, inlineStockEdit[p.id])} className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95">
+                                      <CheckCircle size={11} />
+                                    </button>
+                                    <button onClick={() => setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; })} className="p-1.5 rounded-lg bg-zinc-300 text-zinc-700 hover:bg-zinc-400 active:scale-95">
+                                      <X size={11} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button 
+                                    onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))} 
+                                    className="py-1.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-600 rounded-lg text-xs font-semibold cursor-pointer active:scale-95"
+                                    title="Edit custom value"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+
+                                <button 
+                                  onClick={() => handleInlineStockSave(p.id, p.stock + 1)} 
+                                  className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-emerald-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
+                                  title="Increase stock by 1"
+                                >
+                                  +1
+                                </button>
+                                <button 
+                                  onClick={() => handleInlineStockSave(p.id, p.stock + 5)} 
+                                  className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-emerald-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
+                                  title="Increase stock by 5"
+                                >
+                                  +5
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalInventoryPages > 1 && (
+                <div className="flex items-center justify-between pt-4 pb-2 text-xs font-normal select-none leading-none">
+                  <span className="text-zinc-400">
+                    Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-semibold">{Math.min(filteredInventoryProducts.length, (inventoryPage - 1) * INVENTORY_ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-semibold">{Math.min(filteredInventoryProducts.length, inventoryPage * INVENTORY_ITEMS_PER_PAGE)}</span> of <span className="font-semibold text-zinc-650 dark:text-zinc-300">{filteredInventoryProducts.length}</span> products
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      disabled={inventoryPage === 1}
+                      onClick={() => setInventoryPage(prev => Math.max(1, prev - 1))}
+                      className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
+                    >
+                      ◀ Prev
+                    </button>
+                    {[...Array(totalInventoryPages)].map((_, idx) => {
+                      const pageNum = idx + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setInventoryPage(pageNum)}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
+                            inventoryPage === pageNum
+                              ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md font-semibold'
+                              : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button 
+                      disabled={inventoryPage === totalInventoryPages}
+                      onClick={() => setInventoryPage(prev => Math.min(totalInventoryPages, prev + 1))}
+                      className="py-2 px-3 bg-zinc-100 hover:bg-[#1e293b] dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                     >
                       Next ▶
                     </button>
