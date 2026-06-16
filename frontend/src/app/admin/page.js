@@ -5511,21 +5511,21 @@ function OrderRow({ id, date, amount, status, name, gradient, initials, theme })
   };
 
   return (
-    <div className={`flex items-center justify-between border-b py-3.5 last:border-b-0 ${
+    <div className={`flex items-center justify-between border-b py-3 sm:py-3.5 last:border-b-0 gap-2 sm:gap-4 ${
       theme === 'dark' ? 'border-[#1e293b]/60' : 'border-zinc-100'
     }`}>
-      <div className="flex items-center gap-3.5 text-left">
-        <div className={`w-10 h-10 rounded-full ${gradient} flex items-center justify-center font-normal text-[12px] text-white shadow-2xs shrink-0 select-none`}>
+      <div className="flex items-center gap-2.5 sm:gap-3.5 text-left min-w-0">
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${gradient} flex items-center justify-center font-normal text-[10px] sm:text-[12px] text-white shadow-2xs shrink-0 select-none`}>
           {initials}
         </div>
-        <div>
-          <p className={`font-normal text-[16px] leading-none mb-1.5 ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{id}</p>
-          <p className="text-[13px] text-zinc-400 font-normal">{date}</p>
+        <div className="min-w-0">
+          <p className={`font-normal text-[14px] sm:text-[16px] leading-none mb-1 sm:mb-1.5 truncate ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`} title={id}>{id}</p>
+          <p className="text-[11px] sm:text-[13px] text-zinc-400 font-normal">{date}</p>
         </div>
       </div>
-      <div className="text-right leading-none flex flex-col items-end gap-2.5">
-        <p className={`font-normal text-[16px] leading-none ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{amount}</p>
-        <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-normal uppercase tracking-wider ${getBadgeStyle()}`}>
+      <div className="text-right leading-none flex flex-col items-end gap-2 sm:gap-2.5 shrink-0">
+        <p className={`font-normal text-[14px] sm:text-[16px] leading-none ${theme === 'dark' ? 'text-white' : 'text-[#0f172a]'}`}>{amount}</p>
+        <span className={`px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full border text-[8px] sm:text-[9px] font-normal uppercase tracking-wider ${getBadgeStyle()}`}>
           {status}
         </span>
       </div>
