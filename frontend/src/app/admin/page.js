@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
@@ -177,7 +177,7 @@ export default function AdminRoute() {
             </button>
           </form>
           <p className="text-[10px] text-center text-zinc-400 font-normal pt-4">
-            Â© 2026 vdgfashion Admin. All rights reserved.
+            © 2026 vdgfashion Admin. All rights reserved.
           </p>
         </div>
       </div>
@@ -556,7 +556,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         name: p.name,
         category: p.category_name || 'Uncategorized',
         sold: soldMap[p.id] || 0,
-        rev: `â‚¹${((soldMap[p.id] || 0) * parseFloat(p.price || 0)).toLocaleString('en-IN')}`,
+        rev: `₹${((soldMap[p.id] || 0) * parseFloat(p.price || 0)).toLocaleString('en-IN')}`,
         image: p.image
       }))
       .sort((a, b) => b.sold - a.sold)
@@ -670,7 +670,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
     cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
     width: '', height: '', length: '', product_type: 'simple', status: 'published',
-    category: '', parent_category: 'New Born (0â€“3 Months)', image: ''
+    category: '', parent_category: 'New Born (0-3 Months)', image: ''
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -1821,7 +1821,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               OK, Got it!
             </button>
 
-            {/* All keyframes self-contained â€” no dependency on success popup */}
+            {/* All keyframes self-contained — no dependency on success popup */}
             <style>{`
               @keyframes dpopIn {
                 from { opacity: 0; transform: scale(0.7) translateY(30px); }
@@ -2039,7 +2039,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme={theme}
                   color="bg-purple-600 text-white dark:bg-purple-500 shadow-purple-500/10" 
                   label="Total Sales" 
-                  value={orders.length > 0 ? `â‚¹${Math.round(totalSalesVal).toLocaleString('en-IN')}` : "â‚¹0"} 
+                  value={orders.length > 0 ? `₹${Math.round(totalSalesVal).toLocaleString('en-IN')}` : "₹0"} 
                   icon={<ShoppingBag className="h-5.5 w-5.5" />} 
                 />
                 <GridStat 
@@ -2067,7 +2067,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   theme={theme}
                   color="bg-teal-600 text-white dark:bg-teal-500 shadow-teal-500/10" 
                   label="Revenue" 
-                  value={orders.length > 0 ? `â‚¹${Math.round(totalRevenueVal).toLocaleString('en-IN')}` : "â‚¹0"} 
+                  value={orders.length > 0 ? `₹${Math.round(totalRevenueVal).toLocaleString('en-IN')}` : "₹0"} 
                   icon={<Wallet className="h-5.5 w-5.5" />} 
                 />
                 <GridStat 
@@ -2144,7 +2144,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-normal h-[88%] pb-2 select-none w-[42px] text-left leading-none">
                       {[1, 0.8, 0.6, 0.4, 0.2, 0].map(mult => (
-                        <span key={mult}>â‚¹{analyticsChartMetric === 'revenue' ? Math.round(maxChartVal * mult).toLocaleString('en-IN') : Math.round(maxChartVal * mult)}</span>
+                        <span key={mult}>₹{analyticsChartMetric === 'revenue' ? Math.round(maxChartVal * mult).toLocaleString('en-IN') : Math.round(maxChartVal * mult)}</span>
                       ))}
                     </div>
                     {/* Line Chart Grid Canvas */}
@@ -2225,7 +2225,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             dotColor={slice.dot} 
                             label={slice.name} 
                             pct={`${slice.percentage}%`} 
-                            val={`â‚¹${Math.round(slice.count).toLocaleString('en-IN')}`} 
+                            val={`₹${Math.round(slice.count).toLocaleString('en-IN')}`} 
                           />
                         ))
                       )}
@@ -2272,7 +2272,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             theme={theme} 
                             id={`#${o.order_id}`} 
                             date={orderDate} 
-                            amount={`â‚¹${o.total_amount}`} 
+                            amount={`₹${o.total_amount}`} 
                             status={status} 
                             name={o.customer_name} 
                             gradient={avatarColor} 
@@ -2394,7 +2394,7 @@ function DashboardPortal({ onLogout, adminUser }) {
               <footer className={`pt-6 border-t flex items-center justify-between text-[10px] text-zinc-400 font-normal ${
                 theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200'
               }`}>
-                <span>Â© 2026 vdgfashion Admin. All rights reserved.</span>
+                <span>© 2026 vdgfashion Admin. All rights reserved.</span>
                 <span className="flex items-center gap-0.5">Made with <Heart size={10} className="text-red-500 fill-red-500 shrink-0" /> by vdgfashion</span>
               </footer>
             </div>
@@ -2439,7 +2439,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</span>
                         </td>
                         <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
-                        <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>â‚¹{p.price}</td>
+                        <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
                         <td className="p-4 text-right">
                           {inlineStockEdit[p.id] !== undefined ? (
                             <div className="flex items-center justify-end gap-1">
@@ -2510,7 +2510,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onClick={() => setProductPage(prev => Math.max(1, prev - 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                     >
-                      â—€ Prev
+                      ◀ Prev
                     </button>
                     {[...Array(totalProductPages)].map((_, idx) => {
                       const pageNum = idx + 1;
@@ -2533,7 +2533,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onClick={() => setProductPage(prev => Math.min(totalProductPages, prev + 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                     >
-                      Next â–¶
+                      Next ▶
                     </button>
                   </div>
                 </div>
@@ -2579,7 +2579,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </h3>
                     <div className="flex items-center gap-1.5 text-[9px] font-normal mt-1.5 leading-none">
                       <span className="text-emerald-500">Active: {rootCategories.filter(c => c.is_active).length}</span>
-                      <span className="text-zinc-350 dark:text-zinc-700">â€¢</span>
+                      <span className="text-zinc-350 dark:text-zinc-700">•</span>
                       <span className="text-rose-500">Inactive: {rootCategories.filter(c => !c.is_active).length}</span>
                     </div>
                   </div>
@@ -2598,7 +2598,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </h3>
                     <div className="flex items-center gap-1.5 text-[9px] font-normal mt-1.5 leading-none">
                       <span className="text-emerald-500">Active: {subCategories.filter(c => c.is_active).length}</span>
-                      <span className="text-zinc-350 dark:text-zinc-700">â€¢</span>
+                      <span className="text-zinc-350 dark:text-zinc-700">•</span>
                       <span className="text-rose-500">Inactive: {subCategories.filter(c => !c.is_active).length}</span>
                     </div>
                   </div>
@@ -2931,7 +2931,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
                             <td className="p-4 text-zinc-400 font-normal">{o.phone || '---'}</td>
                             <td className="p-4 uppercase text-zinc-500 font-normal">{o.payment_method}</td>
-                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>â‚¹{o.total_amount}</td>
+                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
                             <td className="p-4 text-center relative">
                               <div className="inline-block text-left">
                                 {/* Custom Dropdown Toggle Button */}
@@ -3133,11 +3133,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="relative h-56 w-full flex select-none flex-grow">
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-normal h-[85%] pb-2 select-none w-10 text-left leading-none">
-                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal).toLocaleString('en-IN')}` : Math.round(maxChartVal)}</span>
-                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal * 0.75).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.75)}</span>
-                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal * 0.5).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.5)}</span>
-                      <span>{analyticsChartMetric === 'revenue' ? `â‚¹${Math.round(maxChartVal * 0.25).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.25)}</span>
-                      <span>â‚¹0</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal).toLocaleString('en-IN')}` : Math.round(maxChartVal)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.75).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.75)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.5).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.5)}</span>
+                      <span>{analyticsChartMetric === 'revenue' ? `₹${Math.round(maxChartVal * 0.25).toLocaleString('en-IN')}` : Math.round(maxChartVal * 0.25)}</span>
+                      <span>₹0</span>
                     </div>
 
                     {/* Chart Canvas */}
@@ -3240,7 +3240,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <p className="font-normal text-zinc-400">{points[hoveredPointIndex].date}</p>
                           <p className="font-normal text-xs text-white">
                             {analyticsChartMetric === 'revenue' 
-                              ? `â‚¹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
+                              ? `₹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
                               : `${points[hoveredPointIndex].val} Orders`}
                           </p>
                         </div>
@@ -3472,7 +3472,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onClick={() => setAnalyticsPage(prev => Math.max(1, prev - 1))}
                         className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        â—€ Prev
+                        ◀ Prev
                       </button>
                       {[...Array(totalAnalyticsPages)].map((_, idx) => {
                         const pageNum = idx + 1;
@@ -3497,7 +3497,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onClick={() => setAnalyticsPage(prev => Math.min(totalAnalyticsPages, prev + 1))}
                         className="py-2 px-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        Next â–¶
+                        Next ▶
                       </button>
                     </div>
                   </div>
@@ -3914,7 +3914,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (â‚¹)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Free Shipping Threshold limit (₹)</label>
                         <input
                           type="number"
                           min="0"
@@ -3929,7 +3929,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (â‚¹)</label>
+                        <label className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider">Flat Shipping Fee (₹)</label>
                         <input
                           type="number"
                           min="0"
@@ -4270,7 +4270,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onClick={() => setUserPage(prev => Math.max(1, prev - 1))}
                         className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        â—€ Prev
+                        ◀ Prev
                       </button>
                       {[...Array(totalUserPages)].map((_, idx) => {
                         const pageNum = idx + 1;
@@ -4293,7 +4293,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onClick={() => setUserPage(prev => Math.min(totalUserPages, prev + 1))}
                         className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
                       >
-                        Next â–¶
+                        Next ▶
                       </button>
                     </div>
                   </div>
