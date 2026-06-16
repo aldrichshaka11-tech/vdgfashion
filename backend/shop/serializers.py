@@ -127,6 +127,8 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     selected_size=item.get('selected_size'),
                     price=product.price
                 )
+                product.stock = max(0, product.stock - item['quantity'])
+                product.save()
             except Product.DoesNotExist:
                 OrderItem.objects.create(
                     order=order,
