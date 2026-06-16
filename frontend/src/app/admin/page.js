@@ -710,9 +710,12 @@ function DashboardPortal({ onLogout, adminUser }) {
   const syncData = useCallback(async () => {
     setLoadingData(true);
     try {
+      const token = sessionStorage.getItem('access_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+
       const prodRes = await fetch(`${API_BASE}/api/products/`);
       if (prodRes.ok) setProducts(await prodRes.json());
-      const orderRes = await fetch(`${API_BASE}/api/orders/`);
+      const orderRes = await fetch(`${API_BASE}/api/orders/`, { headers: authHeader });
       if (orderRes.ok) setOrders(await orderRes.json());
       const catRes = await fetch(`${API_BASE}/api/categories/`);
       if (catRes.ok) {
@@ -729,7 +732,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (mobBanRes.ok) setMobileBanners(await mobBanRes.json());
       const revRes = await fetch(`${API_BASE}/api/reviews/`);
       if (revRes.ok) setReviews(await revRes.json());
-      const usersRes = await fetch(`${API_BASE}/api/auth/users/`);
+      const usersRes = await fetch(`${API_BASE}/api/auth/users/`, { headers: authHeader });
       if (usersRes.ok) setUsersList(await usersRes.json());
 
     } catch (e) {
@@ -845,9 +848,13 @@ function DashboardPortal({ onLogout, adminUser }) {
             last_name: userForm.last_name
           };
 
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(payload)
       });
 
@@ -874,8 +881,10 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/auth/users/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (res.ok) {
         showToast('User deleted successfully', 'success');
@@ -891,9 +900,13 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleToggleUserStaff = async (user) => {
     try {
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ is_staff: !user.is_staff })
       });
       if (res.ok) {
@@ -909,9 +922,13 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleToggleUserActive = async (user) => {
     try {
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ is_active: !user.is_active })
       });
       if (res.ok) {
@@ -1104,9 +1121,13 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleOrderStatusChange = async (orderId, newStatus) => {
     try {
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
@@ -1119,8 +1140,10 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleDeleteOrder = async (id) => {
     if (!confirm('Are you sure you want to delete this order?')) return;
     try {
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/orders/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (res.ok) {
         showToast('Order deleted successfully', 'success');
@@ -4010,9 +4033,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                           if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
                           setLoadingData(true);
                           try {
+                            const token = sessionStorage.getItem('access_token');
                             const res = await fetch(`${API_BASE}/api/products/clear-all/`, {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' }
+                              headers: { 
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                              }
                             });
                             if (res.ok) {
                               showToast('Database wiped clean!', 'success');
