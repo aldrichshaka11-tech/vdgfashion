@@ -18,6 +18,8 @@ export default function ProductFilters() {
     setSelectedSize,
     resetFilters,
     categoryItems,
+    showOnlyOffers,
+    setShowOnlyOffers,
   } = useStore();
 
   const [isCategoryOpen, setIsCategoryOpen] = useState(true);
@@ -177,27 +179,19 @@ export default function ProductFilters() {
 
         <hr className="border-zinc-100" />
 
-        {/* Sizes */}
+        {/* Offers Checkbox */}
         <div className="space-y-3.5">
-          <h4 className="font-black text-[13.5px] text-zinc-900 tracking-tight">Size</h4>
-          <div className="grid grid-cols-6 gap-2">
-            {sizes.map((size) => {
-              const isSelected = selectedSize === size;
-              return (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(isSelected ? '' : size)}
-                  className={`text-center py-2 text-xs font-black rounded-lg border transition-all ${
-                    isSelected
-                      ? 'bg-zinc-950 text-white border-zinc-950 scale-103 shadow-sm'
-                      : 'border-zinc-200 text-zinc-600 hover:border-zinc-850 hover:text-zinc-950'
-                  }`}
-                >
-                  {size}
-                </button>
-              );
-            })}
-          </div>
+          <label className="flex items-center gap-2.5 text-[13.5px] font-bold text-zinc-900 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showOnlyOffers}
+              onChange={(e) => setShowOnlyOffers(e.target.checked)}
+              className="h-4.5 w-4.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+            />
+            <span className={showOnlyOffers ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
+              Offers & Discounts Only
+            </span>
+          </label>
         </div>
 
       </div>

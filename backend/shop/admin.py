@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, SiteSettings
+from .models import Category, Brand, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings
 
 class ProductColorInline(admin.TabularInline):
     model = ProductColor
@@ -384,5 +384,23 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'status', 'is_active', 'created_at')
+    list_editable = ('status', 'is_active')
+    search_fields = ('name', 'description')
+    list_filter = ('status', 'is_active')
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('id', 'product', 'user_name', 'user_email', 'rating', 'is_active', 'created_at')
+    list_editable = ('is_active',)
+    search_fields = ('user_name', 'user_email', 'comment', 'product__name')
+    list_filter = ('rating', 'is_active', 'created_at')
+
 
 

@@ -157,22 +157,30 @@ export default function CartPage() {
                 ) : (
                   <div className="divide-y divide-zinc-150">
                     {cart.map((item, index) => {
-                      const itemTotal = item.product.price * item.quantity;
+                      const isBogo = item.product.discount && (
+                        item.product.discount.toUpperCase().includes('BUY 1 GET 1') || 
+                        item.product.discount.toUpperCase().includes('BOGO') || 
+                        item.product.discount.toUpperCase().includes('B1G1')
+                      );
+                      const effectiveQty = isBogo ? Math.ceil(item.quantity / 2) : item.quantity;
+                      const itemTotal = item.product.price * effectiveQty;
                       return (
                         <div key={`${item.product.id}-${index}`} className="grid grid-cols-1 md:grid-cols-[1.3fr_0.5fr_0.6fr_0.5fr] gap-4 p-5 items-center">
                           <div className="flex gap-3">
-                            <div
-                              className="relative h-24 w-24 rounded-xl border border-zinc-150 p-2 shrink-0"
-                              style={{ backgroundColor: item.product.colorHex || '#f4f4f5' }}
-                            >
-                              <Image src={item.product.image} alt={item.product.name} fill className="object-contain p-2" />
-                            </div>
+                             <div
+                               className="relative h-24 w-24 rounded-xl border border-zinc-150 overflow-hidden shrink-0"
+                               style={{ backgroundColor: item.product.colorHex || '#f4f4f5' }}
+                             >
+                               {item.product.image ? (
+                                 <Image src={item.product.image} alt={item.product.name} fill className="object-cover" />
+                               ) : null}
+                             </div>
                             <div className="min-w-0">
                               <h3 className="text-base font-normal text-zinc-850">{item.product.name}</h3>
                               <p className="text-xs text-zinc-500 mt-1">
                                 Size: {item.selectedSize || 'One Size'}
                               </p>
-                              <span className="inline-flex mt-2 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-normal text-emerald-700 border border-emerald-100">
+                              <span className="inline-flex mt-2 rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white border border-transparent">
                                 In Stock
                               </span>
                               <div className="mt-3 flex items-center gap-4 text-xs font-semibold text-zinc-500">
@@ -188,7 +196,12 @@ export default function CartPage() {
                             </div>
                           </div>
 
-                          <p className="text-base font-extrabold text-zinc-900">{formatINR(item.product.price)}</p>
+                          <div className="flex flex-col">
+                            <p className="text-base font-extrabold text-zinc-900">{formatINR(item.product.price)}</p>
+                            {isBogo && (
+                              <span className="text-[10px] text-[#e11d48] font-black uppercase mt-0.5">BOGO Active</span>
+                            )}
+                          </div>
 
                           <div className="inline-flex items-center rounded-lg border border-zinc-200 overflow-hidden w-fit">
                             <button

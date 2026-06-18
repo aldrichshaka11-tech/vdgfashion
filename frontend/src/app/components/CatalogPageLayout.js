@@ -6,9 +6,28 @@ import Header from './Header';
 import CartDrawer from './CartDrawer';
 import ProductCard from './ProductCard';
 import ProductDetailView from './ProductDetailView';
+import Footer from './Footer';
 import { PRODUCTS } from '../data/products';
 import { useStore } from '../context/StoreContext';
 import { X } from 'lucide-react';
+
+const getPaginatedRange = (currentPage, totalPages) => {
+  const maxVisible = 22;
+  if (totalPages <= maxVisible) {
+    return [...Array(totalPages)].map((_, i) => i + 1);
+  }
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+  const pages = [];
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+};
 
 export default function CatalogPageLayout({ title, subtitle, type }) {
   const { products: allProducts, selectedProduct, wishlist, searchQuery } = useStore();
@@ -70,86 +89,88 @@ export default function CatalogPageLayout({ title, subtitle, type }) {
       <div className="flex-1 lg:pl-72 flex flex-col min-h-screen min-w-0">
         <Header onMobileMenuToggle={() => setMobileSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6">
-          {selectedProduct ? (
-            <ProductDetailView />
-          ) : (
-            <>
-              <section className="rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8">
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">{title}</h1>
-                <p className="text-sm sm:text-base text-zinc-500 font-normal mt-1.5">{subtitle}</p>
-              </section>
+        <main className="flex-1 overflow-y-auto flex flex-col justify-between">
+          <div className="px-4 sm:px-8 py-6 sm:py-8 w-full max-w-[1600px] mx-auto space-y-6 flex-grow">
+            {selectedProduct ? (
+              <ProductDetailView />
+            ) : (
+              <>
+                <section className="rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8">
+                  <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">{title}</h1>
+                  <p className="text-sm sm:text-base text-zinc-500 font-normal mt-1.5">{subtitle}</p>
+                </section>
 
-              <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {paginatedProducts.length === 0 ? (
-                  <div className="col-span-full rounded-[2rem] border border-zinc-200 bg-white p-12 text-center">
-                    <h3 className="text-base sm:text-lg font-black text-zinc-950">
-                      {type === 'wishlist' ? 'Your wishlist is empty' : 'No products found'}
-                    </h3>
-                    <p className="text-sm sm:text-base text-zinc-500 mt-2 font-normal">
-                      {type === 'wishlist'
-                        ? 'Tap the heart icon on products to add them here.'
-                        : 'Try a different keyword in search.'}
-                    </p>
+                <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {paginatedProducts.length === 0 ? (
+                    <div className="col-span-full rounded-[2rem] border border-zinc-200 bg-white p-12 text-center">
+                      <h3 className="text-base sm:text-lg font-black text-zinc-950">
+                        {type === 'wishlist' ? 'Your wishlist is empty' : 'No products found'}
+                      </h3>
+                      <p className="text-sm sm:text-base text-zinc-500 mt-2 font-normal">
+                        {type === 'wishlist'
+                          ? 'Tap the heart icon on products to add them here.'
+                          : 'Try a different keyword in search.'}
+                      </p>
+                    </div>
+                  ) : (
+                    paginatedProducts.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))
+                  )}
+                </section>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-zinc-200 text-xs font-semibold select-none gap-4">
+                    <span className="text-zinc-500 font-normal">
+                      Showing <span className="text-[#e11d48] font-normal">{Math.min(products.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-normal">{Math.min(products.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-normal text-zinc-800">{products.length}</span> products
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        disabled={currentPage === 1}
+                        onClick={() => {
+                          setCurrentPage(prev => Math.max(1, prev - 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="py-2 px-3 bg-white hover:bg-zinc-50 disabled:opacity-40 text-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-200 active:scale-95 shadow-2xs font-bold"
+                      >
+                        ◀ Prev
+                      </button>
+                      {getPaginatedRange(currentPage, totalPages).map((pageNum) => {
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => {
+                              setCurrentPage(pageNum);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-all cursor-pointer active:scale-90 shadow-2xs ${
+                              currentPage === pageNum
+                                ? 'bg-gradient-to-r from-[#e11d48] to-[#be123c] text-white'
+                                : 'bg-white hover:bg-zinc-50 text-zinc-605 border border-zinc-200'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      <button 
+                        disabled={currentPage === totalPages}
+                        onClick={() => {
+                          setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="py-2 px-3 bg-white hover:bg-zinc-50 disabled:opacity-40 text-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-200 active:scale-95 shadow-2xs font-bold"
+                      >
+                        Next ▶
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  paginatedProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))
                 )}
-              </section>
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-zinc-200 text-xs font-semibold select-none gap-4">
-                  <span className="text-zinc-500 font-normal">
-                    Showing <span className="text-[#e11d48] font-normal">{Math.min(products.length, (currentPage - 1) * PRODUCTS_PER_PAGE + 1)}</span> to <span className="text-[#e11d48] font-normal">{Math.min(products.length, currentPage * PRODUCTS_PER_PAGE)}</span> of <span className="font-normal text-zinc-800">{products.length}</span> products
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <button 
-                      disabled={currentPage === 1}
-                      onClick={() => {
-                        setCurrentPage(prev => Math.max(1, prev - 1));
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="py-2 px-3 bg-white hover:bg-zinc-50 disabled:opacity-40 text-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-200 active:scale-95 shadow-2xs font-bold"
-                    >
-                      ◀ Prev
-                    </button>
-                    {[...Array(totalPages)].map((_, idx) => {
-                      const pageNum = idx + 1;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => {
-                            setCurrentPage(pageNum);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-all cursor-pointer active:scale-90 shadow-2xs ${
-                            currentPage === pageNum
-                              ? 'bg-gradient-to-r from-[#e11d48] to-[#be123c] text-white'
-                              : 'bg-white hover:bg-zinc-50 text-zinc-600 border border-zinc-200'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    <button 
-                      disabled={currentPage === totalPages}
-                      onClick={() => {
-                        setCurrentPage(prev => Math.min(totalPages, prev + 1));
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="py-2 px-3 bg-white hover:bg-zinc-50 disabled:opacity-40 text-zinc-700 rounded-xl transition-all cursor-pointer border border-zinc-200 active:scale-95 shadow-2xs font-bold"
-                    >
-                      Next ▶
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+              </>
+            )}
+          </div>
+          <Footer />
         </main>
       </div>
 

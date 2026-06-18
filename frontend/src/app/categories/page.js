@@ -23,6 +23,24 @@ const STATIC_SUBCATEGORIES = {
   'T-Shirts': ['T-Shirts']
 };
 
+const getPaginatedRange = (currentPage, totalPages) => {
+  const maxVisible = 22;
+  if (totalPages <= maxVisible) {
+    return [...Array(totalPages)].map((_, i) => i + 1);
+  }
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+  const pages = [];
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+};
+
 export default function CategoriesPage() {
   const {
     products,
@@ -43,6 +61,7 @@ export default function CategoriesPage() {
     selectedProduct,
     setSelectedProduct,
     setSearchQuery,
+    showOnlyOffers
   } = useStore();
 
   const horizontalCategories = categoryItems || [];
@@ -56,10 +75,16 @@ export default function CategoriesPage() {
       
     const productSubcategories = products
       .filter(p => {
-        const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
-        return catName && catName.toLowerCase() === selectedCategory.toLowerCase() && p.parent_category;
+        const parentCat = p.parent_category || '';
+        const catName = p.category_name || '';
+        return (parentCat.toLowerCase() === selectedCategory.toLowerCase() && catName) ||
+               (catName.toLowerCase() === selectedCategory.toLowerCase() && parentCat);
       })
-      .map(p => p.parent_category);
+      .map(p => {
+        const parentCat = p.parent_category || '';
+        const catName = p.category_name || '';
+        return parentCat.toLowerCase() === selectedCategory.toLowerCase() ? catName : parentCat;
+      });
       
     const staticSubs = STATIC_SUBCATEGORIES[selectedCategory] || [];
     
@@ -69,10 +94,16 @@ export default function CategoriesPage() {
   const subcategoryCounts = useMemo(() => {
     const counts = {};
     products.forEach(p => {
-      const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
-      if (catName && catName.toLowerCase() === selectedCategory.toLowerCase()) {
+      const catName = p.category_name || '';
+      const parentCat = p.parent_category || '';
+      const belongsToSelectedCategory = 
+        catName.toLowerCase() === selectedCategory.toLowerCase() ||
+        parentCat.toLowerCase() === selectedCategory.toLowerCase();
+      
+      if (belongsToSelectedCategory) {
         const matchedSub = availableSubcategories.find(sub => {
-          if (p.parent_category && p.parent_category.toLowerCase() === sub.toLowerCase()) return true;
+          if (parentCat && parentCat.toLowerCase() === sub.toLowerCase()) return true;
+          if (catName && catName.toLowerCase() === sub.toLowerCase()) return true;
           const nameMatch = p.name.toLowerCase().includes(sub.toLowerCase());
           const descMatch = p.description ? p.description.toLowerCase().includes(sub.toLowerCase()) : false;
           return nameMatch || descMatch;
@@ -87,13 +118,21 @@ export default function CategoriesPage() {
 
   const parentCategoryTotalCount = useMemo(() => {
     return products.filter(p => {
-      const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
-      return catName && catName.toLowerCase() === selectedCategory.toLowerCase();
+      const catName = p.category_name || '';
+      const parentCat = p.parent_category || '';
+      return catName.toLowerCase() === selectedCategory.toLowerCase() ||
+             parentCat.toLowerCase() === selectedCategory.toLowerCase();
     }).length;
   }, [products, selectedCategory]);
 
   const renderSubcategoriesList = () => {
     if (selectedCategory === 'ALL' || availableSubcategories.length === 0) return null;
+
+    const visibleSubs = showAllSubcategories 
+      ? availableSubcategories 
+      : availableSubcategories.slice(0, 5);
+
+    const hasMore = availableSubcategories.length > 5;
 
     return (
       <div 
@@ -123,7 +162,7 @@ export default function CategoriesPage() {
             </span>
           </button>
 
-          {availableSubcategories.map((sub) => {
+          {visibleSubs.map((sub) => {
             const isSelected = selectedSubcategory === sub;
             const count = subcategoryCounts[sub] || 0;
             return (
@@ -148,6 +187,15 @@ export default function CategoriesPage() {
               </button>
             );
           })}
+
+          {hasMore && (
+            <button
+              onClick={() => setShowAllSubcategories(prev => !prev)}
+              className="w-full text-center py-2 text-xs font-bold text-[#e11d48] hover:text-[#be123c] transition-colors border-t border-zinc-100 mt-2 cursor-pointer flex items-center justify-center gap-1 active:scale-95"
+            >
+              {showAllSubcategories ? 'Show Less ▲' : `View More (${availableSubcategories.length - 5} more) ▼`}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -156,11 +204,16 @@ export default function CategoriesPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAllSubcategories, setShowAllSubcategories] = useState(false);
+
+  useEffect(() => {
+    setShowAllSubcategories(false);
+  }, [selectedCategory]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
+  }, [searchQuery, selectedCategory, selectedSubcategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy, showOnlyOffers]);
 
   useEffect(() => {
     AOS.init({
@@ -210,7 +263,10 @@ export default function CategoriesPage() {
     // Subcategory Filter
     if (selectedCategory !== 'ALL' && selectedSubcategory !== 'ALL') {
       result = result.filter((p) => {
-        if (p.parent_category && p.parent_category.toLowerCase() === selectedSubcategory.toLowerCase()) {
+        const parentCat = p.parent_category || '';
+        const catName = p.category_name || '';
+        if (parentCat.toLowerCase() === selectedSubcategory.toLowerCase() ||
+            catName.toLowerCase() === selectedSubcategory.toLowerCase()) {
           return true;
         }
         const nameMatch = p.name.toLowerCase().includes(selectedSubcategory.toLowerCase());
@@ -232,6 +288,10 @@ export default function CategoriesPage() {
       result = result.filter((p) => p.sizes.includes(selectedSize));
     }
 
+    if (showOnlyOffers) {
+      result = result.filter((p) => p.tagType === 'discount' || p.tag_type === 'discount');
+    }
+
     // Sorting Dropdown Logic
     if (sortBy === 'PRICE_LOW_HIGH') {
       result.sort((a, b) => a.price - b.price);
@@ -242,7 +302,7 @@ export default function CategoriesPage() {
     }
 
     return result;
-  }, [products, searchQuery, selectedCategory, selectedSubcategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
+  }, [products, searchQuery, selectedCategory, selectedSubcategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy, showOnlyOffers]);
 
   const PRODUCTS_PER_PAGE = 8;
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE) || 1;
@@ -299,11 +359,15 @@ export default function CategoriesPage() {
             </div>
           ) : (
             <>
-              {/* 1. All Categories Gradient Banner */}
               <section className="relative w-full rounded-[2rem] overflow-hidden shadow-sm border border-zinc-200/50 bg-[#8b5cf6]" data-aos="fade-up">
                 <Image 
-                  src="/banner/21.png" 
-                  alt="All Categories Banner" 
+                  src={
+                    selectedCategory.toLowerCase().includes('men') && !selectedCategory.toLowerCase().includes('women') ? '/banner/22.webp' :
+                    selectedCategory.toLowerCase().includes('women') || selectedCategory.toLowerCase().includes('dress') || selectedCategory.toLowerCase().includes('frock') || selectedCategory.toLowerCase().includes('girl') ? '/banner/23.webp' :
+                    selectedCategory.toLowerCase().includes('toy') ? '/banner/13.webp' :
+                    '/banner/21.webp'
+                  } 
+                  alt={`${selectedCategory} Banner`}
                   width={1774}
                   height={887}
                   className="w-full h-auto select-none"
@@ -337,7 +401,9 @@ export default function CategoriesPage() {
                           style={{ backgroundColor: cat.bg }}
                         >
                           <div className="relative w-4/5 h-4/5">
-                            <Image src={cat.img} alt={cat.name} fill className="object-contain" />
+                            {cat.img ? (
+                              <Image src={cat.img} alt={cat.name} fill className="object-contain" />
+                            ) : null}
                           </div>
                         </div>
                         
@@ -463,8 +529,7 @@ export default function CategoriesPage() {
                             >
                               ◀ Prev
                             </button>
-                            {[...Array(totalPages)].map((_, idx) => {
-                              const pageNum = idx + 1;
+                            {getPaginatedRange(currentPage, totalPages).map((pageNum) => {
                               return (
                                 <button
                                   key={pageNum}

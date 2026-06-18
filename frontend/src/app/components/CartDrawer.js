@@ -122,17 +122,17 @@ export default function CartDrawer() {
                     <div key={index} className="py-4 flex gap-4 animate-fade-in rounded-xl px-3 bg-white border border-zinc-150 mb-2">
                       {/* Pastel background container */}
                       <div
-                        className="relative h-20 w-16 rounded-lg overflow-hidden border border-zinc-150 flex-shrink-0 flex items-center justify-center"
+                        className="relative h-20 w-16 rounded-lg overflow-hidden border border-zinc-150 flex-shrink-0"
                         style={{ backgroundColor: item.product.colorHex || '#f4f4f5' }}
                       >
-                        <div className="relative w-[90%] h-[90%]">
+                        {item.product.image ? (
                           <Image
                             src={item.product.image}
                             alt={item.product.name}
                             fill
-                            className="object-contain"
+                            className="object-cover"
                           />
-                        </div>
+                        ) : null}
                       </div>
                       
                       <div className="flex-1 flex flex-col justify-between">
@@ -178,10 +178,25 @@ export default function CartDrawer() {
                       {/* Pricing */}
                       <div className="text-right flex flex-col justify-between items-end">
                         <span className="text-lg font-extrabold text-zinc-950 leading-none">
-                          {formatINR(item.product.price * item.quantity)}
+                          {(() => {
+                            const isBogo = item.product.discount && (
+                              item.product.discount.toUpperCase().includes('BUY 1 GET 1') || 
+                              item.product.discount.toUpperCase().includes('BOGO') || 
+                              item.product.discount.toUpperCase().includes('B1G1')
+                            );
+                            const effectiveQty = isBogo ? Math.ceil(item.quantity / 2) : item.quantity;
+                            return formatINR(item.product.price * effectiveQty);
+                          })()}
                         </span>
                         <span className="text-[11px] font-bold text-zinc-400">
                           {formatINR(item.product.price)} each
+                          {item.product.discount && (
+                            item.product.discount.toUpperCase().includes('BUY 1 GET 1') || 
+                            item.product.discount.toUpperCase().includes('BOGO') || 
+                            item.product.discount.toUpperCase().includes('B1G1')
+                          ) && (
+                            <span className="block text-[9px] text-[#e11d48] font-extrabold mt-0.5 uppercase">BOGO Applied</span>
+                          )}
                         </span>
                       </div>
                     </div>

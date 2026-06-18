@@ -30,6 +30,23 @@ import {
 } from 'lucide-react';
 import { formatINR } from '../utils/currency';
 
+const getPaginatedRange = (currentPage, totalPages) => {
+  const maxVisible = 22;
+  if (totalPages <= maxVisible) {
+    return [...Array(totalPages)].map((_, i) => i + 1);
+  }
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+  const pages = [];
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+};
 
 export default function MyOrdersPage() {
   const router = useRouter();
@@ -332,7 +349,9 @@ export default function MyOrdersPage() {
                               style={{ backgroundColor: item.colorHex || '#f4f4f5' }}
                               title={`${item.name} (${item.qty})`}
                             >
-                              <Image src={item.image} alt={item.name} fill className="object-contain p-1" />
+                              {item.image ? (
+                                <Image src={item.image} alt={item.name} fill className="object-contain p-1" />
+                              ) : null}
                             </div>
                           ))}
                           
@@ -414,8 +433,7 @@ export default function MyOrdersPage() {
                   </button>
 
                   {/* Page numbers */}
-                  {[...Array(totalPages)].map((_, i) => {
-                    const pageNum = i + 1;
+                  {getPaginatedRange(currentPage, totalPages).map((pageNum) => {
                     return (
                       <button
                         key={pageNum}
@@ -503,7 +521,9 @@ export default function MyOrdersPage() {
                     className="relative h-14 w-14 rounded-xl border border-zinc-150 p-1 shrinkage-0"
                     style={{ backgroundColor: item.colorHex || '#f4f4f5' }}
                   >
-                    <Image src={item.image} alt={item.name} fill className="object-contain p-1" />
+                    {item.image ? (
+                      <Image src={item.image} alt={item.name} fill className="object-contain p-1" />
+                    ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs sm:text-sm font-extrabold text-zinc-900 line-clamp-1">{item.name}</h4>

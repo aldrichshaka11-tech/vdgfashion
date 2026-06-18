@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Star, Heart, Plus, Minus, ShoppingBag, Truck, RefreshCw, CheckCircle2, ChevronDown, X, Info } from 'lucide-react';
+import { ChevronRight, Star, Heart, Plus, Minus, ShoppingBag, Truck, RefreshCw, CheckCircle2, ChevronDown, X, Info, CreditCard } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import Image from 'next/image';
 import { formatINR } from '../utils/currency';
@@ -48,9 +48,10 @@ export default function ProductDetailView() {
     ? selectedProduct.sizes
     : ["0-1M"];
 
-  const thumbnails = selectedProduct.thumbnails && selectedProduct.thumbnails.length > 0
+  const thumbnails = (selectedProduct.thumbnails && selectedProduct.thumbnails.length > 0
     ? selectedProduct.thumbnails
-    : [selectedProduct.image];
+    : [selectedProduct.image]
+  ).filter(Boolean);
 
   const details = selectedProduct.details || [];
 
@@ -115,7 +116,7 @@ export default function ProductDetailView() {
                   src={thumb}
                   alt={`Thumbnail ${idx + 1}`}
                   fill
-                  className={thumb && thumb.toLowerCase().includes('.png') ? "object-contain p-1" : "object-cover"}
+                  className="object-cover"
                 />
               </button>
             ))}
@@ -136,14 +137,16 @@ export default function ProductDetailView() {
             </button>
 
             {/* Display active image */}
-            <div className="relative w-full h-full hover-scale">
-              <Image
-                src={thumbnails[currentImageIdx] || selectedProduct.image}
-                alt={selectedProduct.name}
-                fill
-                className={(thumbnails[currentImageIdx] || selectedProduct.image || '').toLowerCase().includes('.png') ? "object-contain p-4" : "object-cover"}
-                priority
-              />
+            <div className="relative w-full h-full hover-scale overflow-hidden">
+              {(thumbnails[currentImageIdx] || selectedProduct.image) ? (
+                <Image
+                  src={thumbnails[currentImageIdx] || selectedProduct.image}
+                  alt={selectedProduct.name}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              ) : null}
             </div>
           </div>
 
@@ -164,6 +167,32 @@ export default function ProductDetailView() {
             <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 leading-tight tracking-tight">
               {selectedProduct.name}
             </h1>
+
+            {/* SKU & Category / Subcategory Labels */}
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-zinc-500 pt-1">
+              {selectedProduct.sku && (
+                <span className="bg-zinc-100 text-zinc-700 px-2.5 py-1 rounded-md font-mono">
+                  Product Code: {selectedProduct.sku}
+                </span>
+              )}
+              {selectedProduct.parent_category ? (
+                <>
+                  <span className="bg-zinc-50 text-zinc-650 px-2.5 py-1 rounded-md border border-zinc-150">
+                    {selectedProduct.parent_category}
+                  </span>
+                  <ChevronRight className="h-3 w-3 text-zinc-350" />
+                  <span className="bg-rose-50/50 text-[#e5484d] border border-rose-100/50 px-2.5 py-1 rounded-md font-bold">
+                    {selectedProduct.category_name}
+                  </span>
+                </>
+              ) : (
+                selectedProduct.category_name && (
+                  <span className="bg-zinc-50 text-zinc-650 px-2.5 py-1 rounded-md border border-zinc-150">
+                    {selectedProduct.category_name}
+                  </span>
+                )
+              )}
+            </div>
 
             {/* Rating */}
             <div className="flex items-center gap-2">
@@ -219,7 +248,7 @@ export default function ProductDetailView() {
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`h-12 w-13 text-sm font-semibold rounded-lg border transition-all ${
+                    className={`h-12 min-w-12 px-3 text-sm font-semibold rounded-lg border transition-all ${
                       isSelected
                         ? 'bg-zinc-950 text-white border-zinc-950 scale-105 shadow-sm font-bold'
                         : 'border-zinc-200 text-zinc-700 hover:border-black hover:text-black'
@@ -405,7 +434,7 @@ export default function ProductDetailView() {
 
 
 function ProductReviewsSection({ productId }) {
-  const { user } = useStore();
+  const { user, loginUser, logoutUser } = useStore();
   const [reviews, setReviews] = useState([]);
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
@@ -413,12 +442,29 @@ function ProductReviewsSection({ productId }) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [editingReviewId, setEditingReviewId] = useState(null);
+
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
+
+  const handleInlineLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+    const result = await loginUser(loginUsername, loginPassword);
+    setLoginLoading(false);
+    if (!result.success) {
+      setLoginError(result.message);
+    }
+  };
 
   const fetchReviews = () => {
     fetch(`${API_BASE}/api/reviews/?product=${productId}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => {
-        // Double-check filter on frontend for current product
         const filtered = data.filter(r => r.product === productId);
         setReviews(filtered);
       })
@@ -428,6 +474,53 @@ function ProductReviewsSection({ productId }) {
   useEffect(() => {
     fetchReviews();
   }, [productId]);
+
+  const handleStartEdit = (review) => {
+    setEditingReviewId(review.id);
+    setComment(review.comment);
+    setRating(review.rating);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+    setComment('');
+    setRating(5);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!confirm('Are you sure you want to delete your review?')) return;
+    try {
+      const headers = {};
+      if (user && user.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
+      const res = await fetch(`${API_BASE}/api/reviews/${reviewId}/`, {
+        method: 'DELETE',
+        headers: headers
+      });
+      if (res.ok) {
+        setSuccessMsg('Your review has been deleted successfully.');
+        setErrorMsg('');
+        if (editingReviewId === reviewId) {
+          handleCancelEdit();
+        }
+        fetchReviews();
+      } else {
+        if (res.status === 401) {
+          logoutUser();
+          setErrorMsg('Your session has expired. Please log in again.');
+        } else {
+          setErrorMsg('Failed to delete review. Try again.');
+        }
+      }
+    } catch (err) {
+      setErrorMsg('Network error deleting review.');
+    }
+  };
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -450,8 +543,15 @@ function ProductReviewsSection({ productId }) {
       if (user && user.token) {
         headers['Authorization'] = `Bearer ${user.token}`;
       }
-      const res = await fetch(`${API_BASE}/api/reviews/`, {
-        method: 'POST',
+      
+      const isEditing = editingReviewId !== null;
+      const url = isEditing 
+        ? `${API_BASE}/api/reviews/${editingReviewId}/` 
+        : `${API_BASE}/api/reviews/`;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: headers,
         body: JSON.stringify({
           product: productId,
@@ -464,18 +564,32 @@ function ProductReviewsSection({ productId }) {
 
       const data = await res.json();
       if (res.ok) {
-        setSuccessMsg('Thank you! Your review has been published.');
+        setSuccessMsg(isEditing ? 'Your review has been updated!' : 'Thank you! Your review has been published.');
         setComment('');
         setRating(5);
+        setEditingReviewId(null);
         fetchReviews();
       } else {
+        if (res.status === 401) {
+          logoutUser();
+          setErrorMsg('Your session has expired. Please log in again to write a review.');
+          return;
+        }
         const isDuplicate = JSON.stringify(data).toLowerCase().includes('unique') || 
-                            JSON.stringify(data).toLowerCase().includes('already reviewed') ||
-                            res.status === 400;
+                            JSON.stringify(data).toLowerCase().includes('already reviewed');
         if (isDuplicate) {
           setErrorMsg('You have already submitted a comment for this product! One comment is allowed per customer.');
         } else {
-          setErrorMsg('Failed to submit review. Try again.');
+          let errorMsg = 'Failed to submit review. Try again.';
+          if (data && typeof data === 'object') {
+            const errors = Object.entries(data)
+              .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+              .join(' | ');
+            if (errors) errorMsg = errors;
+          } else if (typeof data === 'string') {
+            errorMsg = data;
+          }
+          setErrorMsg(errorMsg);
         }
       }
     } catch (err) {
@@ -484,6 +598,8 @@ function ProductReviewsSection({ productId }) {
       setSubmitting(false);
     }
   };
+
+  const userReview = reviews.find(r => user && r.user_email === user.email);
 
   return (
     <div className="space-y-8 animate-fade-in text-left">
@@ -503,100 +619,206 @@ function ProductReviewsSection({ productId }) {
               No reviews recorded for this product yet. Be the first to share your thoughts!
             </div>
           ) : (
-            reviews.map((r, idx) => (
-              <div key={r.id || idx} className="bg-white border border-zinc-200 rounded-[2rem] p-6 shadow-2xs space-y-3 relative hover:border-zinc-350 transition-colors">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-bold text-zinc-900 text-sm">{r.user_name}</h4>
-                    <p className="text-[10px] text-zinc-400 font-normal">{new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            reviews.map((r, idx) => {
+              const isOwner = user && r.user_email === user.email;
+              return (
+                <div key={r.id || idx} className="bg-white border border-zinc-200 rounded-[2rem] p-6 shadow-2xs space-y-3 relative hover:border-zinc-350 transition-colors">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-zinc-900 text-sm">
+                        {r.user_name} {isOwner && <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded ml-1 font-bold">You</span>}
+                      </h4>
+                      <p className="text-[10px] text-zinc-400 font-normal">{new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    </div>
+                    <div className="flex items-center text-amber-400">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-3.5 w-3.5 ${i < r.rating ? 'fill-amber-400' : 'text-zinc-200'}`} />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center text-amber-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`h-3.5 w-3.5 ${i < r.rating ? 'fill-amber-400' : 'text-zinc-200'}`} />
-                    ))}
-                  </div>
+                  <p className="text-zinc-650 text-xs sm:text-sm leading-relaxed font-normal">{r.comment}</p>
+                  
+                  {isOwner && (
+                    <div className="flex items-center gap-3.5 pt-1 text-[11px] font-bold">
+                      <button
+                        onClick={() => handleStartEdit(r)}
+                        className="text-indigo-600 hover:text-indigo-850 transition-colors cursor-pointer"
+                      >
+                        Edit Review
+                      </button>
+                      <span className="text-zinc-200 font-normal">|</span>
+                      <button
+                        onClick={() => handleDeleteReview(r.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                      >
+                        Delete Review
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="text-zinc-650 text-xs sm:text-sm leading-relaxed font-normal">{r.comment}</p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
         {/* Right Column: Submission Form (4 cols) */}
         <div className="lg:col-span-4 bg-zinc-50 border border-zinc-200/80 rounded-[2.2rem] p-6 shadow-3xs space-y-4">
-          <h4 className="text-sm font-black text-zinc-950 uppercase tracking-wider">Write a Review</h4>
+          <h4 className="text-sm font-black text-zinc-950 uppercase tracking-wider">
+            {editingReviewId ? 'Edit your Review' : 'Write a Review'}
+          </h4>
           
           {user ? (
-            <form onSubmit={handleSubmitReview} className="space-y-4 text-xs font-semibold text-zinc-700">
-              {errorMsg && (
-                <div className="bg-red-50 text-red-600 border border-red-200 rounded-xl p-3 font-bold text-[11px]">
-                  ⚠️ {errorMsg}
-                </div>
-              )}
-              {successMsg && (
-                <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl p-3 font-bold text-[11px]">
-                  ✅ {successMsg}
-                </div>
-              )}
-
-              {/* Star Rating Picker */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Your Rating</label>
-                <div className="flex items-center gap-1 text-zinc-200">
-                  {[...Array(5)].map((_, idx) => {
-                    const starVal = idx + 1;
-                    const isActive = starVal <= (hoverRating || rating);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setRating(starVal)}
-                        onMouseEnter={() => setHoverRating(starVal)}
-                        onMouseLeave={() => setHoverRating(0)}
-                        className="p-0.5 text-zinc-200 hover:scale-110 active:scale-95 transition-all cursor-pointer"
-                      >
-                        <Star className={`h-6.5 w-6.5 ${isActive ? 'fill-amber-400 text-amber-400' : 'text-zinc-300'}`} />
-                      </button>
-                    );
-                  })}
-                </div>
+            userReview && !editingReviewId ? (
+              <div className="space-y-3 text-center py-6 bg-zinc-100/50 rounded-2xl p-4.5 border border-zinc-200/40">
+                <p className="text-xs text-zinc-650 font-bold leading-relaxed">
+                  You have already submitted a comment for this product. 
+                </p>
+                <p className="text-[11.5px] text-zinc-400 font-normal leading-normal">
+                  One comment is allowed per customer. You can edit or delete your existing review from the list.
+                </p>
               </div>
+            ) : (
+              <form onSubmit={handleSubmitReview} className="space-y-4 text-xs font-semibold text-zinc-700">
+                {errorMsg && (
+                  <div className="bg-red-50 text-red-600 border border-red-200 rounded-xl p-3 font-bold text-[11px]">
+                    ⚠️ {errorMsg}
+                  </div>
+                )}
+                {successMsg && (
+                  <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl p-3 font-bold text-[11px]">
+                    ✅ {successMsg}
+                  </div>
+                )}
 
-              {/* Textarea */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Your Comment</label>
-                <textarea
-                  required
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Share your thoughts on style, sizing, and muslin fabric fit..."
-                  className="w-full h-24 p-3 border border-zinc-200 bg-white rounded-xl resize-none focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all font-normal text-xs"
-                />
-              </div>
+                {/* Star Rating Picker */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Your Rating</label>
+                  <div className="flex items-center gap-1 text-zinc-200">
+                    {[...Array(5)].map((_, idx) => {
+                      const starVal = idx + 1;
+                      const isActive = starVal <= (hoverRating || rating);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setRating(starVal)}
+                          onMouseEnter={() => setHoverRating(starVal)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className="p-0.5 text-zinc-200 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Star className={`h-6.5 w-6.5 ${isActive ? 'fill-amber-400 text-amber-400' : 'text-zinc-300'}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full py-3 bg-[#e5484d] hover:bg-[#d8373d] disabled:opacity-50 text-white font-extrabold rounded-xl transition-all shadow-md tracking-wider uppercase text-[10px] cursor-pointer"
-              >
-                {submitting ? 'Publishing...' : 'Submit Review'}
-              </button>
-            </form>
+                {/* Textarea */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Your Comment</label>
+                  <textarea
+                    required
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Share your thoughts on style, sizing, and muslin fabric fit..."
+                    className="w-full h-24 p-3 border border-zinc-200 bg-white rounded-xl resize-none focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all font-normal text-xs"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-grow py-3 bg-[#e5484d] hover:bg-[#d8373d] disabled:opacity-50 text-white font-extrabold rounded-xl transition-all shadow-md tracking-wider uppercase text-[10px] cursor-pointer"
+                  >
+                    {submitting ? 'Publishing...' : editingReviewId ? 'Update Review' : 'Submit Review'}
+                  </button>
+                  {editingReviewId && (
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="py-3 px-4 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 font-extrabold rounded-xl transition-all tracking-wider uppercase text-[10px] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            )
           ) : (
-            <div className="space-y-3.5 text-center py-6">
-              <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                You must sign in to your buyer profile account to write a product review.
-              </p>
-              <button 
-                type="button"
-                onClick={() => {
-                  router.push('/account');
-                }}
-                className="w-full mt-2.5 py-3 bg-zinc-950 hover:bg-zinc-800 text-white text-[10px] font-extrabold rounded-xl tracking-wider uppercase shadow-md transition-colors cursor-pointer"
-              >
-                Log In / Sign Up
-              </button>
-            </div>
+            !showLoginForm ? (
+              <div className="space-y-3.5 text-center py-6">
+                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                  You must sign in to your buyer profile account to write a product review.
+                </p>
+                <button 
+                  type="button"
+                  onClick={() => setShowLoginForm(true)}
+                  className="w-full mt-2.5 py-3 bg-zinc-950 hover:bg-zinc-800 text-white text-[10px] font-extrabold rounded-xl tracking-wider uppercase shadow-md transition-colors cursor-pointer"
+                >
+                  Log In / Sign Up
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleInlineLogin} className="space-y-4 text-xs font-semibold text-zinc-700">
+                <p className="text-[11px] text-zinc-500 font-bold leading-relaxed text-center">
+                  Sign in to post your review:
+                </p>
+                
+                {loginError && (
+                  <div className="bg-red-50 text-red-600 border border-red-200 rounded-xl p-3 font-bold text-[11px] leading-normal">
+                    ⚠️ {loginError}
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Username / Email*</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={loginUsername} 
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Password*</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={loginPassword} 
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-indigo-500 hover:opacity-95 disabled:opacity-50 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 text-xs tracking-wider uppercase cursor-pointer"
+                >
+                  {loginLoading ? 'Signing in...' : 'Sign In & Comment'}
+                </button>
+
+                <div className="pt-2 flex justify-between items-center text-[10px] font-bold">
+                  <button 
+                    type="button"
+                    onClick={() => router.push('/account')}
+                    className="text-indigo-600 hover:underline cursor-pointer"
+                  >
+                    Create an Account
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setShowLoginForm(false)}
+                    className="text-zinc-400 hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )
           )}
         </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Lock, Mail, Loader2, AlertCircle, Eye, EyeOff,
   LayoutDashboard, Package, Folders, ShoppingCart, Users, 
@@ -8,7 +8,7 @@ import {
   UserCheck, ClipboardList, Search, Bell, Moon, Sun, ChevronRight, ChevronDown,
   ArrowUpRight, RefreshCcw, CheckCircle, Database, Trash2, Edit, Plus, Upload, X,
   ShoppingBag, Wallet, Menu, LogOut, Filter,
-  Clock, Truck, MapPin, XCircle, Heart
+  Clock, Truck, MapPin, XCircle, Heart, Percent
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { API_BASE, mediaUrl } from '../../lib/api';
@@ -187,10 +187,36 @@ export default function AdminRoute() {
   return <DashboardPortal onLogout={handleLogout} adminUser={adminUser} />;
 }
 
+const getPaginatedRange = (currentPage, totalPages) => {
+  const maxVisible = 22;
+  if (totalPages <= maxVisible) {
+    return [...Array(totalPages)].map((_, i) => i + 1);
+  }
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+  const pages = [];
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+};
+
 function DashboardPortal({ onLogout, adminUser }) {
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [activePage, setActivePage] = useState('dashboard');
   const [productPage, setProductPage] = useState(1);
+
+  // Offers management state
+  const [offersSearchQuery, setOffersSearchQuery] = useState('');
+  const [selectedProductForOffer, setSelectedProductForOffer] = useState(null);
+  const [offerDiscountStr, setOfferDiscountStr] = useState('');
+  const [offerPromoPrice, setOfferPromoPrice] = useState('');
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [offerModalMode, setOfferModalMode] = useState('add');
   const [analyticsPage, setAnalyticsPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState('light');
@@ -676,7 +702,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
     cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
     width: '', height: '', length: '', product_type: 'simple', status: 'published',
-    category: '', parent_category: 'New Born (0-3 Months)', image: ''
+    category: '', parent_category: 'New Born (0-3 Months)', image: '',
+    razorpay_buy_now_link: ''
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -688,7 +715,32 @@ function DashboardPortal({ onLogout, adminUser }) {
   });
 
   const [bulkInput, setBulkInput] = useState('');
-  const [bulkMode, setBulkMode] = useState('sheet'); // 'sheet' or 'json'
+  const [bulkImages, setBulkImages] = useState({}); // { index: { file, path, preview } }
+  const [uploadingBulkImages, setUploadingBulkImages] = useState({});
+
+  const handleBulkImageUpload = async (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingBulkImages(prev => ({ ...prev, [index]: true }));
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/products/upload-image/', {
+        method: 'POST', body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBulkImages(prev => ({ ...prev, [index]: { path: data.path, url: data.url, name: file.name } }));
+        showToast(`Image ${index + 1} uploaded!`, 'success');
+      } else {
+        showToast('Image upload failed', 'warning');
+      }
+    } catch { showToast('Network error uploading image', 'warning'); }
+    finally { setUploadingBulkImages(prev => ({ ...prev, [index]: false })); }
+  };
+  const [bulkMode, setBulkMode] = useState('file'); // 'file' or 'paste'
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadProgressInfo, setUploadProgressInfo] = useState('');
 
   const showToast = (message, type = 'info') => {
     const newToast = { id: Date.now(), message, type };
@@ -705,7 +757,25 @@ function DashboardPortal({ onLogout, adminUser }) {
   const getImageUrl = (urlOrPath) => {
     if (!urlOrPath) return null;
     if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
-      return urlOrPath;
+      let imgUrl = urlOrPath;
+      // Google Drive URL helper
+      if (imgUrl.includes('drive.google.com')) {
+        const driveMatch = imgUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) || 
+                           imgUrl.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+        if (driveMatch) {
+          const fileId = driveMatch[1];
+          imgUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        }
+      }
+      // Dropbox URL helper
+      else if (imgUrl.includes('dropbox.com')) {
+        if (imgUrl.includes('dl=0')) {
+          imgUrl = imgUrl.replace('dl=0', 'raw=1');
+        } else if (!imgUrl.includes('dl=1') && !imgUrl.includes('raw=1')) {
+          imgUrl = imgUrl + (imgUrl.includes('?') ? '&' : '?') + 'raw=1';
+        }
+      }
+      return imgUrl;
     }
     if (urlOrPath.startsWith('/media/')) {
       return `${API_BASE}${urlOrPath}`;
@@ -755,12 +825,111 @@ function DashboardPortal({ onLogout, adminUser }) {
     return () => clearInterval(interval);
   }, [syncData]);
 
+  // Offers Actions
+  const handleRemoveOffer = async (product) => {
+    if (!confirm(`Are you sure you want to remove the offer from "${product.name}"?`)) return;
+    
+    setLoadingData(true);
+    try {
+      const original = product.original_price || product.price;
+      const payload = {
+        price: parseFloat(original),
+        original_price: parseFloat(original),
+        discount: "",
+        tag_type: ""
+      };
+
+      const token = sessionStorage.getItem('access_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const res = await fetch(`${API_BASE}/api/products/${product.id}/`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...authHeader
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showToast('Offer removed successfully', 'success');
+        syncData();
+      } else {
+        showToast('Failed to remove offer.', 'warning');
+      }
+    } catch (e) {
+      showToast('Error removing offer.', 'warning');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const handleSaveOffer = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedProductForOffer) return;
+
+    const promoPriceNum = parseFloat(offerPromoPrice);
+    const originalPriceNum = parseFloat(selectedProductForOffer.original_price || selectedProductForOffer.price);
+
+    if (isNaN(promoPriceNum) || promoPriceNum <= 0) {
+      showToast('Please enter a valid promotional price.', 'warning');
+      return;
+    }
+
+    const isBogoStr = offerDiscountStr && (
+      offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') || 
+      offerDiscountStr.toUpperCase().includes('BOGO') || 
+      offerDiscountStr.toUpperCase().includes('B1G1')
+    );
+
+    if (promoPriceNum >= originalPriceNum && !isBogoStr) {
+      if (!confirm(`Warning: The promotional price (₹${promoPriceNum}) is higher than or equal to the original price (₹${originalPriceNum}). Do you still want to proceed?`)) {
+        return;
+      }
+    }
+
+    setLoadingData(true);
+    try {
+      const payload = {
+        price: promoPriceNum,
+        original_price: originalPriceNum,
+        discount: offerDiscountStr || "DISCOUNT",
+        tag_type: "discount"
+      };
+
+      const token = sessionStorage.getItem('access_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const res = await fetch(`${API_BASE}/api/products/${selectedProductForOffer.id}/`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...authHeader
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showToast(offerModalMode === 'edit' ? 'Offer updated successfully' : 'Offer added successfully', 'success');
+        setIsOfferModalOpen(false);
+        setSelectedProductForOffer(null);
+        syncData();
+      } else {
+        showToast('Failed to save offer details.', 'warning');
+      }
+    } catch (e) {
+      showToast('Network error saving offer details.', 'warning');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   // CRUD Handlers
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     const url = modalMode === 'edit'
       ? `${API_BASE}/api/products/${selectedItem.id}/`
-      : '${API_BASE}/api/products/';
+      : `${API_BASE}/api/products/`;
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
@@ -776,13 +945,26 @@ function DashboardPortal({ onLogout, adminUser }) {
         }
       }
 
+      let finalCatId = parseInt(productForm.category) || null;
+      let finalParentCat = productForm.parent_category || '';
+      
+      if (finalParentCat) {
+        // Find subcategory object matching parentCategory name and parentCat name
+        const rootCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
+        const subCatObj = subCategories.find(sc => sc.name === finalParentCat && sc.parent_category === rootCatName);
+        if (subCatObj) {
+          finalCatId = subCatObj.id; // set category relation to subcategory Category ID!
+          finalParentCat = rootCatName; // set parent_category string to parent category name!
+        }
+      }
+
       const payload = {
         name: productForm.name,
         slug: productForm.slug || null,
         unit: productForm.unit || 'pc',
         sku: productForm.sku || null,
-        category: parseInt(productForm.category) || null,
-        parent_category: productForm.parent_category,
+        category: finalCatId,
+        parent_category: finalParentCat,
         price: parseFloat(productForm.price),
         original_price: parseFloat(productForm.original_price || productForm.price),
         discount: productForm.discount || null,
@@ -796,6 +978,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         length: productForm.length ? parseFloat(productForm.length) : null,
         product_type: productForm.product_type || 'simple',
         status: productForm.status || 'published',
+        razorpay_buy_now_link: productForm.razorpay_buy_now_link || null,
         ...(imagePath ? { image: imagePath } : {})
       };
 
@@ -1085,33 +1268,113 @@ function DashboardPortal({ onLogout, adminUser }) {
     const lines = text.trim().split('\n');
     if (lines.length < 2) return [];
 
-    // Parse headers
-    const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
+    // Parse headers (detect tab vs comma)
+    const firstLine = lines[0];
+    const separator = firstLine.includes('\t') ? '\t' : ',';
+    const headers = firstLine.split(separator).map(h => h.trim().toLowerCase());
     
     // Find column indices
-    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('title'));
-    const skuIdx = headers.findIndex(h => h.includes('sku') || h.includes('code'));
-    const catIdx = headers.findIndex(h => h.includes('cat') || h.includes('group'));
-    const priceIdx = headers.findIndex(h => h.includes('price') && !h.includes('original') && !h.includes('mrp'));
-    const origPriceIdx = headers.findIndex(h => h.includes('original') || h.includes('mrp'));
-    const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('count'));
-    const imgIdx = headers.findIndex(h => h.includes('image') || h.includes('url') || h.includes('link') || h.includes('drive') || h.includes('photo'));
-    const descIdx = headers.findIndex(h => h.includes('desc') || h.includes('about') || h.includes('info'));
+    const nameIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('name') || norm.includes('title');
+    });
+    const skuIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('sku') || norm.includes('code');
+    });
+    const catIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return (norm.includes('cat') || norm.includes('group')) && !norm.includes('age') && !norm.includes('sub');
+    });
+    const priceIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('price') && !norm.includes('original') && !norm.includes('mrp') && !norm.includes('budget') && !norm.includes('link') && !norm.includes('razorpay');
+    });
+    const origPriceIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('original') || norm.includes('mrp') || norm.includes('budget') || norm.includes('origprice');
+    });
+    const stockIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('stock') || norm.includes('qty') || norm.includes('quantity') || norm.includes('count');
+    });
+    const imgIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return (norm.includes('image') || norm.includes('url') || norm.includes('link') || norm.includes('drive') || norm.includes('photo') || norm.includes('img') || norm.includes('pic')) && !norm.includes('2') && !norm.includes('3');
+    });
+    const img2Idx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('image2') || norm.includes('img2') || norm.includes('photo2') || norm.includes('url2') || norm.includes('link2');
+    });
+    const img3Idx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('image3') || norm.includes('img3') || norm.includes('photo3') || norm.includes('url3') || norm.includes('link3');
+    });
+    const descIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('desc') || norm.includes('about') || norm.includes('info');
+    });
+    const razorpayIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('razorpay') || norm.includes('buynow') || norm.includes('payment') || norm.includes('paylink') || norm.includes('buylink');
+    });
+    const ageGroupIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return (norm.includes('agegroup') || norm.includes('age')) && !norm.includes('image') && !norm.includes('img');
+    });
+    const sizeIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('size');
+    });
+    const parentCatIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('parentcategory') || norm.includes('parentcat') || norm.includes('subcategory') || norm.includes('subcat');
+    });
 
     const parsed = [];
     for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split('\t');
+      let cols = [];
+      if (separator === ',') {
+        let row = lines[i];
+        let arr = [];
+        let insideQuote = false;
+        let entry = '';
+        for (let char of row) {
+          if (char === '"') {
+            insideQuote = !insideQuote;
+          } else if (char === ',' && !insideQuote) {
+            arr.push(entry.trim());
+            entry = '';
+          } else {
+            entry += char;
+          }
+        }
+        arr.push(entry.trim());
+        cols = arr;
+      } else {
+        cols = lines[i].split('\t');
+      }
       if (cols.length < 1) continue;
 
       const item = {};
-      if (nameIdx !== -1 && cols[nameIdx]) item.name = cols[nameIdx].trim();
-      if (skuIdx !== -1 && cols[skuIdx]) item.sku = cols[skuIdx].trim();
-      if (catIdx !== -1 && cols[catIdx]) item.category_name = cols[catIdx].trim();
+      if (nameIdx !== -1 && cols[nameIdx]) item.name = cols[nameIdx].trim().replace(/^"|"$/g, '');
+      if (skuIdx !== -1 && cols[skuIdx]) item.sku = cols[skuIdx].trim().replace(/^"|"$/g, '');
+      if (catIdx !== -1 && cols[catIdx]) item.category_name = cols[catIdx].trim().replace(/^"|"$/g, '');
       if (priceIdx !== -1 && cols[priceIdx]) item.price = parseFloat(cols[priceIdx].trim().replace(/[^0-9.]/g, '')) || 0;
       if (origPriceIdx !== -1 && cols[origPriceIdx]) item.original_price = parseFloat(cols[origPriceIdx].trim().replace(/[^0-9.]/g, '')) || 0;
       if (stockIdx !== -1 && cols[stockIdx]) item.stock = parseInt(cols[stockIdx].trim().replace(/[^0-9]/g, '')) || 0;
-      if (imgIdx !== -1 && cols[imgIdx]) item.image = cols[imgIdx].trim();
-      if (descIdx !== -1 && cols[descIdx]) item.description = cols[descIdx].trim();
+      if (imgIdx !== -1 && cols[imgIdx]) item.image = cols[imgIdx].trim().replace(/^"|"$/g, '');
+      if (img2Idx !== -1 && cols[img2Idx]) item.image_2 = cols[img2Idx].trim().replace(/^"|"$/g, '');
+      if (img3Idx !== -1 && cols[img3Idx]) item.image_3 = cols[img3Idx].trim().replace(/^"|"$/g, '');
+      if (descIdx !== -1 && cols[descIdx]) item.description = cols[descIdx].trim().replace(/^"|"$/g, '');
+      if (razorpayIdx !== -1 && cols[razorpayIdx]) item.razorpay_buy_now_link = cols[razorpayIdx].trim().replace(/^"|"$/g, '');
+      if (ageGroupIdx !== -1 && cols[ageGroupIdx]) {
+        const val = cols[ageGroupIdx].trim().replace(/^"|"$/g, '');
+        item.age_group = val;
+        item.parent_category = val;
+      }
+      if (sizeIdx !== -1 && cols[sizeIdx]) item.size = cols[sizeIdx].trim().replace(/^"|"$/g, '');
+      if (parentCatIdx !== -1 && cols[parentCatIdx] && !item.parent_category) item.parent_category = cols[parentCatIdx].trim().replace(/^"|"$/g, '');
 
       // Fill defaults
       if (!item.name) continue; // Skip items without a name
@@ -1125,12 +1388,53 @@ function DashboardPortal({ onLogout, adminUser }) {
     return parsed;
   };
 
+  const fileInputRef = useRef(null);
+  const uploadCancelledRef = useRef(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setBulkInput(event.target.result);
+      showToast(`Loaded file: ${file.name}`, 'success');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setBulkInput(event.target.result);
+        showToast(`Loaded file: ${file.name}`, 'success');
+      };
+      reader.readAsText(file);
+    }
+  };
+
   const handleBulkUpload = async (e) => {
     e.preventDefault();
     setLoadingData(true);
+    uploadCancelledRef.current = false;
     try {
       let parsedData;
-      if (bulkMode === 'sheet') {
+      if (bulkMode === 'file' || bulkMode === 'paste') {
         parsedData = parseTSV(bulkInput);
         if (parsedData.length === 0) {
           throw new Error('No valid products parsed. Make sure to copy columns including a header row.');
@@ -1139,24 +1443,70 @@ function DashboardPortal({ onLogout, adminUser }) {
         parsedData = JSON.parse(bulkInput);
       }
       
-      const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsedData)
-      });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        showToast(`Bulk Upload Successful! Created ${result.created_count} products.`, 'success');
+      const total = parsedData.length;
+      let createdCount = 0;
+      let failedCount = 0;
+      let errors = [];
+
+      setUploadProgress(0);
+      setUploadProgressInfo(`0 / ${total}`);
+
+      for (let i = 0; i < total; i++) {
+        if (uploadCancelledRef.current) {
+          break;
+        }
+        const product = parsedData[i];
+        setUploadProgressInfo(`${i + 1} / ${total}`);
+        
+        try {
+          const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([product])
+          });
+          const result = await res.json();
+          if (res.ok && result.success) {
+            createdCount += result.created_count;
+            failedCount += result.failed_count;
+            if (result.errors && result.errors.length > 0) {
+              errors.push(...result.errors);
+            }
+          } else {
+            failedCount += 1;
+            errors.push({ name: product.name, error: result.error || 'Import failed' });
+          }
+        } catch (err) {
+          failedCount += 1;
+          errors.push({ name: product.name, error: err.message });
+        }
+        
+        setUploadProgress(Math.round(((i + 1) / total) * 100));
+      }
+
+      if (uploadCancelledRef.current) {
+        showToast(`Bulk Upload Cancelled. Created ${createdCount} products.`, 'warning');
+        setModalType(null);
+        setBulkInput('');
+        syncData();
+      } else if (createdCount > 0 && failedCount === 0) {
+        showToast(`Bulk Upload Successful! Created ${createdCount} products.`, 'success');
+        setModalType(null);
+        setBulkInput('');
+        syncData();
+      } else if (createdCount > 0) {
+        showToast(`Import completed. Created: ${createdCount}, Failed: ${failedCount}`, 'warning');
         setModalType(null);
         setBulkInput('');
         syncData();
       } else {
-        showToast(`Import completed with errors. Failures: ${result.failed_count}`, 'warning');
+        showToast(`All imports failed. Failures: ${failedCount}`, 'warning');
       }
     } catch (err) {
       showToast(err.message || 'Invalid structure. Please check input formatting.', 'warning');
     } finally {
       setLoadingData(false);
+      setUploadProgress(null);
+      setUploadProgressInfo('');
     }
   };
 
@@ -1425,14 +1775,34 @@ function DashboardPortal({ onLogout, adminUser }) {
     setSelectedItem(item);
     if (mode === 'edit' && item) {
       // Find category ID from category field (could be id or name)
-      const catId = item.category || '';
+      let formCatId = '';
+      let formSubCatName = '';
+      
+      const catObj = categories.find(c => String(c.id) === String(item.category));
+      if (catObj) {
+        if (catObj.parent_category) {
+          // This is a subcategory
+          formSubCatName = catObj.name;
+          const parentCatObj = categories.find(c => c.name === catObj.parent_category && !c.parent_category);
+          formCatId = parentCatObj ? parentCatObj.id : '';
+        } else {
+          // This is a root category
+          formCatId = catObj.id;
+          formSubCatName = '';
+        }
+      } else {
+        // Fallback
+        formCatId = item.category || '';
+        formSubCatName = item.parent_category || '';
+      }
+
       setProductForm({
         name: item.name || '',
         slug: item.slug || '',
         unit: item.unit || 'pc',
         sku: item.sku || '',
-        category: catId,
-        parent_category: item.parent_category || '',
+        category: formCatId,
+        parent_category: formSubCatName,
         price: item.price || '',
         original_price: item.original_price || '',
         discount: item.discount || '',
@@ -1446,14 +1816,16 @@ function DashboardPortal({ onLogout, adminUser }) {
         length: item.length || '',
         product_type: item.product_type || 'simple',
         status: item.status || 'published',
-        image: item.image || ''
+        image: item.image || '',
+        razorpay_buy_now_link: item.razorpay_buy_now_link || ''
       });
     } else {
       setProductForm({
         name: '', slug: '', unit: 'pc', sku: '', category: rootCategories[0]?.id || '', parent_category: '',
         price: '', original_price: '', discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
         cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
-        width: '', height: '', length: '', product_type: 'simple', status: 'published', image: ''
+        width: '', height: '', length: '', product_type: 'simple', status: 'published', image: '',
+        razorpay_buy_now_link: ''
       });
     }
   };
@@ -1495,9 +1867,16 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   // Search filter
   const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return products;
     return products.filter((p) => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.description.toLowerCase().includes(searchQuery.toLowerCase())
+      p.name.toLowerCase().includes(q) || 
+      (p.description || '').toLowerCase().includes(q) ||
+      (p.sku || '').toLowerCase().includes(q) ||
+      (p.category_name || '').toLowerCase().includes(q) ||
+      (p.parent_category || '').toLowerCase().includes(q) ||
+      String(p.price).includes(q) ||
+      String(p.id).includes(q)
     );
   }, [products, searchQuery]);
 
@@ -1589,34 +1968,11 @@ function DashboardPortal({ onLogout, adminUser }) {
     return products.filter(p => p.stock > 0 && p.stock < 15).length;
   }, [products]);
 
-  // Bulk input TSV live preview parser
   const parsedBulkPreview = useMemo(() => {
-    if (bulkMode !== 'sheet' || !bulkInput.trim()) return [];
+    if ((bulkMode !== 'file' && bulkMode !== 'paste') || !bulkInput.trim()) return [];
     try {
-      const lines = bulkInput.trim().split('\n');
-      if (lines.length < 2) return [];
-      const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
-      
-      const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('title'));
-      const skuIdx = headers.findIndex(h => h.includes('sku') || h.includes('code'));
-      const catIdx = headers.findIndex(h => h.includes('cat') || h.includes('group'));
-      const priceIdx = headers.findIndex(h => h.includes('price') && !h.includes('original') && !h.includes('mrp'));
-      const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('count'));
-      const imgIdx = headers.findIndex(h => h.includes('image') || h.includes('url') || h.includes('link') || h.includes('drive') || h.includes('photo'));
-
-      const parsed = [];
-      for (let i = 1; i < Math.min(lines.length, 6); i++) {
-        const cols = lines[i].split('\t');
-        const item = {};
-        if (nameIdx !== -1) item.name = cols[nameIdx]?.trim();
-        if (skuIdx !== -1) item.sku = cols[skuIdx]?.trim();
-        if (catIdx !== -1) item.category_name = cols[catIdx]?.trim();
-        if (priceIdx !== -1) item.price = cols[priceIdx]?.trim();
-        if (stockIdx !== -1) item.stock = cols[stockIdx]?.trim();
-        if (imgIdx !== -1) item.image = cols[imgIdx]?.trim();
-        if (item.name) parsed.push(item);
-      }
-      return parsed;
+      const parsed = parseTSV(bulkInput);
+      return parsed.slice(0, 100);
     } catch {
       return [];
     }
@@ -2047,6 +2403,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           <NavItem theme={theme} icon={<BarChart3 size={20} />} label="Analytics" active={activePage === 'analytics'} onClick={() => handlePageChange('analytics')} />
           <NavItem theme={theme} icon={<Users size={20} />} label="Users" active={activePage === 'users'} onClick={() => handlePageChange('users')} />
           <NavItem theme={theme} icon={<Megaphone size={20} />} label="Index Banners" active={activePage === 'hero-banners'} onClick={() => handlePageChange('hero-banners')} />
+          <NavItem theme={theme} icon={<Percent size={20} />} label="Offers" active={activePage === 'offers'} onClick={() => handlePageChange('offers')} />
           <NavItem theme={theme} icon={<Settings size={20} />} label="Settings" active={activePage === 'settings'} onClick={() => handlePageChange('settings')} />
           
           <hr className="border-dashed my-2 opacity-50 border-zinc-200 dark:border-[#1e293b]" />
@@ -2586,6 +2943,24 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
               </div>
 
+              {/* Search & Filter Panel */}
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="relative w-full max-w-[320px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setProductPage(1); }}
+                    placeholder="Search products by name, SKU, category..."
+                    className={`w-full rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
+                      theme === 'dark' 
+                        ? 'bg-[#0f1626] border-[#1e293b] text-white placeholder-zinc-500' 
+                        : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                    }`}
+                  />
+                </div>
+              </div>
+
               <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'}`}>
                 <table className="w-full min-w-[800px] text-left text-sm">
                   <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
@@ -2601,7 +2976,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     {paginatedProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-white/2 transition-colors">
                         <td className="p-4 font-normal flex items-center gap-2.5">
-                          {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#1e293b]" />}
+                          {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain border border-[#1e293b] bg-white p-0.5" />}
                           <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</span>
                         </td>
                         <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
@@ -2678,8 +3053,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     >
                       ◀ Prev
                     </button>
-                    {[...Array(totalProductPages)].map((_, idx) => {
-                      const pageNum = idx + 1;
+                    {getPaginatedRange(productPage, totalProductPages).map((pageNum) => {
                       return (
                         <button
                           key={pageNum}
@@ -2719,7 +3093,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
                   theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
-                  <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0">
                     <Package size={20} />
                   </div>
                   <div>
@@ -2731,7 +3105,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
                   theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
-                  <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
                     <Wallet size={20} />
                   </div>
                   <div>
@@ -2743,7 +3117,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
                   theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
-                  <div className="w-11 h-11 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
                     <XCircle size={20} />
                   </div>
                   <div>
@@ -2755,7 +3129,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
                   theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
                 }`}>
-                  <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
                     <AlertCircle size={20} />
                   </div>
                   <div>
@@ -2835,12 +3209,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                         const stockProgress = Math.min(100, (p.stock / 100) * 100);
                         const progressColor = p.stock === 0 ? 'bg-rose-500' : p.stock < 15 ? 'bg-amber-500' : 'bg-emerald-500';
                         const textStatus = p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock';
-                        const textBadgeColor = p.stock === 0 ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : p.stock < 15 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+                        const textBadgeColor = p.stock === 0 ? 'bg-rose-600 text-white border-transparent' : p.stock < 15 ? 'bg-amber-500 text-white border-transparent' : 'bg-emerald-600 text-white border-transparent';
 
                         return (
                           <tr key={p.id} className="hover:bg-white/2 transition-colors">
                             <td className="p-4 font-normal flex items-center gap-2.5">
-                              {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-9 h-9 rounded-xl object-cover border border-[#1e293b]" />}
+                              {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-9 h-9 rounded-xl object-contain border border-[#1e293b] bg-white p-0.5" />}
                               <div>
                                 <span className={`font-semibold block ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{p.name}</span>
                                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">SKU: {p.sku || 'N/A'}</span>
@@ -2901,7 +3275,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 ) : (
                                   <button 
                                     onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))} 
-                                    className="py-1.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-600 rounded-lg text-xs font-semibold cursor-pointer active:scale-95"
+                                    className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer active:scale-95 transition-all duration-150"
                                     title="Edit custom value"
                                   >
                                     Edit
@@ -2946,8 +3320,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     >
                       ◀ Prev
                     </button>
-                    {[...Array(totalInventoryPages)].map((_, idx) => {
-                      const pageNum = idx + 1;
+                    {getPaginatedRange(inventoryPage, totalInventoryPages).map((pageNum) => {
                       return (
                         <button
                           key={pageNum}
@@ -3180,7 +3553,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
                                     {c.image_url || c.image ? (
-                                      <img src={getImageUrl(c.image_url || c.image)} alt={c.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
+                                      <img src={getImageUrl(c.image_url || c.image)} alt={c.name} className="w-9 h-9 rounded-xl object-contain border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
                                     ) : (
                                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
                                         theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
@@ -3260,7 +3633,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
                                     {sub.image_url || sub.image ? (
-                                      <img src={getImageUrl(sub.image_url || sub.image)} alt={sub.name} className="w-9 h-9 rounded-xl object-cover border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
+                                      <img src={getImageUrl(sub.image_url || sub.image)} alt={sub.name} className="w-9 h-9 rounded-xl object-contain border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
                                     ) : (
                                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
                                         theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
@@ -3773,7 +4146,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       {paginatedAnalyticsProducts.map((p) => (
                         <tr key={p.id} className="hover:bg-white/2 transition-colors">
                           <td className="p-4 font-normal flex items-center gap-2.5">
-                            {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-cover border border-[#1e293b]" />}
+                            {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain border border-[#1e293b] bg-white p-0.5" />}
                             <div>
                               <p className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</p>
                               <p className="text-[10px] text-zinc-500">PROD-00{p.id}</p>
@@ -3826,10 +4199,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                               {/* Stock Warning Badge */}
                               <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border-none shadow-sm transition-all ${
                                 p.stock === 0
-                                  ? 'bg-red-500 text-white'
+                                  ? 'bg-rose-600 text-white'
                                   : p.stock < 15
-                                  ? 'bg-amber-400 text-white'
-                                  : 'bg-emerald-400 text-white'
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-emerald-600 text-white'
                               }`}>{p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock'}</span>
 
                               {/* Publication Status Dropdown */}
@@ -3908,8 +4281,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       >
                         ◀ Prev
                       </button>
-                      {[...Array(totalAnalyticsPages)].map((_, idx) => {
-                        const pageNum = idx + 1;
+                      {getPaginatedRange(analyticsPage, totalAnalyticsPages).map((pageNum) => {
                         return (
                           <button
                             key={pageNum}
@@ -3918,7 +4290,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
                               analyticsPage === pageNum
                                 ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
-                                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-650 dark:text-zinc-400'
+                                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-655 dark:text-zinc-400'
                             }`}
                           >
                             {pageNum}
@@ -4487,6 +4859,226 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
           )}
 
+          {activePage === 'offers' && (
+            <div className="space-y-6 text-left animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Offers & Discounts Management</h2>
+                  <p className="text-xs text-zinc-500 font-normal mt-1">Dashboard &gt; Offers</p>
+                </div>
+              </div>
+
+              {/* Summary Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20">
+                    <Percent className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Active Promo Offers</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{products.filter(p => p.tag_type === 'discount').length}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-teal-500/20">
+                    <Package className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Catalog Products</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{products.length}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-500/20">
+                    <Star className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Average Rating</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                      {(products.reduce((acc, p) => acc + (p.rating || 0), 0) / (products.length || 1)).toFixed(1)} / 5.0
+                    </h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid split: Left is Active Offers list, Right is Add Offers Search */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                
+                {/* Active Offers list: 7/12 cols */}
+                <div className={`xl:col-span-7 p-6 rounded-3xl border ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="flex justify-between items-center mb-6 border-b border-zinc-100 dark:border-[#1e293b] pb-4">
+                    <div>
+                      <h3 className={`font-semibold text-lg ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Active Discount Offers</h3>
+                      <p className="text-[11px] text-zinc-400 font-normal mt-0.5">Manage current discounted products live on the website.</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto min-h-[200px]">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className={`border-b text-[11px] font-semibold uppercase tracking-wider ${theme === 'dark' ? 'border-[#1e293b]/60 text-zinc-400' : 'border-zinc-150 text-zinc-550'}`}>
+                          <th className="py-3 px-2">Product</th>
+                          <th className="py-3 px-2">Original</th>
+                          <th className="py-3 px-2">Promo Price</th>
+                          <th className="py-3 px-2 text-center">Discount</th>
+                          <th className="py-3 px-2 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-[#1e293b]/60 text-xs">
+                        {products.filter(p => p.tag_type === 'discount').length === 0 ? (
+                          <tr>
+                            <td colSpan="5" className="py-8 text-center text-zinc-400 font-normal">
+                              No products are currently in offers. Use the search panel on the right to add some.
+                            </td>
+                          </tr>
+                        ) : (
+                          products.filter(p => p.tag_type === 'discount').map(p => {
+                            const original = p.original_price || p.price;
+                            return (
+                              <tr key={p.id} className={`hover:bg-zinc-50/50 dark:hover:bg-[#172033]/30 transition-colors`}>
+                                <td className="py-3 px-2 flex items-center gap-2.5 font-normal">
+                                  {p.image ? (
+                                    <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain bg-white border border-zinc-200 dark:border-[#1e293b] p-0.5" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-700">
+                                      <Package size={14} className="text-zinc-400" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[150px]" title={p.name}>{p.name}</p>
+                                    <p className="text-[10px] text-zinc-450 dark:text-zinc-400">{p.category_name || 'General'}</p>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-2 text-zinc-400 font-normal">₹{original}</td>
+                                <td className="py-3 px-2 font-semibold text-zinc-900 dark:text-zinc-100">₹{p.price}</td>
+                                <td className="py-3 px-2 text-center font-normal">
+                                  <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded-lg bg-[#e11d48] text-white uppercase">
+                                    {p.discount || 'DISCOUNT'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-2 text-right space-x-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedProductForOffer(p);
+                                      setOfferDiscountStr(p.discount || '');
+                                      setOfferPromoPrice(p.price || '');
+                                      setOfferModalMode('edit');
+                                      setIsOfferModalOpen(true);
+                                    }}
+                                    className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg transition-colors cursor-pointer inline-flex"
+                                    title="Edit Offer"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleRemoveOffer(p)}
+                                    className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors cursor-pointer inline-flex"
+                                    title="Remove Offer"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Add Offers Catalog search: 5/12 cols */}
+                <div className={`xl:col-span-5 p-6 rounded-3xl border ${
+                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
+                  <div className="mb-6 pb-4 border-b border-zinc-100 dark:border-[#1e293b]">
+                    <h3 className={`font-semibold text-lg ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Search & Add Offers</h3>
+                    <p className="text-[11px] text-zinc-400 font-normal mt-0.5">Search catalog products to apply promotional discounts.</p>
+                  </div>
+
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="Search products by name..."
+                      value={offersSearchQuery}
+                      onChange={(e) => setOffersSearchQuery(e.target.value)}
+                      className={`w-full pl-10 pr-4 py-2.5 text-xs font-normal border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-[#172033] border-[#1e293b] text-zinc-100 placeholder-zinc-550 focus:border-[#8b5cf6]' 
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-purple-500'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="overflow-y-auto max-h-[360px] space-y-2 pr-1">
+                    {(() => {
+                      const nonOfferProducts = products.filter(p => p.tag_type !== 'discount');
+                      const filtered = nonOfferProducts.filter(p => 
+                        p.name.toLowerCase().includes(offersSearchQuery.toLowerCase()) ||
+                        (p.category_name && p.category_name.toLowerCase().includes(offersSearchQuery.toLowerCase()))
+                      );
+
+                      if (filtered.length === 0) {
+                        return (
+                          <p className="text-center py-8 text-xs text-zinc-400">
+                            {offersSearchQuery ? 'No matching products found.' : 'Search or browse products above.'}
+                          </p>
+                        );
+                      }
+
+                      return filtered.map(p => (
+                        <div key={p.id} className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-colors ${
+                          theme === 'dark' ? 'bg-[#172033]/40 border-[#1e293b]/60 hover:bg-[#172033]/80' : 'bg-zinc-50/50 border-zinc-150 hover:bg-zinc-50'
+                        }`}>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {p.image ? (
+                              <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain bg-white border border-zinc-200 dark:border-[#1e293b] p-0.5 shrink-0" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 shrink-0">
+                                <Package size={14} className="text-zinc-400" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px]" title={p.name}>{p.name}</p>
+                              <p className="text-[10px] text-zinc-450 dark:text-zinc-400">₹{p.price}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedProductForOffer(p);
+                              setOfferDiscountStr('20% OFF');
+                              // Pre-calculate 20% discount as default suggestion
+                              const currentPrice = parseFloat(p.price);
+                              const suggestion = Math.round(currentPrice * 0.8);
+                              setOfferPromoPrice(suggestion || '');
+                              setOfferModalMode('add');
+                              setIsOfferModalOpen(true);
+                            }}
+                            className="py-1.5 px-3 bg-[#8b5cf6] hover:bg-purple-650 text-white rounded-lg text-[10px] font-semibold transition-colors cursor-pointer shrink-0"
+                          >
+                            Add Offer
+                          </button>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
           {activePage === 'users' && (
             <div className="space-y-6 text-left animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -4710,8 +5302,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       >
                         ◀ Prev
                       </button>
-                      {[...Array(totalUserPages)].map((_, idx) => {
-                        const pageNum = idx + 1;
+                      {getPaginatedRange(userPage, totalUserPages).map((pageNum) => {
                         return (
                           <button
                             key={pageNum}
@@ -4744,7 +5335,45 @@ function DashboardPortal({ onLogout, adminUser }) {
 
 
       {/* Loading overlay */}
-      {loadingData && (
+      {uploadProgress !== null ? (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className={`w-full max-w-[360px] p-6 rounded-3xl border shadow-2xl transition-all duration-250 animate-fade-in ${
+            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/90' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
+          }`}>
+            <div className="space-y-4 text-center">
+              <Loader2 size={28} className="animate-spin text-indigo-500 mx-auto" />
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold tracking-tight">Importing Products</h4>
+                <p className={`text-[10.5px] font-normal ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}`}>
+                  Downloading images and saving database records...
+                </p>
+              </div>
+              
+              <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden border border-zinc-200/10 shadow-inner">
+                <div 
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out" 
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              
+              <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                <span>{uploadProgress}% Complete</span>
+                <span>{uploadProgressInfo}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  uploadCancelledRef.current = true;
+                }}
+                className="w-full py-2.5 px-4 mt-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-md shadow-rose-600/10"
+              >
+                Cancel Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : loadingData ? (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-normal border ${
             theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
@@ -4753,7 +5382,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             Syncing data...
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Floating CRUD Modals */}
       {modalType && (
@@ -4772,7 +5401,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             {modalType === 'product' && (
               <form onSubmit={handleSaveProduct} className="space-y-6 text-sm font-normal">
                 
-                {/* 1. Featured Image & Gallery Section */}
+                {/* 1. Featured Image Section */}
                 <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
                   theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                 }`}>
@@ -4780,52 +5409,28 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
                     Media Assets
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
-                      <div className="relative flex items-center justify-center">
-                        <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${
-                          theme === 'dark' 
-                            ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40' 
-                            : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
-                        }`}>
-                          <div className="flex items-center gap-2">
-                            {uploadingImage ? (
-                              <Upload size={14} className="animate-spin text-indigo-500" />
-                            ) : productForm.image ? (
-                              <CheckCircle size={14} className="text-emerald-500" />
-                            ) : (
-                              <Upload size={14} className="animate-pulse text-zinc-400" />
-                            )}
-                            <span className="text-[10.5px] font-normal tracking-wide">
-                              {uploadingImage ? 'Uploading...' : productForm.image ? 'File Linked' : 'Choose Local File'}
-                            </span>
-                          </div>
-                          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                        </label>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 min-w-0">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Color selection (hex)</label>
-                      <div className="flex gap-2 min-w-0">
-                        <input 
-                          type="color" 
-                          value={productForm.color_hex} 
-                          onChange={(e) => setProductForm({ ...productForm, color_hex: e.target.value })} 
-                          className={`w-12 h-[46px] p-1.5 rounded-xl border cursor-pointer shrink-0 ${
-                            theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                          }`}
-                        />
-                        <input 
-                          type="text" 
-                          value={productForm.color_hex} 
-                          onChange={(e) => setProductForm({ ...productForm, color_hex: e.target.value })} 
-                          placeholder="#ffffff"
-                          className={`flex-1 min-w-0 p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                            theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                          }`}
-                        />
-                      </div>
+                  <div className="space-y-1.5">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
+                    <div className="relative flex items-center justify-center">
+                      <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40' 
+                          : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          {uploadingImage ? (
+                            <Upload size={14} className="animate-spin text-indigo-500" />
+                          ) : productForm.image ? (
+                            <CheckCircle size={14} className="text-emerald-500" />
+                          ) : (
+                            <Upload size={14} className="animate-pulse text-zinc-400" />
+                          )}
+                          <span className="text-[10.5px] font-normal tracking-wide">
+                            {uploadingImage ? 'Uploading...' : productForm.image ? 'File Linked' : 'Choose Local File'}
+                          </span>
+                        </div>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -4838,7 +5443,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
                     Group & Classification
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Category Dropdown - root categories only */}
                     <div className="space-y-1.5">
                       <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
@@ -4889,25 +5494,6 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this category</p>
                       )}
                     </div>
-
-                    {/* Tag Type */}
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Tag type</label>
-                      <select 
-                        value={productForm.tag_type} 
-                        onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value })}
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      >
-                        <option value="new" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>New</option>
-                        <option value="trending" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Trending</option>
-                        <option value="popular" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Popular</option>
-                        <option value="sale" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Sale</option>
-                        <option value="casual" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Casual</option>
-                        <option value="sporty" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Sporty</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
 
@@ -4919,58 +5505,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">3</span>
                     Product Details
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={productForm.name} 
-                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} 
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Unit *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={productForm.unit} 
-                        onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })} 
-                        placeholder="e.g., pc, pack, box"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slug (automatic / custom)</label>
-                      <input 
-                        type="text" 
-                        value={productForm.slug} 
-                        onChange={(e) => setProductForm({ ...productForm, slug: e.target.value })} 
-                        placeholder="Auto-generated if left blank"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount label</label>
-                      <input 
-                        type="text" 
-                        value={productForm.discount} 
-                        onChange={(e) => setProductForm({ ...productForm, discount: e.target.value })} 
-                        placeholder="e.g., -25% OFF" 
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={productForm.name} 
+                      onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} 
+                      className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
+                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                      }`}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Description *</label>
@@ -4982,67 +5527,6 @@ function DashboardPortal({ onLogout, adminUser }) {
                         theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-zinc-800 border-zinc-200 focus:border-indigo-500 focus:bg-white'
                       }`}
                     />
-                  </div>
-                </div>
-
-                {/* 4. Product Type & Dimensions */}
-                <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
-                }`}>
-                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">4</span>
-                    Product Configuration & Dimensions
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product type</label>
-                      <select 
-                        value={productForm.product_type} 
-                        onChange={(e) => setProductForm({ ...productForm, product_type: e.target.value })}
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      >
-                        <option value="simple" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Simple Product</option>
-                        <option value="variable" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Variable Product</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Width (cm)</label>
-                      <input 
-                        type="number" 
-                        value={productForm.width} 
-                        onChange={(e) => setProductForm({ ...productForm, width: e.target.value })} 
-                        placeholder="0.0"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Height (cm)</label>
-                      <input 
-                        type="number" 
-                        value={productForm.height} 
-                        onChange={(e) => setProductForm({ ...productForm, height: e.target.value })} 
-                        placeholder="0.0"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Length (cm)</label>
-                      <input 
-                        type="number" 
-                        value={productForm.length} 
-                        onChange={(e) => setProductForm({ ...productForm, length: e.target.value })} 
-                        placeholder="0.0"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -5097,6 +5581,37 @@ function DashboardPortal({ onLogout, adminUser }) {
                         value={productForm.sku} 
                         onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} 
                         placeholder="e.g., TS-GRN-001"
+                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Promotion & Tags (Offers) Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1.5 font-normal text-left">
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product Tag (Badge)</label>
+                      <select
+                        value={productForm.tag_type || ''}
+                        onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value || null })}
+                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
+                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                        }`}
+                      >
+                        <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>None (No Badge)</option>
+                        <option value="discount" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Discount / Offer (Shows in Offers Page)</option>
+                        <option value="new" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>New Arrival</option>
+                        <option value="bestseller" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Bestseller</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 font-normal text-left">
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount Label / Value</label>
+                      <input 
+                        type="text" 
+                        value={productForm.discount || ''} 
+                        onChange={(e) => setProductForm({ ...productForm, discount: e.target.value })} 
+                        placeholder="e.g., 20% or 10% OFF"
                         className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
                           theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                         }`}
@@ -5211,7 +5726,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
                     }`}>
                       {categoryForm.imagePreview || categoryForm.image ? (
-                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
                       ) : (
                         <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -5310,7 +5825,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
                     }`}>
                       {categoryForm.imagePreview || categoryForm.image ? (
-                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
                       ) : (
                         <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -5407,106 +5922,153 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
               </form>
             )}
-
             {modalType === 'bulk' && (
               <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal text-left">
                 {/* Mode Switcher */}
                 <div className="flex rounded-xl p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-800">
                   <button
                     type="button"
-                    onClick={() => { setBulkMode('sheet'); setBulkInput(''); }}
+                    onClick={() => { setBulkMode('file'); setBulkInput(''); }}
                     className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${
-                      bulkMode === 'sheet'
+                      bulkMode === 'file'
                         ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
                     }`}
                   >
-                    Google Sheets / Excel Paste
+                    CSV / Excel File Upload
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setBulkMode('json'); setBulkInput(''); }}
+                    onClick={() => { setBulkMode('paste'); setBulkInput(''); }}
                     className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${
-                      bulkMode === 'json'
+                      bulkMode === 'paste'
                         ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
                     }`}
                   >
-                    Advanced JSON Mode
+                    Copy & Paste
                   </button>
                 </div>
 
-                {bulkMode === 'sheet' ? (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
-                      <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">How to import from Google Sheets:</h4>
-                      <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU, Price, MRP, Category, Stock, Image, Description</b>).</li>
-                        <li>For images in Google Drive, simply paste the Drive <b>Share link</b> directly in the Image column. We will download it automatically!</li>
-                        <li>Select and copy (Ctrl+C) your rows, then paste (Ctrl+V) them in the text box below.</li>
-                      </ol>
-                    </div>
+                <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
+                  <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">Spreadsheet Guidelines:</h4>
+                  <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU / Code, Price, MRP / Budget, Category, Age Group, Stock, Image</b>).</li>
+                    <li>For images in Google Drive, paste the Drive <b>Share link</b> directly in the Image column. We will download it automatically!</li>
+                  </ol>
+                </div>
 
-                    <div className="space-y-1">
-                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Copied Cells Here</label>
-                      <textarea 
-                        required
-                        value={bulkInput} 
-                        onChange={(e) => setBulkInput(e.target.value)} 
-                        placeholder="Name&#9;SKU&#9;Price&#9;Category&#9;Stock&#9;Image&#10;Blue Denim Jeans&#9;JEAN-01&#9;999&#9;Apparel&#9;45&#9;https://drive.google.com/file/d/xxxx/view&#10;Pink Cotton Kurti&#9;KURTI-02&#9;1299&#9;Ethnic&#9;80&#9;https://drive.google.com/file/d/yyyy/view"
-                        className={`w-full h-36 p-3 rounded-xl border transition-all focus:outline-none resize-none font-mono text-[9.5px] ${
-                          theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
-                        }`}
+                {bulkMode === 'file' ? (
+                  <div className="space-y-1">
+                    <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Upload TSV / CSV File</label>
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-5 h-36 text-center cursor-pointer transition-all ${
+                        dragActive
+                          ? 'border-indigo-500 bg-indigo-500/5'
+                          : theme === 'dark'
+                          ? 'border-[#1e293b] bg-[#172033] hover:border-indigo-500/40 hover:bg-[#202736]'
+                          : 'border-zinc-200 bg-white hover:border-indigo-500/40 hover:bg-zinc-50 shadow-3xs'
+                      }`}
+                    >
+                      <Upload className="h-6 w-6 text-indigo-500 mb-2 animate-bounce" />
+                      <span className="text-[10px] font-bold">
+                        {bulkInput ? 'File Loaded Successfully' : 'Drag & Drop file here'}
+                      </span>
+                      <span className="text-[8.5px] text-zinc-400 mt-1 max-w-[250px]">
+                        {bulkInput ? 'Click to browse or drop another file to replace' : 'Supports .csv, .tsv, .txt files or click to browse'}
+                      </span>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".csv,.tsv,.txt"
+                        className="hidden"
                       />
                     </div>
-
-                    {parsedBulkPreview.length > 0 && (
-                      <div className="space-y-1.5">
-                        <label className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Parsed Preview (First 5 Items)</label>
-                        <div className={`border rounded-xl overflow-hidden overflow-x-auto text-[10px] ${theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-200 bg-zinc-50'}`}>
-                          <table className="w-full text-left min-w-[500px]">
-                            <thead className={`font-semibold border-b ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-650'}`}>
-                              <tr>
-                                <th className="p-2">Name</th>
-                                <th className="p-2">SKU</th>
-                                <th className="p-2">Category</th>
-                                <th className="p-2 text-right">Price</th>
-                                <th className="p-2 text-right">Stock</th>
-                                <th className="p-2">Image Link</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-200/50 dark:divide-[#1e293b]/60">
-                              {parsedBulkPreview.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-white/2">
-                                  <td className="p-2 font-semibold truncate max-w-[120px]">{item.name}</td>
-                                  <td className="p-2 font-mono">{item.sku || 'N/A'}</td>
-                                  <td className="p-2">{item.category_name}</td>
-                                  <td className="p-2 text-right">₹{item.price}</td>
-                                  <td className="p-2 text-right">{item.stock}</td>
-                                  <td className="p-2 truncate max-w-[150px] font-mono text-[9px] text-zinc-450">{item.image || 'N/A'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Paste Products JSON Array</label>
-                      <span className={`text-[10px] ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>(Array of JSON objects)</span>
-                    </div>
+                    <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}>Paste Copied Cells Here</label>
                     <textarea 
-                      required
                       value={bulkInput} 
                       onChange={(e) => setBulkInput(e.target.value)} 
-                      placeholder='[&#10;  {"name": "Bulk Product A", "price": 499.00, "category_name": "T-Shirts", "stock": 80, "image": "https://drive.google.com/file/d/xxx/view"},&#10;  {"name": "Bulk Product B", "price": 899.00, "category_name": "Apparel", "stock": 50}&#10;]'
-                      className={`w-full h-48 p-3 rounded-xl border transition-all focus:outline-none resize-none font-mono text-[10px] ${
-                        theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500'
+                      placeholder="Name&#9;SKU&#9;Price&#9;Category&#9;Stock&#9;Image&#10;Blue Denim Jeans&#9;JEAN-01&#9;999&#9;Apparel&#9;45&#9;https://drive.google.com/file/d/xxxx/view"
+                      className={`w-full h-36 p-3 rounded-2xl border transition-all focus:outline-none resize-none font-mono text-[9px] ${
+                        theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500 font-normal'
                       }`}
                     />
+                  </div>
+                )}
+
+                {parsedBulkPreview.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}`}>
+                      Parsed Preview (Showing up to {parsedBulkPreview.length} Items)
+                    </label>
+                    <div className={`border rounded-xl overflow-auto max-h-60 text-[10px] ${theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-200 bg-zinc-50'}`}>
+                      <table className="w-full text-left min-w-[650px]">
+                        <thead className={`font-semibold border-b ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-650'}`}>
+                          <tr>
+                            <th className="p-2 w-20">Images</th>
+                            <th className="p-2">Name</th>
+                            <th className="p-2">SKU</th>
+                            <th className="p-2">Category</th>
+                            <th className="p-2 text-right">Price</th>
+                            <th className="p-2 text-right">Stock</th>
+                            <th className="p-2">Image Link</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200/50 dark:divide-[#1e293b]/60">
+                          {parsedBulkPreview.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-white/2">
+                              <td className="p-2 flex gap-1.5 items-center min-h-[40px]">
+                                {item.image ? (
+                                  <img 
+                                    src={getImageUrl(item.image)} 
+                                    alt="Img 1" 
+                                    className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
+                                    title="Main Image"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                  />
+                                ) : null}
+                                {item.image_2 ? (
+                                  <img 
+                                    src={getImageUrl(item.image_2)} 
+                                    alt="Img 2" 
+                                    className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
+                                    title="Second Image"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                  />
+                                ) : null}
+                                {item.image_3 ? (
+                                  <img 
+                                    src={getImageUrl(item.image_3)} 
+                                    alt="Img 3" 
+                                    className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
+                                    title="Third Image"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                  />
+                                ) : null}
+                                {!item.image && !item.image_2 && !item.image_3 && (
+                                  <span className="text-zinc-500 font-mono text-[9px]">No Image</span>
+                                )}
+                              </td>
+                              <td className="p-2 font-semibold truncate max-w-[120px]">{item.name}</td>
+                              <td className="p-2 font-mono">{item.sku || 'N/A'}</td>
+                              <td className="p-2">{item.category_name}</td>
+                              <td className="p-2 text-right">₹{item.price}</td>
+                              <td className="p-2 text-right">{item.stock}</td>
+                              <td className="p-2 truncate max-w-[150px] font-mono text-[9px] text-zinc-450">{item.image || 'N/A'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
@@ -5615,6 +6177,146 @@ function DashboardPortal({ onLogout, adminUser }) {
           </div>
         </div>
       )}
+
+      {/* Offers Modal */}
+      {isOfferModalOpen && selectedProductForOffer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
+          <div className={`w-full max-w-[500px] rounded-[2rem] border p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all transform scale-100 ${
+            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-purple-500/5' : 'bg-white border-zinc-200 text-[#0f172a]'
+          }`}>
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-zinc-150 dark:border-zinc-800">
+              <h3 className="text-lg font-bold">
+                {offerModalMode === 'edit' ? 'Edit Offer Configuration' : 'Configure Offer'}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsOfferModalOpen(false);
+                  setSelectedProductForOffer(null);
+                }}
+                className={`p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-[#172033] cursor-pointer`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveOffer} className="space-y-4 text-left text-sm">
+              <div className={`p-4 rounded-xl border flex items-center gap-3 ${
+                theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                {selectedProductForOffer.image ? (
+                  <img 
+                    src={getImageUrl(selectedProductForOffer.image)} 
+                    alt={selectedProductForOffer.name} 
+                    className="w-12 h-12 rounded-lg object-contain bg-white border"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-zinc-100 flex items-center justify-center border text-zinc-400">
+                    <Package size={20} />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate max-w-[280px]">{selectedProductForOffer.name}</p>
+                  <p className="text-xs text-zinc-450">Original Price: ₹{selectedProductForOffer.original_price || selectedProductForOffer.price}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  Offer Type
+                </label>
+                <div className="flex gap-4 p-3.5 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="offerType"
+                      checked={!(offerDiscountStr && (offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') || offerDiscountStr.toUpperCase().includes('BOGO') || offerDiscountStr.toUpperCase().includes('B1G1')))}
+                      onChange={() => {
+                        setOfferDiscountStr('20% OFF');
+                        const currentPrice = parseFloat(selectedProductForOffer.original_price || selectedProductForOffer.price);
+                        setOfferPromoPrice(Math.round(currentPrice * 0.8));
+                      }}
+                      className="w-4 h-4 accent-[#8b5cf6]"
+                    />
+                    <span>Standard Discount</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="offerType"
+                      checked={!!(offerDiscountStr && (offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') || offerDiscountStr.toUpperCase().includes('BOGO') || offerDiscountStr.toUpperCase().includes('B1G1')))}
+                      onChange={() => {
+                        setOfferDiscountStr('BUY 1 GET 1 FREE');
+                        setOfferPromoPrice(selectedProductForOffer.original_price || selectedProductForOffer.price);
+                      }}
+                      className="w-4 h-4 accent-[#8b5cf6]"
+                    />
+                    <span>Buy 1 Get 1 (BOGO)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  Discount Tag Label
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 20% OFF or Flat 500 Off"
+                  value={offerDiscountStr}
+                  onChange={(e) => setOfferDiscountStr(e.target.value)}
+                  className={`w-full p-3.5 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm transition-all ${
+                    theme === 'dark' 
+                      ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
+                      : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                  }`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  Promotional Price (₹)
+                </label>
+                <input
+                  type="number"
+                  required
+                  placeholder="e.g. 799"
+                  value={offerPromoPrice}
+                  onChange={(e) => setOfferPromoPrice(e.target.value)}
+                  className={`w-full p-3.5 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm transition-all ${
+                    theme === 'dark' 
+                      ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
+                      : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-zinc-150 dark:border-zinc-800 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOfferModalOpen(false);
+                    setSelectedProductForOffer(null);
+                  }}
+                  className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${
+                    theme === 'dark' 
+                      ? 'bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300' 
+                      : 'bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`py-2.5 px-5 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+                >
+                  Apply Offer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5717,7 +6419,7 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
           <img 
             src={image} 
             alt={name} 
-            className="w-8 h-8 rounded-lg object-cover border border-zinc-200 dark:border-[#1e293b] shadow-3xs" 
+            className="w-8 h-8 rounded-lg object-contain border border-zinc-200 dark:border-[#1e293b] bg-white p-0.5 shadow-3xs" 
           />
         ) : (
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-3xs ${

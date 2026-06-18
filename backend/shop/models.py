@@ -58,6 +58,8 @@ class Product(models.Model):
     is_new = models.BooleanField(default=False)
     description = models.TextField()
     image = models.ImageField(upload_to='products/', max_length=500, blank=True, null=True)
+    image_2 = models.ImageField(upload_to='products/', max_length=500, blank=True, null=True)
+    image_3 = models.ImageField(upload_to='products/', max_length=500, blank=True, null=True)
     color_hex = models.CharField(max_length=50)
     cart_btn_color = models.CharField(max_length=100, blank=True, null=True)
     stock = models.IntegerField(default=50)
@@ -81,7 +83,8 @@ class Product(models.Model):
     meta_title = models.CharField(max_length=255, blank=True, null=True)
     reorder_level = models.IntegerField(default=10)
     tax_rate = models.DecimalField(decimal_places=2, default=18.0, max_digits=5)
-    warehouse = models.CharField(max_length=100, default='WH-MAIN')
+    # Direct payment link
+    razorpay_buy_now_link = models.URLField(max_length=500, blank=True, null=True)
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

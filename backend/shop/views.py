@@ -199,19 +199,72 @@ class ProductViewSet(viewsets.ModelViewSet):
         import re
         import time
         import requests
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         from django.core.files.base import ContentFile
 
         products_data = request.data
         if not isinstance(products_data, list):
             return Response({'error': 'Payload must be a JSON array'}, status=status.HTTP_400_BAD_REQUEST)
 
+        def download_and_save_image(img_url, safe_name, field_name, prod_id):
+            if not img_url:
+                return None
+            img_url = img_url.strip()
+            if not img_url.startswith('http'):
+                return None
+            
+            # Google Drive URL helper
+            drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', img_url)
+            if not drive_match:
+                drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', img_url)
+            if drive_match:
+                file_id = drive_match.group(1)
+                img_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+            
+            # Dropbox URL helper
+            elif 'dropbox.com' in img_url:
+                if 'dl=0' in img_url:
+                    img_url = img_url.replace('dl=0', 'dl=1')
+                elif 'dl=1' not in img_url and 'raw=1' not in img_url:
+                    img_url = img_url + ('&' if '?' in img_url else '?') + 'dl=1'
+            
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+                r = requests.get(img_url, headers=headers, timeout=15, verify=False)
+                if r.status_code == 200:
+                    ext = 'jpg'
+                    content_type = r.headers.get('content-type', '').lower()
+                    if 'png' in content_type: ext = 'png'
+                    elif 'webp' in content_type: ext = 'webp'
+                    elif 'jpeg' in content_type: ext = 'jpeg'
+                    
+                    filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
+                    path = default_storage.save(filename, ContentFile(r.content))
+                    Product.objects.filter(pk=prod_id).update(**{field_name: path})
+                    return path
+            except Exception as e:
+                print(f"[IMAGE UPLOADER] Error downloading {img_url}: {e}")
+            return None
+
         created_count = 0
         errors = []
         for idx, item in enumerate(products_data):
             try:
-                category_name = item.get('category_name', 'General')
-                category, _ = Category.objects.get_or_create(name=category_name)
+                raw_cat_name = item.get('category_name', 'General')
+                category_name = " ".join(raw_cat_name.split()) if raw_cat_name else 'General'
                 
+                raw_parent_cat = item.get('parent_category', '')
+                parent_category = " ".join(raw_parent_cat.split()) if raw_parent_cat else ''
+                
+                if parent_category:
+                    parent_cat, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
+                    category, _ = Category.objects.get_or_create(name=parent_category, parent_category=parent_cat.name)
+                else:
+                    category, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
+
                 # Check for category image if specified in data
                 cat_image_url = item.get('category_image', '')
                 if cat_image_url and cat_image_url.startswith('http') and not category.image:
@@ -222,7 +275,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                         file_id = drive_match.group(1)
                         cat_image_url = f'https://drive.google.com/uc?export=download&id={file_id}'
                     try:
-                        r = requests.get(cat_image_url, timeout=10)
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                        }
+                        r = requests.get(cat_image_url, headers=headers, timeout=10, verify=False)
                         if r.status_code == 200:
                             ext = 'jpg'
                             if 'png' in r.headers.get('content-type', ''): ext = 'png'
@@ -234,13 +290,22 @@ class ProductViewSet(viewsets.ModelViewSet):
                     except Exception:
                         pass
 
-                serializer = self.get_serializer(data={
-                    'name': item.get('name'),
+                # Check if product already exists (by SKU first, then by exact name) to prevent duplicates
+                sku = item.get('sku')
+                name = item.get('name')
+                existing_product = None
+                if sku:
+                    existing_product = Product.objects.filter(sku=sku, is_active=True).first()
+                if not existing_product and name:
+                    existing_product = Product.objects.filter(name__iexact=name.strip(), is_active=True).first()
+
+                serializer_data = {
+                    'name': name.strip() if name else '',
                     'slug': item.get('slug'),
                     'unit': item.get('unit', 'pc'),
-                    'sku': item.get('sku'),
+                    'sku': sku,
                     'category': category.id,
-                    'parent_category': item.get('parent_category', ''),
+                    'parent_category': category_name if parent_category else '',
                     'price': item.get('price'),
                     'original_price': item.get('original_price', item.get('price')),
                     'discount': item.get('discount'),
@@ -251,35 +316,48 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'stock': item.get('stock', 50),
                     'product_type': item.get('product_type', 'simple'),
                     'status': item.get('status', 'published'),
-                })
+                    'razorpay_buy_now_link': item.get('razorpay_buy_now_link') or item.get('razorpay'),
+                }
+
+                if existing_product:
+                    serializer = self.get_serializer(existing_product, data=serializer_data, partial=True)
+                else:
+                    serializer = self.get_serializer(data=serializer_data)
+
                 if serializer.is_valid():
                     product_instance = serializer.save()
                     created_count += 1
                     
-                    # Handle product image download
-                    img_url = item.get('image', '')
-                    if img_url and img_url.startswith('http'):
-                        drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', img_url)
-                        if not drive_match:
-                            drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', img_url)
-                        if drive_match:
-                            file_id = drive_match.group(1)
-                            img_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+                    # Create default ProductColor and ProductSize (get_or_create to prevent duplicate relation entries)
+                    color_hex = item.get('color_hex', '#e6fcf5')
+                    ProductColor.objects.get_or_create(product=product_instance, hex=color_hex, defaults={'name': 'Default'})
+                    
+                    sizes_to_create = []
+                    age_group = item.get('age_group')
+                    if age_group:
+                        sizes_to_create.append(age_group)
+                    size_val = item.get('size')
+                    if size_val and size_val not in sizes_to_create:
+                        sizes_to_create.append(size_val)
+                    
+                    if not sizes_to_create:
+                        sizes_to_create = ['S', 'M', 'L', 'XL']
+                    
+                    for s in sizes_to_create:
+                        ProductSize.objects.get_or_create(product=product_instance, size=s)
                         
-                        try:
-                            r = requests.get(img_url, timeout=15)
-                            if r.status_code == 200:
-                                ext = 'jpg'
-                                content_type = r.headers.get('content-type', '')
-                                if 'png' in content_type: ext = 'png'
-                                elif 'webp' in content_type: ext = 'webp'
-                                
-                                safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
-                                filename = f"products/{safe_name}_{int(time.time())}.{ext}"
-                                path = default_storage.save(filename, ContentFile(r.content))
-                                Product.objects.filter(pk=product_instance.pk).update(image=path)
-                        except Exception:
-                            pass
+                    # Create default feature and detail (get_or_create to prevent duplicates)
+                    ProductFeature.objects.get_or_create(product=product_instance, feature_text='Material: Muslin / Cotton')
+                    ProductDetail.objects.get_or_create(product=product_instance, title='Elegant Design', defaults={'content': item.get('description', 'Elegant apparel for everyday style.')})
+                    
+                    # Handle product image downloads
+                    safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
+                    if item.get('image'):
+                        download_and_save_image(item.get('image'), safe_name, 'image', product_instance.pk)
+                    if item.get('image_2'):
+                        download_and_save_image(item.get('image_2'), safe_name, 'image_2', product_instance.pk)
+                    if item.get('image_3'):
+                        download_and_save_image(item.get('image_3'), safe_name, 'image_3', product_instance.pk)
                 else:
                     errors.append({'index': idx, 'errors': serializer.errors})
             except Exception as e:

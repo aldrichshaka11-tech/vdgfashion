@@ -5,6 +5,16 @@ import { API_BASE, mediaUrl } from '../../lib/api';
 
 const StoreContext = createContext();
 
+const getCategoryIcon = (name, dbImage) => {
+  if (dbImage) return mediaUrl(dbImage) || dbImage;
+  return null;
+};
+
+const getProductPlaceholder = (name, categoryName, dbImage) => {
+  if (dbImage) return mediaUrl(dbImage) || dbImage;
+  return null;
+};
+
 const CART_KEY = 'vgd_cart';
 const WISHLIST_KEY = 'vgd_wishlist';
 
@@ -156,14 +166,15 @@ export function StoreProvider({ children }) {
         if (!Array.isArray(data)) return;
         setProducts(data.map(p => ({
           ...p,
-          image: mediaUrl(p.image) || p.image,
+          image: getProductPlaceholder(p.name, p.category_name, p.image),
           thumbnails: (p.thumbnails || []).map(t => mediaUrl(t) || t),
           colorHex: p.color_hex || p.colorHex,
           cartBtnColor: p.cart_btn_color || p.cartBtnColor || 'bg-rose-600 hover:bg-rose-700',
           originalPrice: p.original_price !== undefined ? p.original_price : p.originalPrice,
           reviewsCount: p.reviews_count !== undefined ? p.reviews_count : p.reviewsCount,
           isNew: p.is_new !== undefined ? p.is_new : p.isNew,
-          tagType: p.tag_type || p.tagType
+          tagType: p.tag_type || p.tagType,
+          razorpayBuyNowLink: p.razorpay_buy_now_link !== undefined ? p.razorpay_buy_now_link : p.razorpayBuyNowLink
         })));
       })
       .catch(() => {});
@@ -207,7 +218,7 @@ export function StoreProvider({ children }) {
             id: c.id,
             name: c.name,
             bg: categoryColors[i % categoryColors.length],
-            img: mediaUrl(c.image_url || c.image) || '/products/accessories_category.png',
+            img: getCategoryIcon(c.name, c.image),
             categoryRef: c.name
           }))
         );
@@ -276,6 +287,7 @@ export function StoreProvider({ children }) {
   const [sortBy, setSortBy] = useState('DEFAULT');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [showOnlyOffers, setShowOnlyOffers] = useState(false);
 
   useEffect(() => { setSelectedSubcategory('ALL'); }, [selectedCategory]);
 
@@ -321,7 +333,15 @@ export function StoreProvider({ children }) {
 
   // ─── Cart totals ─────────────────────────────────────────────
   const cartCount = cart.reduce((t, item) => t + item.quantity, 0);
-  const cartSubtotal = cart.reduce((t, item) => t + item.product.price * item.quantity, 0);
+  const cartSubtotal = cart.reduce((t, item) => {
+    const isBogo = item.product.discount && (
+      item.product.discount.toUpperCase().includes('BUY 1 GET 1') || 
+      item.product.discount.toUpperCase().includes('BOGO') || 
+      item.product.discount.toUpperCase().includes('B1G1')
+    );
+    const effectiveQty = isBogo ? Math.ceil(item.quantity / 2) : item.quantity;
+    return t + item.product.price * effectiveQty;
+  }, 0);
   const freeShipThreshold = parseFloat(settings.freeShippingThreshold || 3000);
   const shippingFee = cartSubtotal === 0 || cartSubtotal > freeShipThreshold ? 0 : parseFloat(settings.shippingFee || 99);
   const couponDiscount = appliedCoupon === settings.activePromoCode
@@ -348,6 +368,7 @@ export function StoreProvider({ children }) {
     setSelectedSize('');
     setSortBy('DEFAULT');
     setSearchQuery('');
+    setShowOnlyOffers(false);
   };
 
   return (
@@ -367,6 +388,7 @@ export function StoreProvider({ children }) {
       selectedColor, setSelectedColor,
       selectedSize, setSelectedSize,
       sortBy, setSortBy, resetFilters,
+      showOnlyOffers, setShowOnlyOffers,
       selectedProduct, setSelectedProduct,
       user, loginUser, registerUser, logoutUser,
       settings, saveStoreSettings,

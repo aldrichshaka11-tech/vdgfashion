@@ -509,7 +509,9 @@ export default function CheckoutPage() {
                               className="relative h-14 w-14 rounded-xl border border-zinc-150 p-1 bg-zinc-50/50 shrink-0"
                               style={{ backgroundColor: item.product.colorHex || '#f4f4f5' }}
                             >
-                              <Image src={item.product.image} alt={item.product.name} fill className="object-contain p-1" />
+                              {item.product.image ? (
+                                <Image src={item.product.image} alt={item.product.name} fill className="object-contain p-1" />
+                              ) : null}
                             </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="text-xs sm:text-sm font-bold text-zinc-900 line-clamp-1">{item.product.name}</h4>

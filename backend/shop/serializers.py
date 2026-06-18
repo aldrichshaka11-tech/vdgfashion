@@ -32,6 +32,8 @@ class ProductSerializer(serializers.ModelSerializer):
     details = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     image = serializers.SerializerMethodField()
+    image_2 = serializers.SerializerMethodField()
+    image_3 = serializers.SerializerMethodField()
     thumbnails = serializers.SerializerMethodField()
 
     class Meta:
@@ -40,11 +42,15 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'slug', 'unit', 'sku', 'category', 'category_name', 'parent_category',
             'price', 'original_price', 'discount', 'tag_type',
             'rating', 'reviews_count', 'is_new', 'description',
-            'image', 'thumbnails', 'color_hex', 'cart_btn_color', 'stock',
+            'image', 'image_2', 'image_3', 'thumbnails', 'color_hex', 'cart_btn_color', 'stock',
             'width', 'height', 'length', 'product_type', 'status',
-            'colors', 'sizes', 'features', 'details'
+            'colors', 'sizes', 'features', 'details', 'razorpay_buy_now_link'
         ]
-        extra_kwargs = {'image': {'read_only': True}}
+        extra_kwargs = {
+            'image': {'read_only': True},
+            'image_2': {'read_only': True},
+            'image_3': {'read_only': True}
+        }
 
     def get_sizes(self, obj):
         return [s.size for s in obj.sizes.all()]
@@ -63,9 +69,28 @@ class ProductSerializer(serializers.ModelSerializer):
             return obj.image.url
         return None
 
+    def get_image_2(self, obj):
+        if obj.image_2:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image_2.url)
+            return obj.image_2.url
+        return None
+
+    def get_image_3(self, obj):
+        if obj.image_3:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image_3.url)
+            return obj.image_3.url
+        return None
+
     def get_thumbnails(self, obj):
-        url = self.get_image(obj)
-        return [url] if url else []
+        urls = []
+        for img in [self.get_image(obj), self.get_image_2(obj), self.get_image_3(obj)]:
+            if img:
+                urls.append(img)
+        return urls
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -227,6 +252,12 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'product', 'product_name', 'user_name', 'user_email', 'rating', 'comment', 'created_at', 'is_active']
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            attrs['user_email'] = request.user.email
+        return attrs
 
 
 class SiteSettingsSerializer(serializers.ModelSerializer):

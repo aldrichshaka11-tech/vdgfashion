@@ -18,6 +18,24 @@ import Image from 'next/image';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
+const getPaginatedRange = (currentPage, totalPages) => {
+  const maxVisible = 22;
+  if (totalPages <= maxVisible) {
+    return [...Array(totalPages)].map((_, i) => i + 1);
+  }
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+  const pages = [];
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+};
+
 // Helper to generate Google-style letter avatar
 const getGoogleAvatar = (name) => {
   const initial = (name || 'U').trim().charAt(0).toUpperCase();
@@ -60,7 +78,8 @@ export default function Home() {
     setSelectedCategory,
     setCheckedCategories,
     resetFilters,
-    reviews
+    reviews,
+    showOnlyOffers
   } = useStore();
 
   const router = useRouter();
@@ -143,6 +162,10 @@ export default function Home() {
       result = result.filter((p) => p.sizes.includes(selectedSize));
     }
 
+    if (showOnlyOffers) {
+      result = result.filter((p) => p.tagType === 'discount' || p.tag_type === 'discount');
+    }
+
     if (sortBy === 'PRICE_LOW_HIGH') {
       result.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'PRICE_HIGH_LOW') {
@@ -152,7 +175,7 @@ export default function Home() {
     }
 
     return result;
-  }, [products, searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy]);
+  }, [products, searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy, showOnlyOffers]);
 
   const PRODUCTS_PER_PAGE = 8;
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE) || 1;
@@ -251,7 +274,9 @@ export default function Home() {
                           style={{ backgroundColor: cat.bg }}
                         >
                           <div className="relative w-4/5 h-4/5">
-                            <Image src={cat.img} alt={cat.name} fill className="object-contain" />
+                            {cat.img ? (
+                              <Image src={cat.img} alt={cat.name} fill className="object-contain" />
+                            ) : null}
                           </div>
                         </div>
                         
@@ -266,6 +291,42 @@ export default function Home() {
                   })}
                 </div>
               </div>
+
+              {/* Special Offers Section - Controlled by admin marking products as 'discount' */}
+              {(() => {
+                const offerProducts = products.filter(p => p.tagType === 'discount' || p.tag_type === 'discount');
+                if (offerProducts.length === 0) return null;
+
+                return (
+                  <div className="space-y-6" data-aos="fade-up">
+                    <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200">
+                      <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
+                        <Gift className="h-5 w-5 fill-[#e11d48] text-[#e11d48]" />
+                        Special Offers & Deals
+                      </span>
+                      <button
+                        onClick={() => router.push('/offers')}
+                        className="text-xs font-bold text-[#e11d48] hover:text-[#be123c] transition-colors"
+                      >
+                        View All Offers &rarr;
+                      </button>
+                    </div>
+                    
+                    <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-1">
+                      {offerProducts.map((prod, idx) => (
+                        <div
+                          key={prod.id}
+                          className="w-[220px] sm:w-[260px] flex-shrink-0"
+                          data-aos="fade-up"
+                          data-aos-delay={idx * 50}
+                        >
+                          <ProductCard product={prod} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Grid content header - 🔥 Best Picks For You */}
               <div id="shop-catalog" className="space-y-6 scroll-mt-24 animate-fade-in" data-aos="fade-up">
@@ -355,8 +416,7 @@ export default function Home() {
                               >
                                 ◀ Prev
                               </button>
-                              {[...Array(totalPages)].map((_, idx) => {
-                                const pageNum = idx + 1;
+                              {getPaginatedRange(currentPage, totalPages).map((pageNum) => {
                                 return (
                                   <button
                                     key={pageNum}
@@ -367,7 +427,7 @@ export default function Home() {
                                     className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-all cursor-pointer active:scale-90 shadow-2xs ${
                                       currentPage === pageNum
                                         ? 'bg-gradient-to-r from-[#e11d48] to-[#be123c] text-white'
-                                        : 'bg-white hover:bg-zinc-50 text-zinc-600 border border-zinc-200'
+                                        : 'bg-white hover:bg-zinc-50 text-zinc-655 border border-zinc-200'
                                     }`}
                                   >
                                     {pageNum}
@@ -408,9 +468,11 @@ export default function Home() {
                         matchedProduct = products[idx % products.length];
                       }
                     }
-                    const bannerImgSrc = (idx === 1 || banner.title?.toLowerCase().includes('hoodie'))
-                      ? '/products/baby_frock.png'
-                      : (matchedProduct?.image || banner.img || banner.image);
+                    const bannerImgSrc = banner.img || banner.image || (
+                      (idx === 1 || banner.title?.toLowerCase().includes('hoodie'))
+                        ? '/products/baby_frock.png'
+                        : (matchedProduct?.image)
+                    );
 
                     return (
                     <div key={banner.id || idx} className={`rounded-[2.5rem] p-6 sm:p-8 flex items-center justify-between gap-6 border-0 hover:shadow-md transition-all duration-300 min-h-[220px] ${
@@ -419,13 +481,15 @@ export default function Home() {
                       (banner.bg || (idx % 2 === 0 ? 'bg-[#e2f2ed]' : 'bg-[#fdf0d5]'))
                     }`}>
                       <div className="relative w-2/5 aspect-square max-w-[200px] flex-shrink-0 flex items-center justify-center">
-                        <img 
-                          src={bannerImgSrc} 
-                          alt={banner.title} 
-                          className={`object-contain max-h-[195px] drop-shadow-md transition-transform duration-305 ${
-                            bannerImgSrc.includes('baby_frock.png') ? 'scale-[1.45] hover:scale-[1.55]' : 'hover:scale-105'
-                          }`}
-                        />
+                        {bannerImgSrc ? (
+                          <img 
+                            src={bannerImgSrc} 
+                            alt={banner.title} 
+                            className={`object-contain max-h-[195px] drop-shadow-md transition-transform duration-305 ${
+                              bannerImgSrc.includes('baby_frock.png') ? 'scale-[1.45] hover:scale-[1.55]' : 'hover:scale-105'
+                            }`}
+                          />
+                        ) : null}
                       </div>
                       <div className="flex-grow flex flex-col items-start space-y-3 pl-2">
                         <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">{banner.title}</h3>
@@ -651,49 +715,38 @@ export default function Home() {
                       ref={reviewsRef}
                       className="flex gap-6 overflow-x-auto no-scrollbar pb-4 w-full snap-x scroll-smooth px-1"
                     >
-                      {(reviews && reviews.length > 0 ? reviews.map((r, idx) => ({
-                          image: ["/review_girl_pink.png", "/review_boy_navy.png", "/review_boy_cream.png", "/review_boy_blue.png"][idx % 4],
-                          quote: r.comment,
-                          name: r.user_name,
-                          location: r.product_name || "Verified Buyer",
-                          rating: r.rating || 5
-                      })) : [
+                      {[
                         {
-                          image: "/review_girl_pink.png",
-                          quote: "Lovely dress. The fit is perfect and the material is really premium. Excellent stitch alignment!",
-                          name: "Gayathri R.",
-                          location: "Rose Pink Weave Wrap Dress",
+                          quote: "Excellent collection of kids wear and ladies kurtis. The fabric quality is top-notch and the designs are very trendy. Highly recommend VDG Fashion!",
+                          name: "Aarthi Swaminathan",
+                          location: "Local Guide • Google Review",
                           rating: 5
                         },
                         {
-                          image: "/review_boy_navy.png",
-                          quote: "Nice fabric, nice fit. I ordered a size 6 for my kid and it fits perfectly. Stitching is very clean and boutique quality.",
-                          name: "Preeti S.",
-                          location: "Navy Blue Peplum Top",
+                          quote: "Great customer service and very reasonable prices. I bought cotton dresses for my daughter and the stitching is perfect. Best boutique in Virudhunagar!",
+                          name: "Manoj Kumar",
+                          location: "Google Review",
                           rating: 5
                         },
                         {
-                          image: "/review_boy_cream.png",
-                          quote: "Very nice coord set, loved it. Kids wear should be this comfortable. Fast shipping too!",
-                          name: "Anand Kumar",
-                          location: "Khaki Cream Crop Top",
+                          quote: "Superb collections! The material is extremely soft, breathable, and perfect for kids. Very fast delivery and neat packaging.",
+                          name: "Priya Dharshini",
+                          location: "Local Guide • Google Review",
                           rating: 5
                         },
                         {
-                          image: "/review_boy_blue.png",
-                          quote: "I ordered 2 shirts and 2 tops. Love the fabric, it's very soft and breathable for children.",
-                          name: "Gunasekharan Siva",
-                          location: "Coimbatore, Tamil Nadu",
+                          quote: "Highly satisfied with the product quality. The colors are exactly as shown in the catalog. Excellent response from the store team.",
+                          name: "Sudhakar T.",
+                          location: "Google Review",
                           rating: 5
                         },
                         {
-                          image: "/review_girl_pink.png",
-                          quote: "Perfect fit, fast delivery! The quality of the material is exceptional. Will buy again.",
-                          name: "Sarah M.",
-                          location: "Organic Green T-Shirt",
+                          quote: "A perfect place to shop for modern and comfortable clothing. The fabric doesn't fade after wash. My kids absolutely love their new dresses!",
+                          name: "Janani Rajesh",
+                          location: "Google Review",
                           rating: 5
                         }
-                      ]).map((review, idx) => (
+                      ].map((review, idx) => (
                         <div
                           key={idx}
                           className="w-full sm:w-[340px] flex-shrink-0 bg-white border border-zinc-200/60 rounded-2xl p-5 sm:p-6 snap-start flex flex-col justify-between min-h-[220px] shadow-2xs hover:shadow-xs transition-shadow duration-200"

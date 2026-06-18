@@ -113,7 +113,9 @@ export default function Header({ onMobileMenuToggle }) {
                         className="relative h-10 w-10 rounded-lg border border-zinc-150 overflow-hidden p-0.5 shrink-0"
                         style={{ backgroundColor: product.colorHex || '#f4f4f5' }}
                       >
-                        <img src={product.image} alt={product.name} className="h-full w-full object-contain" />
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="h-full w-full object-contain" />
+                        ) : null}
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="text-xs font-bold text-zinc-950 truncate">{product.name}</h4>

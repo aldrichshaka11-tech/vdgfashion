@@ -41,6 +41,17 @@ export default function AccountPage() {
     joined: 'October 2025'
   });
 
+  // Saved addresses states
+  const [isAddrModalOpen, setIsAddrModalOpen] = useState(false);
+  const [addrModalMode, setAddrModalMode] = useState('add'); // 'add' | 'edit'
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [addrForm, setAddrForm] = useState({
+    type: 'Home',
+    name: '',
+    phone: '',
+    address: ''
+  });
+
   const [savedAddresses, setSavedAddresses] = useState([
     {
       id: 1,
@@ -77,7 +88,7 @@ export default function AccountPage() {
             : 'Pending',
           items: (o.items || []).map(item => {
             const productObj = products?.find(p => p.id === (item.product || item.product_id));
-            const resolvedImage = productObj && productObj.image ? productObj.image : '/products/accessories_category.png';
+            const resolvedImage = productObj && productObj.image ? productObj.image : null;
             return {
               name: item.product_name,
               qty: item.quantity,
@@ -129,6 +140,23 @@ export default function AccountPage() {
     AOS.init({ duration: 700, once: true });
   }, []);
 
+  // Load saved addresses from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('vgd_saved_addresses');
+    if (saved) {
+      try {
+        setSavedAddresses(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse saved addresses', e);
+      }
+    }
+  }, []);
+
+  const saveAddressesToStorage = (updated) => {
+    setSavedAddresses(updated);
+    localStorage.setItem('vgd_saved_addresses', JSON.stringify(updated));
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -154,6 +182,41 @@ export default function AccountPage() {
   const handleProfileSave = (e) => {
     e.preventDefault();
     alert('Mock Account details saved successfully!');
+  };
+
+  const handleAddrDelete = (id) => {
+    if (!confirm('Are you sure you want to delete this address?')) return;
+    const updated = savedAddresses.filter(addr => addr.id !== id);
+    saveAddressesToStorage(updated);
+  };
+
+  const handleAddrFormSubmit = (e) => {
+    e.preventDefault();
+    if (!addrForm.type || !addrForm.name || !addrForm.phone || !addrForm.address) {
+      alert('Please fill out all fields.');
+      return;
+    }
+
+    if (addrModalMode === 'add') {
+      const newAddress = {
+        id: Date.now(),
+        type: addrForm.type,
+        name: addrForm.name,
+        phone: addrForm.phone,
+        address: addrForm.address
+      };
+      const updated = [...savedAddresses, newAddress];
+      saveAddressesToStorage(updated);
+    } else {
+      const updated = savedAddresses.map(addr => 
+        addr.id === selectedAddressId 
+          ? { ...addr, type: addrForm.type, name: addrForm.name, phone: addrForm.phone, address: addrForm.address }
+          : addr
+      );
+      saveAddressesToStorage(updated);
+    }
+    setIsAddrModalOpen(false);
+    setSelectedAddressId(null);
   };
 
   const getStatusBadgeClass = (status) => {
@@ -418,7 +481,9 @@ export default function AccountPage() {
                               {order.items.map((item, itemIdx) => (
                                 <div key={itemIdx} className="flex gap-4 py-3 items-center">
                                   <div className="relative h-14 w-14 rounded-xl border border-zinc-150 p-1 bg-zinc-50 shrink-0">
-                                    <Image src={item.img} alt={item.name} fill className="object-contain p-1" />
+                                    {item.img ? (
+                                      <Image src={item.img} alt={item.name} fill className="object-contain p-1" />
+                                    ) : null}
                                   </div>
                                   <div className="min-w-0 flex-grow">
                                     <h4 className="text-sm font-bold text-zinc-900 line-clamp-1">{item.name}</h4>
@@ -493,9 +558,26 @@ export default function AccountPage() {
                   {/* 3. Address details panel */}
                   {activeTab === 'addresses' && (
                     <div className="space-y-6 animate-fade-in">
-                      <div className="space-y-1">
-                        <h3 className="text-xl sm:text-2xl font-black text-zinc-950">Delivery Directory</h3>
-                        <p className="text-xs sm:text-sm text-zinc-400 font-normal">Manage your shipping destinations and billing locations.</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-100 pb-4">
+                        <div className="space-y-1">
+                          <h3 className="text-xl sm:text-2xl font-black text-zinc-950">Delivery Directory</h3>
+                          <p className="text-xs sm:text-sm text-zinc-400 font-normal">Manage your shipping destinations and billing locations.</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setAddrForm({
+                              type: 'Home',
+                              name: user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || ''),
+                              phone: user?.phone || '',
+                              address: ''
+                            });
+                            setAddrModalMode('add');
+                            setIsAddrModalOpen(true);
+                          }}
+                          className="px-4 py-2.5 bg-[#e11d48] hover:bg-[#be123c] text-white font-bold rounded-xl transition-all shadow-sm active:scale-95 text-xs shrink-0 cursor-pointer"
+                        >
+                          Add New Address
+                        </button>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -509,7 +591,31 @@ export default function AccountPage() {
                               }`}>
                                 {addr.type}
                               </span>
-                              <button className="text-xs font-semibold text-rose-500 hover:text-rose-600">Edit</button>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => {
+                                    setAddrForm({
+                                      type: addr.type,
+                                      name: addr.name,
+                                      phone: addr.phone,
+                                      address: addr.address
+                                    });
+                                    setSelectedAddressId(addr.id);
+                                    setAddrModalMode('edit');
+                                    setIsAddrModalOpen(true);
+                                  }}
+                                  className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <span className="text-zinc-300 select-none">|</span>
+                                <button 
+                                  onClick={() => handleAddrDelete(addr.id)}
+                                  className="text-xs font-bold text-rose-500 hover:text-rose-650 cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                             <div className="space-y-1 text-xs sm:text-sm">
                               <h4 className="font-bold text-zinc-900">{addr.name}</h4>
@@ -532,6 +638,97 @@ export default function AccountPage() {
           <Footer />
         </main>
       </div>
+
+      {/* Address Edit/Add Modal */}
+      {isAddrModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none text-black">
+          <div className="w-full max-w-[500px] bg-white rounded-[2rem] border border-zinc-200 p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all transform scale-100">
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-zinc-150">
+              <h3 className="text-lg font-bold">
+                {addrModalMode === 'edit' ? 'Edit Shipping Address' : 'Add New Address'}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsAddrModalOpen(false);
+                  setSelectedAddressId(null);
+                }}
+                className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-550 transition-all cursor-pointer flex items-center justify-center"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddrFormSubmit} className="space-y-4 text-left text-xs font-semibold">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Address Label / Tag</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Home, Office, Work"
+                  value={addrForm.type}
+                  onChange={(e) => setAddrForm({ ...addrForm, type: e.target.value })}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Recipient Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={addrForm.name}
+                  onChange={(e) => setAddrForm({ ...addrForm, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Mobile Phone Number</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. +91 98765 43210"
+                  value={addrForm.phone}
+                  onChange={(e) => setAddrForm({ ...addrForm, phone: e.target.value })}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Complete Shipping Address</label>
+                <textarea
+                  required
+                  rows="3"
+                  placeholder="e.g. Apartment, House No., Street, City, State - Pin Code"
+                  value={addrForm.address}
+                  onChange={(e) => setAddrForm({ ...addrForm, address: e.target.value })}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-zinc-150 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddrModalOpen(false);
+                    setSelectedAddressId(null);
+                  }}
+                  className="py-2.5 px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="py-2.5 px-5 bg-[#e11d48] hover:bg-[#be123c] text-white font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  Save Address
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <CartDrawer />
     </div>

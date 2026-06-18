@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart, ShoppingCart, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star, CreditCard } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import Image from 'next/image';
 import { formatINR } from '../utils/currency';
@@ -101,13 +101,15 @@ export default function ProductCard({ product }) {
 
           {/* Product Illustration */}
           <div className="relative w-full h-full transition-transform duration-500 group-hover:scale-105">
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              className={product.image && product.image.toLowerCase().includes('.png') ? "object-contain p-2" : "object-cover"}
-              priority
-            />
+            {product.image ? (
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                className="object-cover"
+                priority
+              />
+            ) : null}
           </div>
 
           {/* Rating tag bottom left */}
@@ -119,7 +121,13 @@ export default function ProductCard({ product }) {
       ); })()}
 
         {/* Text layers */}
-        <div className="mt-4 space-y-2 pr-2">
+        <div className="mt-4 space-y-1 pr-2">
+          {/* Category/Subcategory & SKU */}
+          <div className="flex justify-between items-center text-[10px] font-bold text-zinc-450 uppercase tracking-wider">
+            <span>{product.parent_category ? `${product.parent_category} > ${product.category_name}` : (product.category_name || 'General')}</span>
+            {product.sku && <span className="font-mono text-zinc-500 bg-zinc-50 px-1 py-0.5 rounded border border-zinc-100">{product.sku}</span>}
+          </div>
+
           {/* Title - Elegant Semibold for clean contrast */}
           <h3 className="text-base font-bold leading-tight text-zinc-900 line-clamp-1 group-hover:text-[#e11d48] transition-colors tracking-tight">
             {product.name}
@@ -129,7 +137,7 @@ export default function ProductCard({ product }) {
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-extrabold text-zinc-950">{formatINR(product.price)}</span>
             {product.price !== product.originalPrice && (
-              <span className="text-sm text-zinc-400 line-through font-semibold">{formatINR(product.originalPrice)}</span>
+              <span className="text-sm text-zinc-450 line-through font-semibold">{formatINR(product.originalPrice)}</span>
             )}
           </div>
         </div>
