@@ -373,3 +373,26 @@ class SiteSettings(models.Model):
     def __str__(self):
         return "Site Settings"
 
+
+class UserAddress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    label = models.CharField(max_length=100, default='Home')
+    recipient_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=50)
+    street_address = models.TextField()
+    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=255)
+    pin_code = models.CharField(max_length=20)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "User Address"
+        verbose_name_plural = "User Addresses"
+        ordering = ['-is_default', '-created_at']
+
+    def __str__(self):
+        return f"{self.recipient_name} - {self.city}"
+
+

@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from shop.views import (
     ProductViewSet, CategoryViewSet, OrderViewSet, PaymentViewSet,
     HeroBannerViewSet, MobileBannerViewSet, CategoryItemViewSet, MarketingBannerViewSet, ReviewViewSet,
-    SiteSettingsViewSet
+    SiteSettingsViewSet, UserAddressViewSet
 )
 
 router = DefaultRouter()
@@ -20,6 +20,7 @@ router.register(r'category-items', CategoryItemViewSet, basename='category-item'
 router.register(r'marketing-banners', MarketingBannerViewSet, basename='marketing-banner')
 router.register(r'reviews', ReviewViewSet, basename='review')
 router.register(r'settings', SiteSettingsViewSet, basename='settings')
+router.register(r'addresses', UserAddressViewSet, basename='address')
 
 
 urlpatterns = [

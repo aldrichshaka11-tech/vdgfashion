@@ -85,6 +85,13 @@ export default function Footer() {
     { name: 'Offers', icon: Tag, action: () => router.push('/offers') },
   ];
 
+  const policies = [
+    { name: 'Privacy Policy', icon: Shield, action: () => router.push('/privacy-policy') },
+    { name: 'Terms & Conditions', icon: FileText, action: () => router.push('/terms-conditions') },
+    { name: 'Shipping Policy', icon: Truck, action: () => router.push('/shipping-policy') },
+    { name: 'Return & Refund Policy', icon: RotateCcw, action: () => router.push('/return-refund-policy') },
+  ];
+
   return (
     <footer className="relative w-full overflow-hidden mt-12 bg-white border-t border-zinc-200 rounded-t-[32px]">
       
@@ -118,8 +125,8 @@ export default function Footer() {
       {/* Content wrapper */}
       <div className="relative z-10 w-full max-w-[1600px] mx-auto px-4 sm:px-8 pt-16 pb-8 space-y-12 text-black">
         
-        {/* Top Grid: Brand description, Quick Links, Address */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+        {/* Top Grid: Brand description, Quick Links, Policies, Address */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
           
           {/* Column 1: Brand & About */}
           <div className="space-y-4">
@@ -178,7 +185,7 @@ export default function Footer() {
           </div>
 
           {/* Column 2: Quick Links */}
-          <div className="space-y-4 md:pl-4">
+          <div className="space-y-4 lg:pl-4">
             <div>
               <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Quick Links</h4>
               <div className="h-[2.5px] w-8 bg-rose-600 mt-1.5" />
@@ -201,8 +208,32 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Address */}
-          <div className="space-y-4 md:pl-4">
+          {/* Column 3: Policies */}
+          <div className="space-y-4 lg:pl-4">
+            <div>
+              <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Policies</h4>
+              <div className="h-[2.5px] w-8 bg-cyan-500 mt-1.5" />
+            </div>
+            <ul className="space-y-3.5 text-[17px] font-sans font-medium text-zinc-650">
+              {policies.map((item) => {
+                const LinkIcon = item.icon;
+                return (
+                  <li key={item.name}>
+                    <button 
+                      onClick={item.action}
+                      className="flex items-center gap-2.5 hover:text-cyan-600 text-zinc-650 transition-colors text-left group"
+                    >
+                      <LinkIcon className="h-5 w-5 text-zinc-500 group-hover:text-cyan-600 transition-colors shrink-0" />
+                      {item.name}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* Column 4: Address */}
+          <div className="space-y-4 lg:pl-4">
             <div>
               <h4 className="text-[22px] font-sans font-black text-black tracking-normal">Address</h4>
               <div className="h-[2.5px] w-8 bg-indigo-600 mt-1.5" />
@@ -210,14 +241,14 @@ export default function Footer() {
             <div className="space-y-4 text-zinc-700">
               <div className="flex items-start gap-2.5">
                 <MapPin className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                <p className="text-[15.5px] font-medium leading-relaxed">
+                <p className="text-[15.5px] font-medium leading-relaxed text-zinc-650">
                   {settings?.storeAddress || '61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001'}
                 </p>
               </div>
               
               <div className="flex items-center gap-2.5">
                 <Headphones className="h-5 w-5 text-indigo-600 shrink-0" />
-                <p className="text-[15.5px] font-semibold">
+                <p className="text-[15.5px] font-semibold text-zinc-650">
                   Phone: <a href={`tel:${settings?.contactPhone || '083001 12996'}`} className="hover:text-rose-600 transition-colors">{settings?.contactPhone || '083001 12996'}</a>
                 </p>
               </div>

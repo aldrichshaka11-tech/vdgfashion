@@ -4,11 +4,11 @@ from rest_framework.decorators import action
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 from .serializers import (
     CategorySerializer, ProductSerializer, OrderCreateSerializer,
     HeroBannerSerializer, MobileBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
-    PaymentSerializer, ReviewSerializer, SiteSettingsSerializer
+    PaymentSerializer, ReviewSerializer, SiteSettingsSerializer, UserAddressSerializer
 )
 
 
@@ -126,6 +126,20 @@ class ProductViewSet(viewsets.ModelViewSet):
         return context
 
     def create(self, request, *args, **kwargs):
+        # Prevent duplicate products by checking SKU or Name, updating existing instead
+        sku = request.data.get('sku')
+        name = request.data.get('name')
+        existing_product = None
+        if sku:
+            existing_product = Product.objects.filter(sku=sku, is_active=True).first()
+        if not existing_product and name:
+            existing_product = Product.objects.filter(name__iexact=name.strip(), is_active=True).first()
+
+        if existing_product:
+            self.kwargs[self.lookup_field] = str(existing_product.pk)
+            kwargs['partial'] = True
+            return self.update(request, *args, **kwargs)
+
         data = {k: v for k, v in request.data.items() if k != 'image'}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -148,8 +162,19 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Seed defaults
         color_hex = data.get('color_hex', '#e6fcf5')
         ProductColor.objects.create(product=instance, name='Default', hex=color_hex)
-        for s in ['S', 'M', 'L', 'XL']:
+        
+        sizes_input = request.data.get('sizes')
+        if sizes_input:
+            if isinstance(sizes_input, str):
+                sizes_list = [s.strip() for s in sizes_input.split(',') if s.strip()]
+            else:
+                sizes_list = sizes_input
+        else:
+            sizes_list = ['S', 'M', 'L', 'XL']
+            
+        for s in sizes_list:
             ProductSize.objects.create(product=instance, size=s)
+            
         ProductFeature.objects.create(product=instance, feature_text='Material: 100% Organic Cotton')
         ProductDetail.objects.create(product=instance, title='Premium Comfort', content='Designed for comfort and durability.')
 
@@ -175,6 +200,18 @@ class ProductViewSet(viewsets.ModelViewSet):
             if not img_path.startswith('http'):
                 Product.objects.filter(pk=instance.pk).update(image=img_path)
                 instance.refresh_from_db()
+
+        sizes_input = request.data.get('sizes')
+        if sizes_input is not None:
+            if isinstance(sizes_input, str):
+                sizes_list = [s.strip() for s in sizes_input.split(',') if s.strip()]
+            else:
+                sizes_list = sizes_input
+            
+            instance.sizes.all().delete()
+            for s in sizes_list:
+                ProductSize.objects.create(product=instance, size=s)
+            instance.refresh_from_db()
 
         return Response(self.get_serializer(instance).data)
 
@@ -332,19 +369,31 @@ class ProductViewSet(viewsets.ModelViewSet):
                     color_hex = item.get('color_hex', '#e6fcf5')
                     ProductColor.objects.get_or_create(product=product_instance, hex=color_hex, defaults={'name': 'Default'})
                     
-                    sizes_to_create = []
-                    age_group = item.get('age_group')
-                    if age_group:
-                        sizes_to_create.append(age_group)
-                    size_val = item.get('size')
-                    if size_val and size_val not in sizes_to_create:
-                        sizes_to_create.append(size_val)
-                    
-                    if not sizes_to_create:
+                    # Determine sizes to update/seed
+                    sizes_input = item.get('sizes') or item.get('size') or item.get('age_group')
+                    if sizes_input:
+                        sizes_to_create = []
+                        if isinstance(sizes_input, list):
+                            for s in sizes_input:
+                                if isinstance(s, str):
+                                    sizes_to_create.extend([x.strip() for x in s.split(',') if x.strip()])
+                                else:
+                                    sizes_to_create.append(str(s))
+                        elif isinstance(sizes_input, str):
+                            sizes_to_create = [s.strip() for s in sizes_input.split(',') if s.strip()]
+                        else:
+                            sizes_to_create = [str(sizes_input).strip()]
+
+                        if existing_product:
+                            product_instance.sizes.all().delete()
+
+                        for s in sizes_to_create:
+                            ProductSize.objects.get_or_create(product=product_instance, size=s)
+                    elif not existing_product:
+                        # New product, no sizes specified - seed defaults
                         sizes_to_create = ['S', 'M', 'L', 'XL']
-                    
-                    for s in sizes_to_create:
-                        ProductSize.objects.get_or_create(product=product_instance, size=s)
+                        for s in sizes_to_create:
+                            ProductSize.objects.get_or_create(product=product_instance, size=s)
                         
                     # Create default feature and detail (get_or_create to prevent duplicates)
                     ProductFeature.objects.get_or_create(product=product_instance, feature_text='Material: Muslin / Cotton')
@@ -506,4 +555,25 @@ class SiteSettingsViewSet(viewsets.ViewSet):
         
         serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
         return Response(serializer.data)
+
+
+class UserAddressViewSet(viewsets.ModelViewSet):
+    serializer_class = UserAddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return UserAddress.objects.filter(user=self.request.user).order_by('-is_default', '-created_at')
+
+    def perform_create(self, serializer):
+        is_default = serializer.validated_data.get('is_default', False)
+        if is_default:
+            UserAddress.objects.filter(user=self.request.user).update(is_default=False)
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        is_default = serializer.validated_data.get('is_default', False)
+        if is_default:
+            UserAddress.objects.filter(user=self.request.user).update(is_default=False)
+        serializer.save()
+
 

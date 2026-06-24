@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Category, Brand, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings
+from .models import Category, Brand, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 
 class ProductColorInline(admin.TabularInline):
     model = ProductColor
@@ -403,4 +403,8 @@ class ReviewAdmin(admin.ModelAdmin):
     list_filter = ('rating', 'is_active', 'created_at')
 
 
-
+@admin.register(UserAddress)
+class UserAddressAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'recipient_name', 'phone', 'city', 'state', 'pin_code', 'is_default')
+    list_filter = ('is_default', 'state')
+    search_fields = ('recipient_name', 'phone', 'user__username', 'user__email')

@@ -28,9 +28,17 @@ const STATUS_CONFIG = {
 export default function AdminRoute() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
+  
+  // Auth navigation states
+  const [authStep, setAuthStep] = useState('login'); // 'login' | 'otp' | 'forgot' | 'reset'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -61,6 +69,7 @@ export default function AdminRoute() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
@@ -73,13 +82,108 @@ export default function AdminRoute() {
       const data = await res.json();
 
       if (res.ok) {
+        if (data.otp_required) {
+          setAuthStep('otp');
+          setSuccessMessage(data.message || 'OTP verification code has been sent.');
+        } else {
+          sessionStorage.setItem('vdgfashion_admin_authenticated', 'true');
+          sessionStorage.setItem('access_token', data.access);
+          sessionStorage.setItem('refresh_token', data.refresh);
+          setIsLoggedIn(true);
+          fetchAdminProfile(data.access);
+        }
+      } else {
+        setError(data.detail || 'Invalid credentials.');
+      }
+    } catch (err) {
+      setError('Connection failed. Make sure your Django backend is running!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/verify-login-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, otp })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
         sessionStorage.setItem('vdgfashion_admin_authenticated', 'true');
         sessionStorage.setItem('access_token', data.access);
         sessionStorage.setItem('refresh_token', data.refresh);
         setIsLoggedIn(true);
         fetchAdminProfile(data.access);
       } else {
-        setError(data.detail || 'Invalid credentials.');
+        setError(data.detail || 'Invalid or expired OTP.');
+      }
+    } catch (err) {
+      setError('Connection failed. Make sure your Django backend is running!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setAuthStep('reset');
+        setSuccessMessage(data.message || 'Verification code sent.');
+      } else {
+        setError(data.detail || 'Failed to submit forgot password request.');
+      }
+    } catch (err) {
+      setError('Connection failed. Make sure your Django backend is running!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/reset-password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail, otp: otp, new_password: newPassword })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setAuthStep('login');
+        setOtp('');
+        setPassword('');
+        setNewPassword('');
+        setSuccessMessage(data.message || 'Password reset successful. You can now login.');
+      } else {
+        setError(data.detail || 'Invalid OTP code or password requirements.');
       }
     } catch (err) {
       setError('Connection failed. Make sure your Django backend is running!');
@@ -126,56 +230,204 @@ export default function AdminRoute() {
             <div className="space-y-1">
               <h2 className="text-3xl font-normal tracking-tight text-[#0f172a]">vdgfashion</h2>
               <h3 className="text-[17px] font-normal text-zinc-700">Admin Control Panel</h3>
-              <p className="text-[11px] text-zinc-400 font-normal tracking-wide">Sign in to access custom dashboard</p>
+              {authStep === 'login' && <p className="text-[11px] text-zinc-400 font-normal tracking-wide">Sign in to access custom dashboard</p>}
+              {authStep === 'otp' && <p className="text-[11px] text-zinc-400 font-normal tracking-wide">Enter verification code to continue</p>}
+              {authStep === 'forgot' && <p className="text-[11px] text-zinc-400 font-normal tracking-wide">Recover your password account credentials</p>}
+              {authStep === 'reset' && <p className="text-[11px] text-zinc-400 font-normal tracking-wide">Enter new password parameters</p>}
             </div>
           </div>
 
-          <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
-            {error && (
-              <div className="bg-red-50/70 border border-red-200 rounded-2xl p-3 flex items-start gap-2 text-red-500 text-xs">
-                <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
-                <span className="font-normal">{error}</span>
+          {error && (
+            <div className="bg-red-50/70 border border-red-200 rounded-2xl p-3 flex items-start gap-2 text-red-500 text-xs animate-fade-in">
+              <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+              <span className="font-normal">{error}</span>
+            </div>
+          )}
+          {successMessage && (
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3 flex items-start gap-2 text-emerald-600 text-xs animate-fade-in">
+              <CheckCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+              <span className="font-normal">{successMessage}</span>
+            </div>
+          )}
+
+          {authStep === 'login' && (
+            <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  autoComplete="off"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
+                />
               </div>
-            )}
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
-                autoComplete="off"
-                className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                autoComplete="new-password"
-                className="w-full pl-12 pr-12 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
-              />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  autoComplete="new-password"
+                  className="w-full pl-12 pr-12 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer flex items-center justify-center"
+                >
+                  {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </button>
+              </div>
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setAuthStep('forgot'); setError(''); setSuccessMessage(''); }}
+                  className="text-xs text-indigo-600 hover:text-indigo-850 hover:underline font-semibold cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer flex items-center justify-center"
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-normal rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
-                {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>Sign In</span>}
               </button>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-normal rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-2"
-            >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>Sign In</span>}
-            </button>
-          </form>
+            </form>
+          )}
+
+          {authStep === 'otp' && (
+            <form onSubmit={handleVerifyOTP} autoComplete="off" className="space-y-4">
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="6-Digit OTP Code"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 tracking-widest text-center focus:outline-none transition-all shadow-2xs"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-normal rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>Verify OTP</span>}
+              </button>
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthStep('login'); setOtp(''); setError(''); setSuccessMessage(''); }}
+                  className="text-xs text-indigo-600 hover:underline font-semibold cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </form>
+          )}
+
+          {authStep === 'forgot' && (
+            <form onSubmit={handleForgotPassword} autoComplete="off" className="space-y-4">
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
+                <input
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Registered Email Address"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-normal rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>Send Reset OTP</span>}
+              </button>
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthStep('login'); setResetEmail(''); setError(''); setSuccessMessage(''); }}
+                  className="text-xs text-indigo-650 hover:underline font-semibold cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </form>
+          )}
+
+          {authStep === 'reset' && (
+            <form onSubmit={handleResetPassword} autoComplete="off" className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-semibold px-1">Email Address</label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={resetEmail}
+                  className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-[13px] font-normal text-zinc-450 focus:outline-none cursor-not-allowed opacity-85"
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="6-Digit Reset OTP"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 tracking-widest text-center focus:outline-none transition-all shadow-2xs"
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 pointer-events-none opacity-85" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter New Password"
+                  className="w-full pl-12 pr-12 py-3.5 bg-white border border-zinc-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl text-[13px] font-normal text-zinc-800 placeholder-zinc-400 focus:outline-none transition-all shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer flex items-center justify-center"
+                >
+                  {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </button>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:opacity-95 text-white text-sm font-normal rounded-full shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>Reset Password</span>}
+              </button>
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthStep('login'); setOtp(''); setNewPassword(''); setResetEmail(''); setError(''); setSuccessMessage(''); }}
+                  className="text-xs text-indigo-600 hover:underline font-semibold cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </form>
+          )}
+
           <p className="text-[10px] text-center text-zinc-400 font-normal pt-4">
             © 2026 vdgfashion Admin. All rights reserved.
           </p>
@@ -703,7 +955,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
     width: '', height: '', length: '', product_type: 'simple', status: 'published',
     category: '', parent_category: 'New Born (0-3 Months)', image: '',
-    razorpay_buy_now_link: ''
+    razorpay_buy_now_link: '',
+    sizes: 'S, M, L, XL'
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -979,6 +1232,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         product_type: productForm.product_type || 'simple',
         status: productForm.status || 'published',
         razorpay_buy_now_link: productForm.razorpay_buy_now_link || null,
+        sizes: productForm.sizes ? productForm.sizes.split(',').map(s => s.trim()).filter(Boolean) : [],
         ...(imagePath ? { image: imagePath } : {})
       };
 
@@ -1817,7 +2071,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         product_type: item.product_type || 'simple',
         status: item.status || 'published',
         image: item.image || '',
-        razorpay_buy_now_link: item.razorpay_buy_now_link || ''
+        razorpay_buy_now_link: item.razorpay_buy_now_link || '',
+        sizes: item.sizes ? item.sizes.join(', ') : 'S, M, L, XL'
       });
     } else {
       setProductForm({
@@ -1825,7 +2080,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         price: '', original_price: '', discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
         cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
         width: '', height: '', length: '', product_type: 'simple', status: 'published', image: '',
-        razorpay_buy_now_link: ''
+        razorpay_buy_now_link: '',
+        sizes: 'S, M, L, XL'
       });
     }
   };
@@ -3730,8 +3986,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                     {filteredOrders.length === 0 ? (
                       <tr><td colSpan="8" className="p-8 text-center text-zinc-400 font-normal">No orders found.</td></tr>
                     ) : (
-                      filteredOrders.map((o) => {
+                      filteredOrders.map((o, index) => {
                         const StatusIcon = STATUS_CONFIG[o.status || 'pending']?.icon || Clock;
+                        const openUpwards = index >= filteredOrders.length - 2 && filteredOrders.length >= 4;
                         return (
                           <tr key={o.order_id} className="hover:bg-white/2 transition-colors">
                             <td className="p-4 font-normal text-indigo-400">{o.order_id}</td>
@@ -3740,7 +3997,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <td className="p-4 uppercase text-zinc-500 font-normal">{o.payment_method}</td>
                             <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
                             <td className="p-4 text-center relative">
-                              <div className="inline-block text-left">
+                              <div className="inline-block text-left relative">
                                 {/* Custom Dropdown Toggle Button */}
                                  <button
                                    onClick={() => setActiveDropdownId(activeDropdownId === o.id ? null : o.id)}
@@ -3760,7 +4017,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                                        className="fixed inset-0 z-30" 
                                        onClick={() => setActiveDropdownId(null)} 
                                      />
-                                     <div className={`absolute left-1/2 -translate-x-1/2 mt-1.5 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${
+                                     <div className={`absolute left-1/2 -translate-x-1/2 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${
+                                       openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                     } ${
                                        theme === 'dark' 
                                          ? 'bg-[#172033] border-[#1e293b] text-white shadow-black/85' 
                                          : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
@@ -5586,6 +5845,20 @@ function DashboardPortal({ onLogout, adminUser }) {
                         }`}
                       />
                     </div>
+                  </div>
+
+                  {/* Sizes Row */}
+                  <div className="space-y-1.5 pt-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sizes (comma separated)</label>
+                    <input 
+                      type="text" 
+                      value={productForm.sizes || ''} 
+                      onChange={(e) => setProductForm({ ...productForm, sizes: e.target.value })} 
+                      placeholder="e.g., S, M, L, XL or 28, 30, 32 or 0-3M, 3-6M"
+                      className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
+                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                      }`}
+                    />
                   </div>
 
                   {/* Promotion & Tags (Offers) Row */}

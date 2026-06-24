@@ -46,28 +46,17 @@ export default function AccountPage() {
   const [addrModalMode, setAddrModalMode] = useState('add'); // 'add' | 'edit'
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [addrForm, setAddrForm] = useState({
-    type: 'Home',
+    label: 'Home',
     name: '',
     phone: '',
-    address: ''
+    street: '',
+    city: '',
+    state: '',
+    pinCode: '',
+    isDefault: false
   });
 
-  const [savedAddresses, setSavedAddresses] = useState([
-    {
-      id: 1,
-      type: 'Home (Default)',
-      name: 'Goutham Raj',
-      phone: '+91 98765 43210',
-      address: 'Express Avenue Mall, 1st Floor, No. 2, Club House Rd, India, TN - 600002'
-    },
-    {
-      id: 2,
-      type: 'Office',
-      name: 'Goutham Raj',
-      phone: '+91 98765 43210',
-      address: 'T-Shirts & Prints HQ, EA Complex, Anna Salai, Chennai, TN - 600002'
-    }
-  ]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
 
   const [mockOrders, setMockOrders] = useState([]);
 
@@ -140,22 +129,26 @@ export default function AccountPage() {
     AOS.init({ duration: 700, once: true });
   }, []);
 
-  // Load saved addresses from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('vgd_saved_addresses');
-    if (saved) {
-      try {
-        setSavedAddresses(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse saved addresses', e);
+  const fetchAddresses = async () => {
+    if (!user || !user.token) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/addresses/`, {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedAddresses(data);
       }
+    } catch (e) {
+      console.error('Failed to fetch addresses', e);
     }
-  }, []);
-
-  const saveAddressesToStorage = (updated) => {
-    setSavedAddresses(updated);
-    localStorage.setItem('vgd_saved_addresses', JSON.stringify(updated));
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchAddresses();
+    }
+  }, [user]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -184,39 +177,68 @@ export default function AccountPage() {
     alert('Mock Account details saved successfully!');
   };
 
-  const handleAddrDelete = (id) => {
+  const handleAddrDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this address?')) return;
-    const updated = savedAddresses.filter(addr => addr.id !== id);
-    saveAddressesToStorage(updated);
+    try {
+      const res = await fetch(`${API_BASE}/api/addresses/${id}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        setSavedAddresses(prev => prev.filter(addr => addr.id !== id));
+      } else {
+        alert('Failed to delete address.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error deleting address.');
+    }
   };
 
-  const handleAddrFormSubmit = (e) => {
+  const handleAddrFormSubmit = async (e) => {
     e.preventDefault();
-    if (!addrForm.type || !addrForm.name || !addrForm.phone || !addrForm.address) {
+    if (!addrForm.label || !addrForm.name || !addrForm.phone || !addrForm.street || !addrForm.city || !addrForm.pinCode) {
       alert('Please fill out all fields.');
       return;
     }
 
-    if (addrModalMode === 'add') {
-      const newAddress = {
-        id: Date.now(),
-        type: addrForm.type,
-        name: addrForm.name,
-        phone: addrForm.phone,
-        address: addrForm.address
-      };
-      const updated = [...savedAddresses, newAddress];
-      saveAddressesToStorage(updated);
-    } else {
-      const updated = savedAddresses.map(addr => 
-        addr.id === selectedAddressId 
-          ? { ...addr, type: addrForm.type, name: addrForm.name, phone: addrForm.phone, address: addrForm.address }
-          : addr
-      );
-      saveAddressesToStorage(updated);
+    const payload = {
+      label: addrForm.label,
+      recipient_name: addrForm.name,
+      phone: addrForm.phone,
+      street_address: addrForm.street,
+      city: addrForm.city,
+      state: addrForm.state || '',
+      pin_code: addrForm.pinCode,
+      is_default: addrForm.isDefault
+    };
+
+    const url = addrModalMode === 'edit'
+      ? `${API_BASE}/api/addresses/${selectedAddressId}/`
+      : `${API_BASE}/api/addresses/`;
+
+    const method = addrModalMode === 'edit' ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        fetchAddresses();
+        setIsAddrModalOpen(false);
+        setSelectedAddressId(null);
+      } else {
+        alert('Failed to save address. Please check inputs.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error saving address.');
     }
-    setIsAddrModalOpen(false);
-    setSelectedAddressId(null);
   };
 
   const getStatusBadgeClass = (status) => {
@@ -566,10 +588,14 @@ export default function AccountPage() {
                         <button
                           onClick={() => {
                             setAddrForm({
-                              type: 'Home',
+                              label: 'Home',
                               name: user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || ''),
                               phone: user?.phone || '',
-                              address: ''
+                              street: '',
+                              city: '',
+                              state: '',
+                              pinCode: '',
+                              isDefault: false
                             });
                             setAddrModalMode('add');
                             setIsAddrModalOpen(true);
@@ -585,20 +611,24 @@ export default function AccountPage() {
                           <div key={addr.id} className="border border-zinc-150 rounded-2xl p-5 shadow-2xs space-y-3 relative hover:border-zinc-300 transition-colors">
                             <div className="flex justify-between items-center">
                               <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold text-white border shadow-3xs ${
-                                addr.type.toLowerCase().includes('default')
+                                addr.is_default
                                   ? 'bg-[#e5484d] border-[#e5484d]'
                                   : 'bg-[#5c51db] border-[#5c51db]'
                               }`}>
-                                {addr.type}
+                                {addr.is_default ? `${addr.label || 'Home'} (Default)` : (addr.label || 'Home')}
                               </span>
                               <div className="flex items-center gap-2">
                                 <button 
                                   onClick={() => {
                                     setAddrForm({
-                                      type: addr.type,
-                                      name: addr.name,
+                                      label: addr.label || 'Home',
+                                      name: addr.recipient_name,
                                       phone: addr.phone,
-                                      address: addr.address
+                                      street: addr.street_address,
+                                      city: addr.city,
+                                      state: addr.state,
+                                      pinCode: addr.pin_code,
+                                      isDefault: addr.is_default
                                     });
                                     setSelectedAddressId(addr.id);
                                     setAddrModalMode('edit');
@@ -618,8 +648,8 @@ export default function AccountPage() {
                               </div>
                             </div>
                             <div className="space-y-1 text-xs sm:text-sm">
-                              <h4 className="font-bold text-zinc-900">{addr.name}</h4>
-                              <p className="text-zinc-500 font-normal leading-normal">{addr.address}</p>
+                              <h4 className="font-bold text-zinc-900">{addr.recipient_name}</h4>
+                              <p className="text-zinc-500 font-normal leading-normal">{addr.street_address}, {addr.city}, {addr.state} - {addr.pin_code}</p>
                               <p className="text-zinc-400 mt-1 font-normal flex items-center gap-1.5">
                                 <Phone className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                                 <span>{addr.phone}</span>
@@ -665,8 +695,8 @@ export default function AccountPage() {
                   type="text"
                   required
                   placeholder="e.g. Home, Office, Work"
-                  value={addrForm.type}
-                  onChange={(e) => setAddrForm({ ...addrForm, type: e.target.value })}
+                  value={addrForm.label}
+                  onChange={(e) => setAddrForm({ ...addrForm, label: e.target.value })}
                   className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
                 />
               </div>
@@ -699,12 +729,61 @@ export default function AccountPage() {
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Complete Shipping Address</label>
                 <textarea
                   required
-                  rows="3"
-                  placeholder="e.g. Apartment, House No., Street, City, State - Pin Code"
-                  value={addrForm.address}
-                  onChange={(e) => setAddrForm({ ...addrForm, address: e.target.value })}
+                  rows="2"
+                  placeholder="e.g. Apartment, House No., Street Address"
+                  value={addrForm.street}
+                  onChange={(e) => setAddrForm({ ...addrForm, street: e.target.value })}
                   className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs resize-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">City</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Chennai"
+                    value={addrForm.city}
+                    onChange={(e) => setAddrForm({ ...addrForm, city: e.target.value })}
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">State</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tamil Nadu"
+                    value={addrForm.state}
+                    onChange={(e) => setAddrForm({ ...addrForm, state: e.target.value })}
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">PIN Code</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="600002"
+                    value={addrForm.pinCode}
+                    onChange={(e) => setAddrForm({ ...addrForm, pinCode: e.target.value })}
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-2 focus:ring-[#e11d48]/10 text-black shadow-3xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="accountModalIsDefault"
+                  checked={addrForm.isDefault}
+                  onChange={(e) => setAddrForm({ ...addrForm, isDefault: e.target.checked })}
+                  className="h-4.5 w-4.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] cursor-pointer"
+                />
+                <label htmlFor="accountModalIsDefault" className="text-xs text-zinc-650 font-bold select-none cursor-pointer">
+                  Set as default shipping address
+                </label>
               </div>
 
               <div className="flex gap-3 justify-end pt-4 border-t border-zinc-150 mt-6">

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings
+from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -283,3 +283,14 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'activePromoCode', 'activePromoDiscount', 'isStoreOpen',
             'facebookUrl', 'instagramUrl', 'youtubeUrl', 'aboutText', 'logoImage'
         ]
+
+
+class UserAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAddress
+        fields = [
+            'id', 'label', 'recipient_name', 'phone', 'street_address', 
+            'city', 'state', 'pin_code', 'is_default', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
