@@ -1,7 +1,41 @@
 import random
+import os
+import requests
+from django.conf import settings
 from django.core.cache import cache
-from django.core.mail import send_mail
 from django.contrib.auth.models import User
+
+def send_resend_email(subject, html_content, to_email):
+    api_key = os.getenv("RESEND_API_KEY")
+    from_email = os.getenv("RESEND_FROM", "onboarding@resend.dev")
+    
+    if not api_key:
+        print("[RESEND EMAIL] Error: RESEND_API_KEY is not set in environment.")
+        return False
+        
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        if response.status_code in (200, 201):
+            print(f"[RESEND EMAIL] Successfully sent email to {to_email}. Response: {response.json()}")
+            return True
+        else:
+            print(f"[RESEND EMAIL] Failed to send email to {to_email}. Status: {response.status_code}, Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"[RESEND EMAIL] Exception sending email to {to_email}: {e}")
+        return False
 from django.contrib.auth import authenticate
 from rest_framework import generics, status, permissions
 from rest_framework.views import APIView
@@ -86,12 +120,11 @@ class LoginView(APIView):
             print(f"\n========================================\n[SECURITY OTP] Admin Login OTP for {user.username} ({user.email}): {otp}\n========================================\n")
             
             try:
-                send_mail(
+                html_body = f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p><p>This code will expire in 5 minutes.</p>"
+                send_resend_email(
                     'vdgfashion Admin Portal - Login OTP Verification',
-                    f'Your 6-digit verification code is: {otp}\nThis code will expire in 5 minutes.',
-                    'noreply@vdgfashion.com',
-                    [user.email],
-                    fail_silently=False,
+                    html_body,
+                    user.email,
                 )
             except Exception as e:
                 print(f"[SECURITY OTP] Failed to send email: {e}")
@@ -193,12 +226,11 @@ class ForgotPasswordView(APIView):
         print(f"\n========================================\n[SECURITY OTP] Password Reset OTP for {email}: {otp}\n========================================\n")
 
         try:
-            send_mail(
+            html_body = f"<p>Your 6-digit password reset verification code is: <strong>{otp}</strong></p><p>This code will expire in 5 minutes.</p>"
+            send_resend_email(
                 'vdgfashion - Password Reset Verification Code',
-                f'Your 6-digit password reset verification code is: {otp}\nThis code will expire in 5 minutes.',
-                'noreply@vdgfashion.com',
-                [email],
-                fail_silently=False,
+                html_body,
+                email,
             )
         except Exception as e:
             print(f"[SECURITY OTP] Failed to send email: {e}")

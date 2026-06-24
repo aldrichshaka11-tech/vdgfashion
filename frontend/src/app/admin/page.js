@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { 
+import {
   Lock, Mail, Loader2, AlertCircle, Eye, EyeOff,
-  LayoutDashboard, Package, Folders, ShoppingCart, Users, 
-  Ticket, Star, BarChart3, Megaphone, Landmark, Settings, 
+  LayoutDashboard, Package, Folders, ShoppingCart, Users,
+  Ticket, Star, BarChart3, Megaphone, Landmark, Settings,
   UserCheck, ClipboardList, Search, Bell, Moon, Sun, ChevronRight, ChevronDown,
   ArrowUpRight, RefreshCcw, CheckCircle, Database, Trash2, Edit, Plus, Upload, X,
   ShoppingBag, Wallet, Menu, LogOut, Filter,
@@ -28,7 +28,7 @@ const STATUS_CONFIG = {
 export default function AdminRoute() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
-  
+
   // Auth navigation states
   const [authStep, setAuthStep] = useState('login'); // 'login' | 'otp' | 'forgot' | 'reset'
   const [username, setUsername] = useState('');
@@ -38,7 +38,7 @@ export default function AdminRoute() {
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -498,7 +498,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [usersList, setUsersList] = useState([]);
   const [userPage, setUserPage] = useState(1);
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  
+
   // Inventory state variables
   const [inventoryPage, setInventoryPage] = useState(1);
   const [inventorySearchQuery, setInventorySearchQuery] = useState('');
@@ -513,7 +513,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     is_staff: false,
     is_active: true
   });
-  
+
   const [loadingData, setLoadingData] = useState(false);
 
   // Store context settings and forms
@@ -600,7 +600,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   // Dynamic analytics calculation
   const analyticsData = useMemo(() => {
     const dataPoints = [];
-    
+
     if (analyticsTimeframe === 'year') {
       for (let i = 11; i >= 0; i--) {
         const d = new Date();
@@ -664,14 +664,14 @@ function DashboardPortal({ onLogout, adminUser }) {
   }, [analyticsData, analyticsChartMetric, maxChartVal]);
 
   const pathD = useMemo(() => {
-    return points.length > 0 
+    return points.length > 0
       ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
       : '';
   }, [points]);
 
   const areaD = useMemo(() => {
     return points.length > 0
-      ? `${pathD} L ${points[points.length-1].x} 160 L ${points[0].x} 160 Z`
+      ? `${pathD} L ${points[points.length - 1].x} 160 L ${points[0].x} 160 Z`
       : '';
   }, [points, pathD]);
 
@@ -765,10 +765,10 @@ function DashboardPortal({ onLogout, adminUser }) {
   // Dynamic Category Sales Share calculated from active orders and products
   const categoryShares = useMemo(() => {
     if (orders.length === 0 || products.length === 0) return [];
-    
+
     const catRevenue = {};
     let totalRevenue = 0;
-    
+
     orders.forEach(o => {
       (o.items || []).forEach(item => {
         const pid = item.product_id || item.product;
@@ -778,7 +778,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           const price = parseFloat(item.price || product.price || 0);
           const qty = parseInt(item.quantity || 1);
           const rev = price * qty;
-          
+
           catRevenue[cat] = (catRevenue[cat] || 0) + rev;
           totalRevenue += rev;
         }
@@ -851,7 +851,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const customerGrowthData = useMemo(() => {
     const data = [];
     const now = new Date();
-    
+
     if (customerGrowthTimeframe === 'year') {
       const ordersByMonth = {};
       orders.forEach(o => {
@@ -861,7 +861,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           ordersByMonth[monthStr] = (ordersByMonth[monthStr] || 0) + 1;
         }
       });
-      
+
       for (let i = 11; i >= 0; i--) {
         const d = new Date(now);
         d.setMonth(now.getMonth() - i);
@@ -881,7 +881,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           ordersByDate[dateStr] = (ordersByDate[dateStr] || 0) + 1;
         }
       });
-      
+
       let daysCount = customerGrowthTimeframe === 'month' ? 30 : 7;
       for (let i = daysCount - 1; i >= 0; i--) {
         const d = new Date(now);
@@ -978,7 +978,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/products/upload-image/', {
+      const res = await fetch(`${API_BASE}/api/products/upload-image/`, {
         method: 'POST', body: formData
       });
       const data = await res.json();
@@ -1013,8 +1013,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       let imgUrl = urlOrPath;
       // Google Drive URL helper
       if (imgUrl.includes('drive.google.com')) {
-        const driveMatch = imgUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) || 
-                           imgUrl.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+        const driveMatch = imgUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+          imgUrl.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
         if (driveMatch) {
           const fileId = driveMatch[1];
           imgUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
@@ -1081,7 +1081,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   // Offers Actions
   const handleRemoveOffer = async (product) => {
     if (!confirm(`Are you sure you want to remove the offer from "${product.name}"?`)) return;
-    
+
     setLoadingData(true);
     try {
       const original = product.original_price || product.price;
@@ -1094,10 +1094,10 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       const token = sessionStorage.getItem('access_token');
       const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
+
       const res = await fetch(`${API_BASE}/api/products/${product.id}/`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...authHeader
         },
@@ -1130,8 +1130,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     }
 
     const isBogoStr = offerDiscountStr && (
-      offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') || 
-      offerDiscountStr.toUpperCase().includes('BOGO') || 
+      offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') ||
+      offerDiscountStr.toUpperCase().includes('BOGO') ||
       offerDiscountStr.toUpperCase().includes('B1G1')
     );
 
@@ -1152,10 +1152,10 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       const token = sessionStorage.getItem('access_token');
       const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
+
       const res = await fetch(`${API_BASE}/api/products/${selectedProductForOffer.id}/`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...authHeader
         },
@@ -1200,7 +1200,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       let finalCatId = parseInt(productForm.category) || null;
       let finalParentCat = productForm.parent_category || '';
-      
+
       if (finalParentCat) {
         // Find subcategory object matching parentCategory name and parentCat name
         const rootCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
@@ -1278,24 +1278,24 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const payload = modalMode === 'edit'
         ? {
-            email: userForm.email,
-            first_name: userForm.first_name,
-            last_name: userForm.last_name,
-            is_staff: userForm.is_staff,
-            is_active: userForm.is_active
-          }
+          email: userForm.email,
+          first_name: userForm.first_name,
+          last_name: userForm.last_name,
+          is_staff: userForm.is_staff,
+          is_active: userForm.is_active
+        }
         : {
-            username: userForm.username,
-            email: userForm.email,
-            password: userForm.password,
-            first_name: userForm.first_name,
-            last_name: userForm.last_name
-          };
+          username: userForm.username,
+          email: userForm.email,
+          password: userForm.password,
+          first_name: userForm.first_name,
+          last_name: userForm.last_name
+        };
 
       const token = sessionStorage.getItem('access_token');
       const res = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -1347,7 +1347,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -1369,7 +1369,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -1522,16 +1522,28 @@ function DashboardPortal({ onLogout, adminUser }) {
     const lines = text.trim().split('\n');
     if (lines.length < 2) return [];
 
-    // Parse headers (detect tab vs comma)
+    // Parse headers (detect tab vs comma vs semicolon)
     const firstLine = lines[0];
-    const separator = firstLine.includes('\t') ? '\t' : ',';
-    const headers = firstLine.split(separator).map(h => h.trim().toLowerCase());
-    
+    let separator = ',';
+    if (firstLine.includes('\t')) {
+      separator = '\t';
+    } else if (firstLine.includes(';')) {
+      separator = ';';
+    } else if (firstLine.includes(',')) {
+      separator = ',';
+    }
+    const headers = firstLine.split(separator).map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+
     // Find column indices
     const nameIdx = headers.findIndex(h => {
       const norm = h.replace(/[^a-z0-9]/g, '');
       return norm.includes('name') || norm.includes('title');
     });
+
+    if (nameIdx === -1) {
+      throw new Error("Could not find a column for 'Name' or 'Title' in the header row. Please make sure you included/copied the header row (first line containing headers like: product_name, code, category).");
+    }
+
     const skuIdx = headers.findIndex(h => {
       const norm = h.replace(/[^a-z0-9]/g, '');
       return norm.includes('sku') || norm.includes('code');
@@ -1588,7 +1600,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     const parsed = [];
     for (let i = 1; i < lines.length; i++) {
       let cols = [];
-      if (separator === ',') {
+      if (separator === ',' || separator === ';') {
         let row = lines[i];
         let arr = [];
         let insideQuote = false;
@@ -1596,7 +1608,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         for (let char of row) {
           if (char === '"') {
             insideQuote = !insideQuote;
-          } else if (char === ',' && !insideQuote) {
+          } else if (char === separator && !insideQuote) {
             arr.push(entry.trim());
             entry = '';
           } else {
@@ -1606,7 +1618,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         arr.push(entry.trim());
         cols = arr;
       } else {
-        cols = lines[i].split('\t');
+        cols = lines[i].split(separator);
       }
       if (cols.length < 1) continue;
 
@@ -1632,8 +1644,9 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       // Fill defaults
       if (!item.name) continue; // Skip items without a name
-      if (item.price === undefined || isNaN(item.price)) item.price = 0;
-      if (item.original_price === undefined || isNaN(item.original_price) || item.original_price === 0) item.original_price = item.price;
+      if (item.original_price === undefined || isNaN(item.original_price)) item.original_price = 0;
+      if (item.price === undefined || isNaN(item.price) || item.price === 0) item.price = item.original_price;
+      if (item.original_price === 0) item.original_price = item.price;
       if (!item.category_name) item.category_name = 'General';
       if (item.stock === undefined || isNaN(item.stock)) item.stock = 50;
 
@@ -1696,7 +1709,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       } else {
         parsedData = JSON.parse(bulkInput);
       }
-      
+
       const total = parsedData.length;
       let createdCount = 0;
       let failedCount = 0;
@@ -1711,7 +1724,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         }
         const product = parsedData[i];
         setUploadProgressInfo(`${i + 1} / ${total}`);
-        
+
         try {
           const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
             method: 'POST',
@@ -1733,7 +1746,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           failedCount += 1;
           errors.push({ name: product.name, error: err.message });
         }
-        
+
         setUploadProgress(Math.round(((i + 1) / total) * 100));
       }
 
@@ -1777,7 +1790,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       });
       if (res.ok) {
         showToast('Stock updated!', 'success');
-        setInlineStockEdit(prev => { const n = {...prev}; delete n[productId]; return n; });
+        setInlineStockEdit(prev => { const n = { ...prev }; delete n[productId]; return n; });
         syncData();
       }
     } catch { showToast('Failed to update stock', 'warning'); }
@@ -1788,7 +1801,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -1834,11 +1847,11 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     setUploadingImage(true);
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
       const res = await fetch(`${API_BASE}/api/products/upload-image/`, {
         method: 'POST',
@@ -1896,29 +1909,29 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (res.ok && data.success) {
         const existingBanner = banners.find(b => b.order === slotOrder);
         const payload = {
-            title: `Index Banner ${slotOrder}`,
-            subtitle: '',
-            image: data.path,
-            order: slotOrder,
-            alt: `Banner Slot ${slotOrder}`,
-            is_default: false,
-            is_active: true
+          title: `Index Banner ${slotOrder}`,
+          subtitle: '',
+          image: data.path,
+          order: slotOrder,
+          alt: `Banner Slot ${slotOrder}`,
+          is_default: false,
+          is_active: true
         };
         const method = existingBanner ? 'PATCH' : 'POST';
-        const url = existingBanner 
+        const url = existingBanner
           ? `${API_BASE}/api/hero-banners/${existingBanner.id}/`
           : `${API_BASE}/api/hero-banners/`;
-          
+
         const saveRes = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
         if (saveRes.ok) {
-            showToast(`Banner slot ${slotOrder} updated!`, 'success');
-            syncData();
+          showToast(`Banner slot ${slotOrder} updated!`, 'success');
+          syncData();
         } else {
-            showToast('Failed to save banner slot.', 'warning');
+          showToast('Failed to save banner slot.', 'warning');
         }
       } else {
         showToast(data.error || 'Failed to upload image.', 'warning');
@@ -1963,29 +1976,29 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (res.ok && data.success) {
         const existingBanner = mobileBanners.find(b => b.order === slotOrder);
         const payload = {
-            title: `Mobile Banner ${slotOrder}`,
-            subtitle: '',
-            image: data.path,
-            order: slotOrder,
-            alt: `Mobile Banner Slot ${slotOrder}`,
-            is_default: false,
-            is_active: true
+          title: `Mobile Banner ${slotOrder}`,
+          subtitle: '',
+          image: data.path,
+          order: slotOrder,
+          alt: `Mobile Banner Slot ${slotOrder}`,
+          is_default: false,
+          is_active: true
         };
         const method = existingBanner ? 'PATCH' : 'POST';
-        const url = existingBanner 
+        const url = existingBanner
           ? `${API_BASE}/api/mobile-banners/${existingBanner.id}/`
           : `${API_BASE}/api/mobile-banners/`;
-          
+
         const saveRes = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
         if (saveRes.ok) {
-            showToast(`Mobile banner slot ${slotOrder} updated!`, 'success');
-            syncData();
+          showToast(`Mobile banner slot ${slotOrder} updated!`, 'success');
+          syncData();
         } else {
-            showToast('Failed to save mobile banner slot.', 'warning');
+          showToast('Failed to save mobile banner slot.', 'warning');
         }
       } else {
         showToast(data.error || 'Failed to upload image.', 'warning');
@@ -2031,7 +2044,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       // Find category ID from category field (could be id or name)
       let formCatId = '';
       let formSubCatName = '';
-      
+
       const catObj = categories.find(c => String(c.id) === String(item.category));
       if (catObj) {
         if (catObj.parent_category) {
@@ -2125,8 +2138,8 @@ function DashboardPortal({ onLogout, adminUser }) {
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return products;
-    return products.filter((p) => 
-      p.name.toLowerCase().includes(q) || 
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
       (p.description || '').toLowerCase().includes(q) ||
       (p.sku || '').toLowerCase().includes(q) ||
       (p.category_name || '').toLowerCase().includes(q) ||
@@ -2145,8 +2158,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   // Analytics inventory search filter & pagination
   const filteredAnalyticsProducts = useMemo(() => {
-    return products.filter((p) => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.category_name && p.category_name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [products, searchQuery]);
@@ -2160,8 +2173,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   // Users search filter and pagination
   const filteredUsers = useMemo(() => {
-    return usersList.filter((u) => 
-      (u.username || '').toLowerCase().includes(userSearchQuery.toLowerCase()) || 
+    return usersList.filter((u) =>
+      (u.username || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       (u.email || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       (u.first_name || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       (u.last_name || '').toLowerCase().includes(userSearchQuery.toLowerCase())
@@ -2179,8 +2192,8 @@ function DashboardPortal({ onLogout, adminUser }) {
   const filteredInventoryProducts = useMemo(() => {
     return products.filter((p) => {
       // 1. Search query filter
-      const matchesSearch = 
-        p.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()) || 
+      const matchesSearch =
+        p.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()) ||
         (p.sku || '').toLowerCase().includes(inventorySearchQuery.toLowerCase()) ||
         (p.category_name || '').toLowerCase().includes(inventorySearchQuery.toLowerCase());
 
@@ -2235,9 +2248,8 @@ function DashboardPortal({ onLogout, adminUser }) {
   }, [bulkInput, bulkMode]);
 
   return (
-    <div className={`flex h-screen overflow-hidden font-sans admin-portal-font-boost transition-colors duration-200 ${
-      theme === 'dark' ? 'bg-[#080c14] text-[#e8eaf0]' : 'bg-[#f8fafc] text-[#0f172a]'
-    }`}>
+    <div className={`flex h-screen overflow-hidden font-sans admin-portal-font-boost transition-colors duration-200 ${theme === 'dark' ? 'bg-[#080c14] text-[#e8eaf0]' : 'bg-[#f8fafc] text-[#0f172a]'
+      }`}>
       {/* Side Toasts Notifications */}
       <div className="fixed top-5 right-5 z-[998] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: 360 }}>
         {toasts.map((t) => {
@@ -2631,18 +2643,16 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       {/* Backdrop overlay for mobile sidebar */}
       {isSidebarOpen && (
-        <div 
+        <div
           onClick={() => setIsSidebarOpen(false)}
           className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-xs transition-opacity duration-300"
         />
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[290px] lg:static lg:translate-x-0 flex-shrink-0 flex flex-col border-r transition-transform duration-300 ease-in-out ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } ${
-        theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200'
-      }`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[290px] lg:static lg:translate-x-0 flex-shrink-0 flex flex-col border-r transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200'
+        }`}>
         <div className={`p-6 border-b flex items-center gap-3.5 ${theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-100'}`}>
           <div className="flex items-center justify-center w-full">
             <img src="/logo.png" alt="vdgfashion logo" className="h-12 object-contain" />
@@ -2661,16 +2671,15 @@ function DashboardPortal({ onLogout, adminUser }) {
           <NavItem theme={theme} icon={<Megaphone size={20} />} label="Index Banners" active={activePage === 'hero-banners'} onClick={() => handlePageChange('hero-banners')} />
           <NavItem theme={theme} icon={<Percent size={20} />} label="Offers" active={activePage === 'offers'} onClick={() => handlePageChange('offers')} />
           <NavItem theme={theme} icon={<Settings size={20} />} label="Settings" active={activePage === 'settings'} onClick={() => handlePageChange('settings')} />
-          
+
           <hr className="border-dashed my-2 opacity-50 border-zinc-200 dark:border-[#1e293b]" />
 
-          <button 
+          <button
             onClick={onLogout}
-            className={`w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 text-rose-500 ${
-              theme === 'dark' 
-                ? 'hover:bg-rose-950/15' 
+            className={`w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 text-rose-500 ${theme === 'dark'
+                ? 'hover:bg-rose-950/15'
                 : 'hover:bg-rose-50'
-            }`}
+              }`}
           >
             <LogOut size={20} />
             <span>Log Out</span>
@@ -2679,11 +2688,10 @@ function DashboardPortal({ onLogout, adminUser }) {
         </nav>
 
         {/* Footer info profile cockpit */}
-        <div className={`p-5 border-t flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-          theme === 'dark' 
-            ? 'border-[#1e293b] hover:bg-[#172033]/70' 
+        <div className={`p-5 border-t flex items-center justify-between gap-3 cursor-pointer transition-colors ${theme === 'dark'
+            ? 'border-[#1e293b] hover:bg-[#172033]/70'
             : 'border-zinc-200 hover:bg-zinc-50'
-        }`} onClick={onLogout}>
+          }`} onClick={onLogout}>
           <div className="flex items-center gap-3 min-w-0 text-left">
             <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] flex items-center justify-center text-white font-semibold text-sm shadow-2xs shrink-0 border border-white/10 select-none">
               {adminUser?.first_name ? adminUser.first_name[0].toUpperCase() : adminUser?.username ? adminUser.username[0].toUpperCase() : 'A'}
@@ -2704,40 +2712,37 @@ function DashboardPortal({ onLogout, adminUser }) {
       {/* Main viewport */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header bar */}
-        <header className={`px-4 sm:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b gap-4 ${
-          theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200'
-        }`}>
+        <header className={`px-4 sm:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200'
+          }`}>
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Hamburger mobile menu button */}
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
-              className={`p-2 rounded-xl border lg:hidden cursor-pointer transition-colors shrink-0 ${
-                theme === 'dark' 
-                  ? 'bg-[#172033] border-[#1e293b] text-zinc-400 hover:text-white' 
+              className={`p-2 rounded-xl border lg:hidden cursor-pointer transition-colors shrink-0 ${theme === 'dark'
+                  ? 'bg-[#172033] border-[#1e293b] text-zinc-400 hover:text-white'
                   : 'bg-zinc-50 border-zinc-200 text-zinc-650 hover:text-[#0f172a]'
-              }`}
+                }`}
             >
               <Menu size={18} />
             </button>
 
             <div className="relative w-full max-w-[400px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for products, categories..."
-                className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 border ${
-                  theme === 'dark' 
-                    ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
+                className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 border ${theme === 'dark'
+                    ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500'
                     : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                }`}
+                  }`}
               />
             </div>
           </div>
 
           <div className="flex items-center gap-3.5">
-            <button 
+            <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
             >
@@ -2745,7 +2750,7 @@ function DashboardPortal({ onLogout, adminUser }) {
             </button>
 
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer relative p-1 flex items-center justify-center animate-fade-in"
               >
@@ -2760,9 +2765,8 @@ function DashboardPortal({ onLogout, adminUser }) {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className={`absolute right-0 mt-3.5 w-80 rounded-2xl border shadow-xl z-50 p-4 max-h-[350px] overflow-y-auto text-left flex flex-col divide-y divide-zinc-100 dark:divide-[#1e293b]/60 ${
-                    theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/60' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
-                  }`}>
+                  <div className={`absolute right-0 mt-3.5 w-80 rounded-2xl border shadow-xl z-50 p-4 max-h-[350px] overflow-y-auto text-left flex flex-col divide-y divide-zinc-100 dark:divide-[#1e293b]/60 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/60' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
+                    }`}>
                     <div className="pb-2 flex justify-between items-center">
                       <span className="font-normal text-[12px] uppercase tracking-wider text-indigo-500">Notifications ({notifications.length})</span>
                       <button className="text-[10px] font-normal text-zinc-400 hover:text-zinc-650" onClick={() => setShowNotifications(false)}>Close</button>
@@ -2814,47 +2818,47 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Grid Statistics Metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-                <GridStat 
+                <GridStat
                   theme={theme}
-                  color="bg-purple-600 text-white dark:bg-purple-500 shadow-purple-500/10" 
-                  label="Total Sales" 
-                  value={orders.length > 0 ? `₹${Math.round(totalSalesVal).toLocaleString('en-IN')}` : "₹0"} 
-                  icon={<ShoppingBag className="h-5.5 w-5.5" />} 
+                  color="bg-purple-600 text-white dark:bg-purple-500 shadow-purple-500/10"
+                  label="Total Sales"
+                  value={orders.length > 0 ? `₹${Math.round(totalSalesVal).toLocaleString('en-IN')}` : "₹0"}
+                  icon={<ShoppingBag className="h-5.5 w-5.5" />}
                 />
-                <GridStat 
+                <GridStat
                   theme={theme}
-                  color="bg-pink-600 text-white dark:bg-pink-500 shadow-pink-500/10" 
-                  label="Total Orders" 
-                  value={orders.length} 
-                  icon={<ShoppingCart className="h-5.5 w-5.5" />} 
+                  color="bg-pink-600 text-white dark:bg-pink-500 shadow-pink-500/10"
+                  label="Total Orders"
+                  value={orders.length}
+                  icon={<ShoppingCart className="h-5.5 w-5.5" />}
                 />
-                <GridStat 
+                <GridStat
                   theme={theme}
-                  color="bg-blue-600 text-white dark:bg-blue-500 shadow-blue-500/10" 
-                  label="Total Customers" 
-                  value={uniqueCustomersCount} 
-                  icon={<Users className="h-5.5 w-5.5" />} 
+                  color="bg-blue-600 text-white dark:bg-blue-500 shadow-blue-500/10"
+                  label="Total Customers"
+                  value={uniqueCustomersCount}
+                  icon={<Users className="h-5.5 w-5.5" />}
                 />
-                <GridStat 
+                <GridStat
                   theme={theme}
-                  color="bg-orange-500 text-white dark:bg-orange-600 shadow-orange-500/10" 
-                  label="Products" 
-                  value={products.length} 
-                  icon={<Package className="h-5.5 w-5.5" />} 
+                  color="bg-orange-500 text-white dark:bg-orange-600 shadow-orange-500/10"
+                  label="Products"
+                  value={products.length}
+                  icon={<Package className="h-5.5 w-5.5" />}
                 />
-                <GridStat 
+                <GridStat
                   theme={theme}
-                  color="bg-teal-600 text-white dark:bg-teal-500 shadow-teal-500/10" 
-                  label="Revenue" 
-                  value={orders.length > 0 ? `₹${Math.round(totalRevenueVal).toLocaleString('en-IN')}` : "₹0"} 
-                  icon={<Wallet className="h-5.5 w-5.5" />} 
+                  color="bg-teal-600 text-white dark:bg-teal-500 shadow-teal-500/10"
+                  label="Revenue"
+                  value={orders.length > 0 ? `₹${Math.round(totalRevenueVal).toLocaleString('en-IN')}` : "₹0"}
+                  icon={<Wallet className="h-5.5 w-5.5" />}
                 />
-                <GridStat 
+                <GridStat
                   theme={theme}
-                  color="bg-indigo-600 text-white dark:bg-indigo-500 shadow-indigo-500/10" 
-                  label="Coupons Used" 
-                  value={couponsUsedCount} 
-                  icon={<Ticket className="h-5.5 w-5.5" />} 
+                  color="bg-indigo-600 text-white dark:bg-indigo-500 shadow-indigo-500/10"
+                  label="Coupons Used"
+                  value={couponsUsedCount}
+                  icon={<Ticket className="h-5.5 w-5.5" />}
                 />
               </div>
 
@@ -2863,11 +2867,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <button
                   type="button"
                   onClick={() => handleOpenProductModal('add')}
-                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
-                    theme === 'dark' 
-                      ? 'bg-[#0f1626] border-[#1e293b] hover:bg-zinc-900 hover:border-purple-500/50 text-white' 
+                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${theme === 'dark'
+                      ? 'bg-[#0f1626] border-[#1e293b] hover:bg-zinc-900 hover:border-purple-500/50 text-white'
                       : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-purple-500/50 shadow-3xs'
-                  }`}
+                    }`}
                 >
                   <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform">
                     <Plus className="h-5 w-5" />
@@ -2881,11 +2884,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <button
                   type="button"
                   onClick={() => handleOpenCategoryModal('add')}
-                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${
-                    theme === 'dark' 
-                      ? 'bg-[#0f1626] border-[#1e293b] hover:bg-zinc-900 hover:border-pink-500/50 text-white' 
+                  className={`p-4 rounded-2xl border transition-all text-left flex items-center space-x-3 cursor-pointer group ${theme === 'dark'
+                      ? 'bg-[#0f1626] border-[#1e293b] hover:bg-zinc-900 hover:border-pink-500/50 text-white'
                       : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-pink-500/50 shadow-3xs'
-                  }`}
+                    }`}
                 >
                   <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 group-hover:scale-105 transition-transform">
                     <Folders className="h-5 w-5" />
@@ -2900,25 +2902,23 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Charts cockpit section */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Sales Overview Line Chart Area */}
-                <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales Overview</h3>
-                    <select 
+                    <select
                       value={analyticsTimeframe}
                       onChange={(e) => setAnalyticsTimeframe(e.target.value)}
-                      className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                        theme === 'dark' ? 'border-[#1e293b] text-zinc-300' : 'border-zinc-200 text-zinc-700'
-                    }`}>
+                      className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${theme === 'dark' ? 'border-[#1e293b] text-zinc-300' : 'border-zinc-200 text-zinc-700'
+                        }`}>
                       <option value="week" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Week</option>
                       <option value="month" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Month</option>
                       <option value="year" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Year</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex gap-4 h-64 mt-2 select-none flex-grow">
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[10px] text-zinc-400 font-normal h-[88%] pb-2 select-none w-[42px] text-left leading-none">
@@ -2937,7 +2937,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
                         <div className="border-b border-dashed border-zinc-150 dark:border-zinc-800/80 w-full h-0" />
                       </div>
-                      
+
                       {/* Line chart svg overlay */}
                       <svg className="w-full h-[88%] absolute inset-0" viewBox="0 0 500 200" preserveAspectRatio="none">
                         <defs>
@@ -2949,7 +2949,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         {areaD && <path d={areaD} fill="url(#chartGrad)" />}
                         {pathD && <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
                       </svg>
-                      
+
                       {/* X-axis Labels */}
                       <div className="flex justify-between text-[9px] text-zinc-400 font-normal absolute bottom-0 left-0 right-0 px-2">
                         {analyticsData.filter((_, i) => {
@@ -2966,9 +2966,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 {/* Sales By Category Donut Area */}
-                <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex flex-col h-full justify-between ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <h3 className={`font-normal text-sm mb-4 text-left ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Sales by Category</h3>
                   <div className="flex items-center justify-between gap-6 h-64 mt-2 flex-grow">
                     <div className="w-40 h-40 relative flex-shrink-0">
@@ -2979,16 +2978,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#cbd5e1" strokeWidth="4.2" strokeDasharray="100 0" strokeDashoffset="100" />
                         ) : (
                           donutSlices.map((slice, idx) => (
-                            <circle 
+                            <circle
                               key={idx}
-                              cx="21" 
-                              cy="21" 
-                              r="15.915" 
-                              fill="transparent" 
-                              stroke={slice.stroke} 
-                              strokeWidth="4.2" 
-                              strokeDasharray={slice.strokeDasharray} 
-                              strokeDashoffset={slice.strokeDashoffset} 
+                              cx="21"
+                              cy="21"
+                              r="15.915"
+                              fill="transparent"
+                              stroke={slice.stroke}
+                              strokeWidth="4.2"
+                              strokeDasharray={slice.strokeDasharray}
+                              strokeDashoffset={slice.strokeDashoffset}
                             />
                           ))
                         )}
@@ -2999,12 +2998,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <span className="text-xs font-normal text-zinc-400 text-center">No categories recorded yet.</span>
                       ) : (
                         donutSlices.map((slice, idx) => (
-                          <CategoryLegendRow 
-                            key={idx} 
-                            dotColor={slice.dot} 
-                            label={slice.name} 
-                            pct={`${slice.percentage}%`} 
-                            val={`₹${Math.round(slice.count).toLocaleString('en-IN')}`} 
+                          <CategoryLegendRow
+                            key={idx}
+                            dotColor={slice.dot}
+                            label={slice.name}
+                            pct={`${slice.percentage}%`}
+                            val={`₹${Math.round(slice.count).toLocaleString('en-IN')}`}
                           />
                         ))
                       )}
@@ -3013,9 +3012,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 {/* Recent Orders List panel */}
-                <div className={`p-5 rounded-3xl border transition-all ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Recent Orders</h3>
                     <span className="text-[10px] font-normal text-[#8b5cf6] dark:text-[#a855f7] cursor-pointer tracking-wider" onClick={() => setActivePage('orders')}>View All</span>
@@ -3027,8 +3025,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </div>
                     ) : (
                       orders.slice(0, 5).map((o, idx) => {
-                        const initials = o.customer_name 
-                          ? o.customer_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) 
+                        const initials = o.customer_name
+                          ? o.customer_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
                           : 'C';
                         const colors = [
                           'bg-pink-500',
@@ -3046,16 +3044,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                         });
 
                         return (
-                          <OrderRow 
+                          <OrderRow
                             key={o.id || idx}
-                            theme={theme} 
-                            id={`#${o.order_id}`} 
-                            date={orderDate} 
-                            amount={`₹${o.total_amount}`} 
-                            status={status} 
-                            name={o.customer_name} 
-                            gradient={avatarColor} 
-                            initials={initials} 
+                            theme={theme}
+                            id={`#${o.order_id}`}
+                            date={orderDate}
+                            amount={`₹${o.total_amount}`}
+                            status={status}
+                            name={o.customer_name}
+                            gradient={avatarColor}
+                            initials={initials}
                           />
                         );
                       })
@@ -3066,11 +3064,10 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Bottom stats tables and growth bar chart */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Top Selling Products List Card */}
-                <div className={`lg:col-span-2 p-5 rounded-3xl border transition-all ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`lg:col-span-2 p-5 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Top Selling Products</h3>
                     <span className="text-[10px] font-normal text-[#8b5cf6] dark:text-[#a855f7] cursor-pointer tracking-wider" onClick={() => setActivePage('products')}>View All</span>
@@ -3095,14 +3092,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                           </tr>
                         ) : (
                           topSellingProducts.map((p, idx) => (
-                            <TopProductRow 
+                            <TopProductRow
                               key={p.id || idx}
-                              theme={theme} 
-                              name={p.name} 
-                              category={p.category} 
-                              sold={p.sold} 
-                              rev={p.rev} 
-                              image={p.image} 
+                              theme={theme}
+                              name={p.name}
+                              category={p.category}
+                              sold={p.sold}
+                              rev={p.rev}
+                              image={p.image}
                             />
                           ))
                         )}
@@ -3112,23 +3109,21 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 {/* Customer Growth Bar Chart Card */}
-                <div className={`p-5 rounded-3xl border transition-all ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Customer Growth</h3>
-                    <select 
+                    <select
                       value={customerGrowthTimeframe}
                       onChange={(e) => setCustomerGrowthTimeframe(e.target.value)}
-                      className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${
-                        theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-700'
-                    }`}>
+                      className={`text-[10px] font-normal p-1 bg-transparent border rounded-lg outline-none cursor-pointer ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-700'
+                        }`}>
                       <option value="week" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Week</option>
                       <option value="month" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Month</option>
                       <option value="year" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>This Year</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex gap-4 h-64 mt-4 select-none">
                     {/* Y-axis Labels */}
                     <div className="flex flex-col justify-between text-[9px] text-zinc-400 font-normal h-[88%] pb-4 w-7 text-left leading-none">
@@ -3144,8 +3139,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                         {customerGrowthData.map((day, idx) => (
                           <div key={idx} className="flex-grow flex flex-col justify-end h-full group relative">
                             {/* Bar item */}
-                            <div 
-                              className="w-full rounded-t-md bg-[#8b5cf6] dark:bg-[#a855f7] hover:bg-[#ff007a] transition-all cursor-pointer shadow-3xs" 
+                            <div
+                              className="w-full rounded-t-md bg-[#8b5cf6] dark:bg-[#a855f7] hover:bg-[#ff007a] transition-all cursor-pointer shadow-3xs"
                               style={{ height: customerGrowthData.some(d => d.value > 0) ? `${(day.value / maxCustomerGrowthVal) * 100}%` : '4px' }}
                               title={`${day.label}: ${day.value} active users (${day.realOrders} orders)`}
                             />
@@ -3159,7 +3154,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           const len = customerGrowthData.length;
                           if (len <= 7) return true;
                           if (len === 12) return i % 3 === 0;
-                          return i === 0 || i === Math.floor(len/3) || i === Math.floor(2*len/3) || i === len - 1;
+                          return i === 0 || i === Math.floor(len / 3) || i === Math.floor(2 * len / 3) || i === len - 1;
                         }).map((d, i) => (
                           <span key={i}>{d.label}</span>
                         ))}
@@ -3170,9 +3165,8 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Clean elegant dashboard footer */}
-              <footer className={`pt-6 border-t flex items-center justify-between text-[10px] text-zinc-400 font-normal ${
-                theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200'
-              }`}>
+              <footer className={`pt-6 border-t flex items-center justify-between text-[10px] text-zinc-400 font-normal ${theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200'
+                }`}>
                 <span>© 2026 vdgfashion Admin. All rights reserved.</span>
                 <span className="flex items-center gap-0.5">Made with <Heart size={10} className="text-red-500 fill-red-500 shrink-0" /> by vdgfashion</span>
               </footer>
@@ -3184,13 +3178,13 @@ function DashboardPortal({ onLogout, adminUser }) {
               <div className="flex justify-between items-center">
                 <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>Product Registry</h3>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => setModalType('bulk')}
                     className="py-2.5 px-4 bg-[#172033] hover:bg-[#20293a] text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-colors border border-[#1e293b] cursor-pointer"
                   >
                     <Upload size={14} /> Bulk Upload
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleOpenProductModal('add')}
                     className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
@@ -3203,16 +3197,15 @@ function DashboardPortal({ onLogout, adminUser }) {
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                 <div className="relative w-full max-w-[320px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); setProductPage(1); }}
                     placeholder="Search products by name, SKU, category..."
-                    className={`w-full rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
-                      theme === 'dark' 
-                        ? 'bg-[#0f1626] border-[#1e293b] text-white placeholder-zinc-500' 
+                    className={`w-full rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${theme === 'dark'
+                        ? 'bg-[#0f1626] border-[#1e293b] text-white placeholder-zinc-500'
                         : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -3244,16 +3237,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 type="number"
                                 value={inlineStockEdit[p.id]}
                                 onChange={(e) => setInlineStockEdit(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                onKeyDown={(e) => { if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); if (e.key === 'Escape') setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; }); }}
-                                className={`w-16 px-2 py-1 rounded-lg border text-xs font-normal text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                  theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white' : 'bg-white border-zinc-300 text-zinc-800'
-                                }`}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); if (e.key === 'Escape') setInlineStockEdit(prev => { const n = { ...prev }; delete n[p.id]; return n; }); }}
+                                className={`w-16 px-2 py-1 rounded-lg border text-xs font-normal text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white' : 'bg-white border-zinc-300 text-zinc-800'
+                                  }`}
                                 autoFocus
                               />
                               <button onClick={() => handleInlineStockSave(p.id, inlineStockEdit[p.id])} className="p-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95">
                                 <CheckCircle size={12} />
                               </button>
-                              <button onClick={() => setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; })} className="p-1 rounded-lg bg-zinc-300 text-zinc-700 hover:bg-zinc-400 active:scale-95">
+                              <button onClick={() => setInlineStockEdit(prev => { const n = { ...prev }; delete n[p.id]; return n; })} className="p-1 rounded-lg bg-zinc-300 text-zinc-700 hover:bg-zinc-400 active:scale-95">
                                 <X size={12} />
                               </button>
                             </div>
@@ -3261,11 +3253,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <span
                               onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))}
                               title="Click to edit stock"
-                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-normal border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${
-                                p.stock === 0 ? 'bg-red-600 text-white border-transparent'
-                                : p.stock < 15 ? 'bg-amber-500 text-white border-transparent'
-                                : 'bg-emerald-600 text-white border-transparent'
-                              }`}
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-normal border transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400 ${p.stock === 0 ? 'bg-red-600 text-white border-transparent'
+                                  : p.stock < 15 ? 'bg-amber-500 text-white border-transparent'
+                                    : 'bg-emerald-600 text-white border-transparent'
+                                }`}
                             >
                               {p.stock} units <Edit size={10} strokeWidth={2.5} className="text-white shrink-0 ml-0.5" />
                             </span>
@@ -3302,7 +3293,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredProducts.length, (productPage - 1) * ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredProducts.length, productPage * ITEMS_PER_PAGE)}</span> of <span className="font-normal text-zinc-650 dark:text-zinc-300">{filteredProducts.length}</span> products
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <button 
+                    <button
                       disabled={productPage === 1}
                       onClick={() => setProductPage(prev => Math.max(1, prev - 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
@@ -3314,17 +3305,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <button
                           key={pageNum}
                           onClick={() => setProductPage(pageNum)}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
-                            productPage === pageNum
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${productPage === pageNum
                               ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
                               : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>
                       );
                     })}
-                    <button 
+                    <button
                       disabled={productPage === totalProductPages}
                       onClick={() => setProductPage(prev => Math.min(totalProductPages, prev + 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
@@ -3346,9 +3336,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Grid Statistics Metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="w-11 h-11 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0">
                     <Package size={20} />
                   </div>
@@ -3358,9 +3347,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
                     <Wallet size={20} />
                   </div>
@@ -3370,9 +3358,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="w-11 h-11 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
                     <XCircle size={20} />
                   </div>
@@ -3382,9 +3369,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-4.5 rounded-2xl border flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
                     <AlertCircle size={20} />
                   </div>
@@ -3399,26 +3385,24 @@ function DashboardPortal({ onLogout, adminUser }) {
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                 <div className="relative w-full max-w-[320px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={inventorySearchQuery}
                     onChange={(e) => { setInventorySearchQuery(e.target.value); setInventoryPage(1); }}
                     placeholder="Search inventory by name, SKU..."
-                    className={`w-full rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
-                      theme === 'dark' 
-                        ? 'bg-[#0f1626] border-[#1e293b] text-white placeholder-zinc-500' 
+                    className={`w-full rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${theme === 'dark'
+                        ? 'bg-[#0f1626] border-[#1e293b] text-white placeholder-zinc-500'
                         : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                    }`}
+                      }`}
                   />
                 </div>
 
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center justify-end">
-                  <select 
+                  <select
                     value={inventoryCategoryFilter}
                     onChange={(e) => { setInventoryCategoryFilter(e.target.value); setInventoryPage(1); }}
-                    className={`text-xs font-normal p-2.5 bg-transparent border rounded-xl outline-none cursor-pointer max-w-[160px] ${
-                      theme === 'dark' ? 'border-[#1e293b] text-zinc-300 bg-[#0f1626]' : 'border-zinc-200 text-zinc-700 bg-white'
-                    }`}
+                    className={`text-xs font-normal p-2.5 bg-transparent border rounded-xl outline-none cursor-pointer max-w-[160px] ${theme === 'dark' ? 'border-[#1e293b] text-zinc-300 bg-[#0f1626]' : 'border-zinc-200 text-zinc-700 bg-white'
+                      }`}
                   >
                     <option value="all" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>All Categories</option>
                     {categories.map((c) => (
@@ -3426,12 +3410,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                     ))}
                   </select>
 
-                  <select 
+                  <select
                     value={inventoryStatusFilter}
                     onChange={(e) => { setInventoryStatusFilter(e.target.value); setInventoryPage(1); }}
-                    className={`text-xs font-normal p-2.5 bg-transparent border rounded-xl outline-none cursor-pointer ${
-                      theme === 'dark' ? 'border-[#1e293b] text-zinc-300 bg-[#0f1626]' : 'border-zinc-200 text-zinc-700 bg-white'
-                    }`}
+                    className={`text-xs font-normal p-2.5 bg-transparent border rounded-xl outline-none cursor-pointer ${theme === 'dark' ? 'border-[#1e293b] text-zinc-300 bg-[#0f1626]' : 'border-zinc-200 text-zinc-700 bg-white'
+                      }`}
                   >
                     <option value="all" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>All Stock Status</option>
                     <option value="instock" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>In Stock (15+ units)</option>
@@ -3491,46 +3474,45 @@ function DashboardPortal({ onLogout, adminUser }) {
                             </td>
                             <td className="p-4">
                               <div className="flex items-center justify-center gap-1.5">
-                                <button 
-                                  onClick={() => handleInlineStockSave(p.id, Math.max(0, p.stock - 5))} 
+                                <button
+                                  onClick={() => handleInlineStockSave(p.id, Math.max(0, p.stock - 5))}
                                   className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-rose-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
                                   title="Decrease stock by 5"
                                 >
                                   -5
                                 </button>
-                                <button 
-                                  onClick={() => handleInlineStockSave(p.id, Math.max(0, p.stock - 1))} 
+                                <button
+                                  onClick={() => handleInlineStockSave(p.id, Math.max(0, p.stock - 1))}
                                   className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-rose-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
                                   title="Decrease stock by 1"
                                 >
                                   -1
                                 </button>
-                                
+
                                 {inlineStockEdit[p.id] !== undefined ? (
                                   <div className="flex items-center gap-1">
                                     <input
                                       type="number"
                                       value={inlineStockEdit[p.id]}
                                       onChange={(e) => setInlineStockEdit(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                      onKeyDown={(e) => { 
-                                        if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]); 
-                                        if (e.key === 'Escape') setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; }); 
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleInlineStockSave(p.id, inlineStockEdit[p.id]);
+                                        if (e.key === 'Escape') setInlineStockEdit(prev => { const n = { ...prev }; delete n[p.id]; return n; });
                                       }}
-                                      className={`w-14 px-1.5 py-1 rounded-lg border text-xs font-semibold text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white' : 'bg-white border-zinc-300 text-zinc-805'
-                                      }`}
+                                      className={`w-14 px-1.5 py-1 rounded-lg border text-xs font-semibold text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white' : 'bg-white border-zinc-300 text-zinc-805'
+                                        }`}
                                       autoFocus
                                     />
                                     <button onClick={() => handleInlineStockSave(p.id, inlineStockEdit[p.id])} className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95">
                                       <CheckCircle size={11} />
                                     </button>
-                                    <button onClick={() => setInlineStockEdit(prev => { const n={...prev}; delete n[p.id]; return n; })} className="p-1.5 rounded-lg bg-zinc-300 text-zinc-700 hover:bg-zinc-400 active:scale-95">
+                                    <button onClick={() => setInlineStockEdit(prev => { const n = { ...prev }; delete n[p.id]; return n; })} className="p-1.5 rounded-lg bg-zinc-300 text-zinc-700 hover:bg-zinc-400 active:scale-95">
                                       <X size={11} />
                                     </button>
                                   </div>
                                 ) : (
-                                  <button 
-                                    onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))} 
+                                  <button
+                                    onClick={() => setInlineStockEdit(prev => ({ ...prev, [p.id]: p.stock }))}
                                     className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer active:scale-95 transition-all duration-150"
                                     title="Edit custom value"
                                   >
@@ -3538,15 +3520,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   </button>
                                 )}
 
-                                <button 
-                                  onClick={() => handleInlineStockSave(p.id, p.stock + 1)} 
+                                <button
+                                  onClick={() => handleInlineStockSave(p.id, p.stock + 1)}
                                   className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-emerald-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
                                   title="Increase stock by 1"
                                 >
                                   +1
                                 </button>
-                                <button 
-                                  onClick={() => handleInlineStockSave(p.id, p.stock + 5)} 
+                                <button
+                                  onClick={() => handleInlineStockSave(p.id, p.stock + 5)}
                                   className="py-1.5 px-2.5 text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-[#1e293b] text-zinc-500 hover:text-emerald-500 rounded-lg transition-colors cursor-pointer font-bold active:scale-95"
                                   title="Increase stock by 5"
                                 >
@@ -3569,7 +3551,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-semibold">{Math.min(filteredInventoryProducts.length, (inventoryPage - 1) * INVENTORY_ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-semibold">{Math.min(filteredInventoryProducts.length, inventoryPage * INVENTORY_ITEMS_PER_PAGE)}</span> of <span className="font-semibold text-zinc-650 dark:text-zinc-300">{filteredInventoryProducts.length}</span> products
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <button 
+                    <button
                       disabled={inventoryPage === 1}
                       onClick={() => setInventoryPage(prev => Math.max(1, prev - 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
@@ -3581,17 +3563,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <button
                           key={pageNum}
                           onClick={() => setInventoryPage(pageNum)}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
-                            inventoryPage === pageNum
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${inventoryPage === pageNum
                               ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md font-semibold'
                               : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>
                       );
                     })}
-                    <button 
+                    <button
                       disabled={inventoryPage === totalInventoryPages}
                       onClick={() => setInventoryPage(prev => Math.min(totalInventoryPages, prev + 1))}
                       className="py-2 px-3 bg-zinc-100 hover:bg-[#1e293b] dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
@@ -3612,13 +3593,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <p className="text-xs text-zinc-500 font-normal mt-1">Dashboard &gt; Categories</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button 
+                  <button
                     onClick={() => handleOpenCategoryModal('add')}
                     className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     <Plus size={14} /> Add Category
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleOpenSubcategoryModal('add')}
                     className="py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                   >
@@ -3629,9 +3610,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* 4 Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
                     <Folders className="h-6 w-6" />
                   </div>
@@ -3648,9 +3628,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
                     <Folders className="h-6 w-6 rotate-90" />
                   </div>
@@ -3667,9 +3646,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-500/20">
                     <Package className="h-6 w-6" />
                   </div>
@@ -3682,9 +3660,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
                     <Package className="h-6 w-6" />
                   </div>
@@ -3699,22 +3676,20 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Table Card */}
-              <div className={`p-6 rounded-3xl border ${
-                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
-              }`}>
+              <div className={`p-6 rounded-3xl border ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
                 {/* Tabs & Search / Filter Header */}
                 <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-800/80 mb-6">
                   {/* Category / Subcategory Tabs */}
                   <div className="flex gap-6 border-b border-transparent">
                     <button
                       onClick={() => setCategoriesActiveTab('categories')}
-                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${
-                        categoriesActiveTab === 'categories'
+                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'categories'
                           ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
                           : theme === 'dark'
                             ? 'text-zinc-450 hover:text-white'
                             : 'text-zinc-550 hover:text-zinc-850'
-                      }`}
+                        }`}
                     >
                       Categories
                       {categoriesActiveTab === 'categories' && (
@@ -3723,13 +3698,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </button>
                     <button
                       onClick={() => setCategoriesActiveTab('subcategories')}
-                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${
-                        categoriesActiveTab === 'subcategories'
+                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'subcategories'
                           ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
                           : theme === 'dark'
                             ? 'text-zinc-450 hover:text-white'
                             : 'text-zinc-550 hover:text-zinc-850'
-                      }`}
+                        }`}
                     >
                       Subcategories
                       {categoriesActiveTab === 'subcategories' && (
@@ -3740,11 +3714,10 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                   {/* Search and Filters */}
                   <div className="flex items-center gap-3">
-                    <div className={`relative flex items-center bg-zinc-50 border rounded-2xl px-3.5 py-1.5 focus-within:border-indigo-500 w-52 sm:w-64 transition-all ${
-                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
-                    }`}>
+                    <div className={`relative flex items-center bg-zinc-50 border rounded-2xl px-3.5 py-1.5 focus-within:border-indigo-500 w-52 sm:w-64 transition-all ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+                      }`}>
                       <Search className="h-4 w-4 text-zinc-400 shrink-0" />
-                      <input 
+                      <input
                         type="text"
                         value={categorySearchQuery}
                         onChange={(e) => setCategorySearchQuery(e.target.value)}
@@ -3755,12 +3728,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <button onClick={() => setCategorySearchQuery('')} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white"><X size={12} /></button>
                       )}
                     </div>
-                    
-                    <button className={`py-1.5 px-3.5 border rounded-2xl text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                      theme === 'dark' 
-                        ? 'border-[#1e293b] text-zinc-300 hover:bg-[#172033] hover:text-white' 
+
+                    <button className={`py-1.5 px-3.5 border rounded-2xl text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${theme === 'dark'
+                        ? 'border-[#1e293b] text-zinc-300 hover:bg-[#172033] hover:text-white'
                         : 'border-zinc-200 text-zinc-650 hover:bg-zinc-50 hover:text-zinc-900'
-                    }`}>
+                      }`}>
                       <Filter className="h-3.5 w-3.5" />
                       Filter
                     </button>
@@ -3771,9 +3743,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {categoriesActiveTab === 'categories' ? (
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[700px] text-left text-sm">
-                      <thead className={`font-normal tracking-normal border-b text-[12px] ${
-                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
-                      }`}>
+                      <thead className={`font-normal tracking-normal border-b text-[12px] ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
+                        }`}>
                         <tr>
                           <th className="p-4 w-12 text-center">#</th>
                           <th className="p-4">Category Name</th>
@@ -3791,16 +3762,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                             const isSelected = selectedAdminCategory === c.name;
                             const subsCount = subCategories.filter(sub => sub.parent_category === c.name).length;
                             const prodsCount = products.filter(p => p.category_name === c.name || p.category === c.id).length;
-                            
+
                             return (
-                              <tr 
-                                key={c.id} 
+                              <tr
+                                key={c.id}
                                 onClick={() => setSelectedAdminCategory(c.name)}
-                                className={`transition-all duration-150 cursor-pointer ${
-                                  isSelected 
+                                className={`transition-all duration-150 cursor-pointer ${isSelected
                                     ? theme === 'dark' ? 'bg-indigo-950/20 hover:bg-indigo-950/30' : 'bg-indigo-50/40 hover:bg-indigo-50/60'
                                     : theme === 'dark' ? 'hover:bg-white/2' : 'hover:bg-zinc-50/50'
-                                }`}
+                                  }`}
                               >
                                 <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
                                 <td className="p-4 font-normal">
@@ -3811,9 +3781,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     {c.image_url || c.image ? (
                                       <img src={getImageUrl(c.image_url || c.image)} alt={c.name} className="w-9 h-9 rounded-xl object-contain border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
                                     ) : (
-                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
-                                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
-                                      }`}>
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+                                        }`}>
                                         <Folders size={16} className="text-zinc-400" />
                                       </div>
                                     )}
@@ -3822,11 +3791,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{subsCount}</td>
                                 <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{prodsCount}</td>
                                 <td className="p-4 text-center">
-                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${
-                                    c.is_active 
-                                      ? 'bg-emerald-600 text-white border-transparent' 
+                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${c.is_active
+                                      ? 'bg-emerald-600 text-white border-transparent'
                                       : 'bg-rose-600 text-white border-transparent'
-                                  }`}>
+                                    }`}>
                                     {c.is_active ? 'Active' : 'Inactive'}
                                   </span>
                                 </td>
@@ -3858,9 +3826,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   // All Subcategories view
                   <div className="overflow-x-auto no-scrollbar animate-fade-in">
                     <table className="w-full min-w-[700px] text-left text-sm">
-                      <thead className={`font-normal tracking-normal border-b text-[12px] ${
-                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
-                      }`}>
+                      <thead className={`font-normal tracking-normal border-b text-[12px] ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
+                        }`}>
                         <tr>
                           <th className="p-4 w-12 text-center">#</th>
                           <th className="p-4">Subcategory Name</th>
@@ -3876,7 +3843,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           .filter(sub => sub.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
                           .map((sub, index) => {
                             const prodsCount = products.filter(p => p.parent_category === sub.name || p.category_name === sub.name).length;
-                            
+
                             return (
                               <tr key={sub.id} className={`transition-all duration-150 ${theme === 'dark' ? 'hover:bg-white/2' : 'hover:bg-zinc-50/50'}`}>
                                 <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
@@ -3891,9 +3858,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     {sub.image_url || sub.image ? (
                                       <img src={getImageUrl(sub.image_url || sub.image)} alt={sub.name} className="w-9 h-9 rounded-xl object-contain border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
                                     ) : (
-                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
-                                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
-                                      }`}>
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+                                        }`}>
                                         <Folders size={16} className="text-zinc-400" />
                                       </div>
                                     )}
@@ -3901,11 +3867,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 </td>
                                 <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{prodsCount}</td>
                                 <td className="p-4 text-center">
-                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${
-                                    sub.is_active 
-                                      ? 'bg-emerald-600 text-white border-transparent' 
+                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${sub.is_active
+                                      ? 'bg-emerald-600 text-white border-transparent'
                                       : 'bg-rose-600 text-white border-transparent'
-                                  }`}>
+                                    }`}>
                                     {sub.is_active ? 'Active' : 'Inactive'}
                                   </span>
                                 </td>
@@ -3949,19 +3914,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
                     placeholder="Search by order ID, name, phone..."
-                    className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
-                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                    }`}
+                    className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
+                      }`}
                   />
                 </div>
               </div>
 
               {/* Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[['All', orders.length, 'bg-indigo-600'], ['Pending', orders.filter(o=>o.status==='pending'||(!o.status&&o.payment_method==='cod')).length, 'bg-amber-500'], ['Delivered', orders.filter(o=>o.status==='delivered').length, 'bg-emerald-600'], ['Cancelled', orders.filter(o=>o.status==='cancelled').length, 'bg-red-600']].map(([label, count, color]) => (
-                  <div key={label} className={`p-4 rounded-2xl border flex items-center gap-3 ${
-                    theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                  }`}>
+                {[['All', orders.length, 'bg-indigo-600'], ['Pending', orders.filter(o => o.status === 'pending' || (!o.status && o.payment_method === 'cod')).length, 'bg-amber-500'], ['Delivered', orders.filter(o => o.status === 'delivered').length, 'bg-emerald-600'], ['Cancelled', orders.filter(o => o.status === 'cancelled').length, 'bg-red-600']].map(([label, count, color]) => (
+                  <div key={label} className={`p-4 rounded-2xl border flex items-center gap-3 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                    }`}>
                     <div className={`w-9 h-9 rounded-xl ${color} text-white flex items-center justify-center font-normal text-sm`}>{count}</div>
                     <span className={`text-xs font-normal ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>{label}</span>
                   </div>
@@ -3999,32 +3962,29 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <td className="p-4 text-center relative">
                               <div className="inline-block text-left relative">
                                 {/* Custom Dropdown Toggle Button */}
-                                 <button
-                                   onClick={() => setActiveDropdownId(activeDropdownId === o.id ? null : o.id)}
-                                   className={`text-xs font-normal px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${
-                                     STATUS_CONFIG[o.status || 'pending']?.bg || 'bg-zinc-500/10 text-zinc-650 border-zinc-500/20'
-                                   }`}
-                                 >
-                                   <StatusIcon size={14} className="shrink-0" />
-                                   <span className="tracking-wider">{STATUS_CONFIG[o.status || 'pending']?.label || 'Pending'}</span>
-                                   <ChevronDown size={12} className="shrink-0" />
-                                 </button>
- 
-                                 {/* Dropdown Menu Overlay Backdrop & Menu */}
-                                 {activeDropdownId === o.id && (
-                                   <>
-                                     <div 
-                                       className="fixed inset-0 z-30" 
-                                       onClick={() => setActiveDropdownId(null)} 
-                                     />
-                                     <div className={`absolute left-1/2 -translate-x-1/2 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${
-                                       openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-                                     } ${
-                                       theme === 'dark' 
-                                         ? 'bg-[#172033] border-[#1e293b] text-white shadow-black/85' 
-                                         : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
-                                     }`}>
-                                       <div className="max-h-[220px] overflow-y-auto no-scrollbar py-0.5 space-y-0.5">
+                                <button
+                                  onClick={() => setActiveDropdownId(activeDropdownId === o.id ? null : o.id)}
+                                  className={`text-xs font-normal px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${STATUS_CONFIG[o.status || 'pending']?.bg || 'bg-zinc-500/10 text-zinc-650 border-zinc-500/20'
+                                    }`}
+                                >
+                                  <StatusIcon size={14} className="shrink-0" />
+                                  <span className="tracking-wider">{STATUS_CONFIG[o.status || 'pending']?.label || 'Pending'}</span>
+                                  <ChevronDown size={12} className="shrink-0" />
+                                </button>
+
+                                {/* Dropdown Menu Overlay Backdrop & Menu */}
+                                {activeDropdownId === o.id && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-30"
+                                      onClick={() => setActiveDropdownId(null)}
+                                    />
+                                    <div className={`absolute left-1/2 -translate-x-1/2 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                      } ${theme === 'dark'
+                                        ? 'bg-[#172033] border-[#1e293b] text-white shadow-black/85'
+                                        : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
+                                      }`}>
+                                      <div className="max-h-[220px] overflow-y-auto no-scrollbar py-0.5 space-y-0.5">
                                         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
                                           const ItemIcon = cfg.icon || Clock;
                                           return (
@@ -4034,11 +3994,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                                 handleOrderStatusChange(o.id, key);
                                                 setActiveDropdownId(null);
                                               }}
-                                              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-normal transition-all cursor-pointer select-none active:scale-97 ${
-                                                (o.status || 'pending') === key 
-                                                  ? cfg.bg 
+                                              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-normal transition-all cursor-pointer select-none active:scale-97 ${(o.status || 'pending') === key
+                                                  ? cfg.bg
                                                   : (theme === 'dark' ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-zinc-50 text-zinc-650 hover:text-zinc-900')
-                                              }`}
+                                                }`}
                                             >
                                               <ItemIcon size={14} className="shrink-0" />
                                               <span className="tracking-wide">{cfg.label}</span>
@@ -4131,7 +4090,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <Trash2 size={13} />
                             </button>
                           </td>
-</tr>
+                        </tr>
                       ))
                     )}
                   </tbody>
@@ -4156,11 +4115,10 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Charts grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Sales & Orders Trend Card */}
-                <div className={`p-6 rounded-3xl border transition-all lg:col-span-2 relative flex flex-col justify-between ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-6 rounded-3xl border transition-all lg:col-span-2 relative flex flex-col justify-between ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
                       <h4 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
@@ -4168,28 +4126,25 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </h4>
                       <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Daily performance tracking over the last 14 days.</p>
                     </div>
-                    <div className={`flex rounded-xl p-0.5 border ${
-                      theme === 'dark' ? 'bg-zinc-900 border-[#1e293b]' : 'bg-zinc-150 border-zinc-200'
-                    }`}>
+                    <div className={`flex rounded-xl p-0.5 border ${theme === 'dark' ? 'bg-zinc-900 border-[#1e293b]' : 'bg-zinc-150 border-zinc-200'
+                      }`}>
                       <button
                         type="button"
                         onClick={() => setAnalyticsChartMetric('revenue')}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-normal tracking-wide transition-all cursor-pointer ${
-                          analyticsChartMetric === 'revenue'
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-normal tracking-wide transition-all cursor-pointer ${analyticsChartMetric === 'revenue'
                             ? 'bg-[#8b5cf6] text-white shadow-xs'
                             : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-                        }`}
+                          }`}
                       >
                         Revenue
                       </button>
                       <button
                         type="button"
                         onClick={() => setAnalyticsChartMetric('orders')}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-normal tracking-wide transition-all cursor-pointer ${
-                          analyticsChartMetric === 'orders'
+                        className={`px-3 py-1.5 rounded-lg text-[9px] font-normal tracking-wide transition-all cursor-pointer ${analyticsChartMetric === 'orders'
                             ? 'bg-[#8b5cf6] text-white shadow-xs'
                             : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-                        }`}
+                          }`}
                       >
                         Orders
                       </button>
@@ -4228,18 +4183,18 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                         {/* Area Polygon */}
                         {points.length > 0 && (
-                          <polygon 
-                            points={`${points[0].x},160 ${points.map(p => `${p.x},${p.y}`).join(' ')} ${points[points.length-1].x},160`}
+                          <polygon
+                            points={`${points[0].x},160 ${points.map(p => `${p.x},${p.y}`).join(' ')} ${points[points.length - 1].x},160`}
                             fill="url(#analyticsTrendGrad)"
                           />
                         )}
 
                         {/* Trend Line */}
                         {points.length > 0 && (
-                          <polyline 
-                            fill="none" 
-                            stroke="#8b5cf6" 
-                            strokeWidth="3" 
+                          <polyline
+                            fill="none"
+                            stroke="#8b5cf6"
+                            strokeWidth="3"
                             points={points.map(p => `${p.x},${p.y}`).join(' ')}
                           />
                         )}
@@ -4247,22 +4202,22 @@ function DashboardPortal({ onLogout, adminUser }) {
                         {/* Hover line and dot */}
                         {hoveredPointIndex !== null && (
                           <>
-                            <line 
-                              x1={points[hoveredPointIndex].x} 
-                              y1="40" 
-                              x2={points[hoveredPointIndex].x} 
-                              y2="160" 
-                              stroke="#8b5cf6" 
-                              strokeWidth="1" 
-                              strokeDasharray="4 4" 
+                            <line
+                              x1={points[hoveredPointIndex].x}
+                              y1="40"
+                              x2={points[hoveredPointIndex].x}
+                              y2="160"
+                              stroke="#8b5cf6"
+                              strokeWidth="1"
+                              strokeDasharray="4 4"
                             />
-                            <circle 
-                              cx={points[hoveredPointIndex].x} 
-                              cy={points[hoveredPointIndex].y} 
-                              r="6" 
-                              fill="#8b5cf6" 
-                              stroke={theme === 'dark' ? '#0f1626' : '#ffffff'} 
-                              strokeWidth="2" 
+                            <circle
+                              cx={points[hoveredPointIndex].x}
+                              cy={points[hoveredPointIndex].y}
+                              r="6"
+                              fill="#8b5cf6"
+                              stroke={theme === 'dark' ? '#0f1626' : '#ffffff'}
+                              strokeWidth="2"
                             />
                           </>
                         )}
@@ -4295,7 +4250,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                       {/* Dynamic Tooltip */}
                       {hoveredPointIndex !== null && (
-                        <div 
+                        <div
                           className="absolute p-3 bg-zinc-950/95 text-white rounded-xl text-[10px] space-y-1 shadow-xl border border-zinc-800 pointer-events-none transition-all duration-100 z-10"
                           style={{
                             left: `${(points[hoveredPointIndex].x / 500) * 100}%`,
@@ -4305,7 +4260,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         >
                           <p className="font-normal text-zinc-400">{points[hoveredPointIndex].date}</p>
                           <p className="font-normal text-xs text-white">
-                            {analyticsChartMetric === 'revenue' 
+                            {analyticsChartMetric === 'revenue'
                               ? `₹${Math.round(points[hoveredPointIndex].val).toLocaleString('en-IN')}`
                               : `${points[hoveredPointIndex].val} Orders`}
                           </p>
@@ -4316,14 +4271,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 {/* Status Distribution Donut Card */}
-                <div className={`p-6 rounded-3xl border transition-all flex flex-col justify-between ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`p-6 rounded-3xl border transition-all flex flex-col justify-between ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div>
                     <h4 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Order Statuses</h4>
                     <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Distribution of active workflow statuses.</p>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mt-4 flex-grow">
                     <div className="w-32 h-32 relative flex-shrink-0">
                       <svg width="100%" height="100%" viewBox="0 0 42 42" className="donut">
@@ -4333,16 +4287,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#cbd5e1" strokeWidth="4.2" strokeDasharray="100 0" strokeDashoffset="100" />
                         ) : (
                           statusDonutSlices.map((slice, idx) => (
-                            <circle 
+                            <circle
                               key={idx}
-                              cx="21" 
-                              cy="21" 
-                              r="15.915" 
-                              fill="transparent" 
-                              stroke={slice.color} 
-                              strokeWidth="4.2" 
-                              strokeDasharray={slice.strokeDasharray} 
-                              strokeDashoffset={slice.strokeDashoffset} 
+                              cx="21"
+                              cy="21"
+                              r="15.915"
+                              fill="transparent"
+                              stroke={slice.color}
+                              strokeWidth="4.2"
+                              strokeDasharray={slice.strokeDasharray}
+                              strokeDashoffset={slice.strokeDashoffset}
                             />
                           ))
                         )}
@@ -4373,15 +4327,14 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Stock Inventory Section */}
-              <div className={`p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-              }`}>
+              <div className={`p-6 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
                     <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Inventory Stock Registry</h3>
                     <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Real-time tracking of item stocks, supply states, and automatic refills.</p>
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => window.print()}
                     className="py-2 px-3 bg-[#8b5cf6] hover:bg-purple-650 text-white text-[10px] font-normal rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -4414,7 +4367,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
                           <td className="p-4 text-right">
                             <div className="flex items-center gap-1.5 justify-end">
-                              <input 
+                              <input
                                 type="number"
                                 min="0"
                                 key={p.stock}
@@ -4444,11 +4397,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     e.target.blur();
                                   }
                                 }}
-                                className={`w-16 p-1.5 text-center rounded-lg border outline-none text-xs font-normal transition-all ${
-                                  theme === 'dark' 
-                                    ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                                className={`w-16 p-1.5 text-center rounded-lg border outline-none text-xs font-normal transition-all ${theme === 'dark'
+                                    ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                                     : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                                }`}
+                                  }`}
                               />
                               <span className="text-[10px] text-zinc-500 font-normal">pcs</span>
                             </div>
@@ -4456,13 +4408,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <td className="p-4">
                             <div className="flex flex-col items-center gap-1.5">
                               {/* Stock Warning Badge */}
-                              <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border-none shadow-sm transition-all ${
-                                p.stock === 0
+                              <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border-none shadow-sm transition-all ${p.stock === 0
                                   ? 'bg-rose-600 text-white'
                                   : p.stock < 15
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-emerald-600 text-white'
-                              }`}>{p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock'}</span>
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-emerald-600 text-white'
+                                }`}>{p.stock === 0 ? 'Out of Stock' : p.stock < 15 ? 'Low Stock' : 'In Stock'}</span>
 
                               {/* Publication Status Dropdown */}
                               <select
@@ -4485,11 +4436,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                                     showToast('Network error during status update', 'warning');
                                   }
                                 }}
-                                className={`text-[9px] font-normal px-3 py-1 rounded-full outline-none cursor-pointer border-none shadow-sm appearance-none transition-all ${
-                                  (p.status || 'published') === 'published'
+                                className={`text-[9px] font-normal px-3 py-1 rounded-full outline-none cursor-pointer border-none shadow-sm appearance-none transition-all ${(p.status || 'published') === 'published'
                                     ? 'bg-indigo-500 text-white'
                                     : 'bg-amber-400 text-white'
-                                }`}
+                                  }`}
                               >
                                 <option value="published" style={{ background: '#fff', color: '#000' }}>Published</option>
                                 <option value="draft" style={{ background: '#fff', color: '#000' }}>Draft</option>
@@ -4497,7 +4447,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             </div>
                           </td>
                           <td className="p-4 text-center">
-                            <button 
+                            <button
                               type="button"
                               onClick={async () => {
                                 try {
@@ -4532,7 +4482,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredAnalyticsProducts.length, (analyticsPage - 1) * 8 + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredAnalyticsProducts.length, analyticsPage * 8)}</span> of <span className="font-normal text-zinc-650 dark:text-zinc-300">{filteredAnalyticsProducts.length}</span> items
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <button 
+                      <button
                         type="button"
                         disabled={analyticsPage === 1}
                         onClick={() => setAnalyticsPage(prev => Math.max(1, prev - 1))}
@@ -4546,17 +4496,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                             key={pageNum}
                             type="button"
                             onClick={() => setAnalyticsPage(pageNum)}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
-                              analyticsPage === pageNum
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${analyticsPage === pageNum
                                 ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
                                 : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-655 dark:text-zinc-400'
-                            }`}
+                              }`}
                           >
                             {pageNum}
                           </button>
                         );
                       })}
-                      <button 
+                      <button
                         type="button"
                         disabled={analyticsPage === totalAnalyticsPages}
                         onClick={() => setAnalyticsPage(prev => Math.min(totalAnalyticsPages, prev + 1))}
@@ -4579,36 +4528,33 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Index Banners</h2>
                   <p className="text-xs text-zinc-500 font-normal mt-1">Manage desktop and mobile hero banners on the index page.</p>
                 </div>
-                
+
                 {/* Tab Header Navigation */}
-                <div className={`flex border rounded-2xl p-1 gap-2 shrink-0 ${
-                  theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
-                }`}>
+                <div className={`flex border rounded-2xl p-1 gap-2 shrink-0 ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+                  }`}>
                   <button
                     type="button"
                     onClick={() => setBannerTypeTab('desktop')}
-                    className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
-                      bannerTypeTab === 'desktop'
+                    className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${bannerTypeTab === 'desktop'
                         ? 'bg-[#8b5cf6] text-white shadow-xs'
                         : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-855 hover:bg-zinc-100'
-                    }`}
+                      }`}
                   >
                     Desktop Banners
                   </button>
                   <button
                     type="button"
                     onClick={() => setBannerTypeTab('mobile')}
-                    className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
-                      bannerTypeTab === 'mobile'
+                    className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${bannerTypeTab === 'mobile'
                         ? 'bg-[#8b5cf6] text-white shadow-xs'
                         : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-855 hover:bg-zinc-100'
-                    }`}
+                      }`}
                   >
                     Mobile Banners
                   </button>
                 </div>
               </div>
-              
+
               {/* Previews Only */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                 {[1, 2, 3].map((slot) => {
@@ -4616,22 +4562,21 @@ function DashboardPortal({ onLogout, adminUser }) {
                   const activeBanners = isMobile ? mobileBanners : banners;
                   const existingBanner = activeBanners.find(b => b.order === slot);
                   const isUploaded = existingBanner && !existingBanner.is_default;
-                  
+
                   // Use correct seeded default images: 11/12/13.webp for desktop and 21/22/23.webp for mobile
                   let imgSrc = isMobile ? `/banner/2${slot}.webp` : `/banner/1${slot}.webp`;
-                  
+
                   if (existingBanner) {
                     imgSrc = existingBanner.src || existingBanner.image;
                     if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `${API_BASE}${imgSrc}`;
                     if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `${API_BASE}/media/${imgSrc}`;
                   }
-                  
+
                   const isUploading = isMobile ? uploadingMobileBannerSlot === slot : uploadingBannerSlot === slot;
-                  
+
                   return (
-                    <div key={`preview-${slot}`} className={`rounded-3xl border p-3 flex flex-col items-center gap-4 shadow-3xs relative overflow-hidden ${
-                      theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
-                    }`}>
+                    <div key={`preview-${slot}`} className={`rounded-3xl border p-3 flex flex-col items-center gap-4 shadow-3xs relative overflow-hidden ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+                      }`}>
                       <div className="w-full flex justify-between items-center mb-1 px-1">
                         <h3 className={`font-normal text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{isMobile ? 'Mobile' : 'Desktop'} Banner {slot}</h3>
                         {isUploaded && (
@@ -4657,9 +4602,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 })}
               </div>
 
-              <div className={`p-6 rounded-3xl border shadow-3xs mt-6 ${
-                theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
-              }`}>
+              <div className={`p-6 rounded-3xl border shadow-3xs mt-6 ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+                }`}>
                 <h3 className={`font-normal text-lg mb-4 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Upload Custom {bannerTypeTab === 'mobile' ? 'Mobile' : 'Desktop'} Banners</h3>
                 <div className="space-y-4">
                   {[1, 2, 3].map((slot) => {
@@ -4667,7 +4611,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     const activeBanners = isMobile ? mobileBanners : banners;
                     const existingBanner = activeBanners.find(b => b.order === slot);
                     const isUploaded = existingBanner && !existingBanner.is_default;
-                    
+
                     let imgSrc = isMobile ? `/banner/2${slot}.webp` : `/banner/1${slot}.webp`;
                     if (existingBanner) {
                       imgSrc = existingBanner.src || existingBanner.image;
@@ -4678,14 +4622,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                     const isUploading = isMobile ? uploadingMobileBannerSlot === slot : uploadingBannerSlot === slot;
 
                     return (
-                      <div key={`input-${slot}`} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border ${
-                        theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-100 bg-zinc-50/50'
-                      }`}>
-                        <span className={`w-16 font-normal text-sm shrink-0 ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slot {slot}</span>
-                        
-                        <div className={`w-16 h-8 sm:w-20 sm:h-10 rounded overflow-hidden shrink-0 shadow-sm relative border ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-100 border-zinc-200'
+                      <div key={`input-${slot}`} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border ${theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-100 bg-zinc-50/50'
                         }`}>
+                        <span className={`w-16 font-normal text-sm shrink-0 ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Slot {slot}</span>
+
+                        <div className={`w-16 h-8 sm:w-20 sm:h-10 rounded overflow-hidden shrink-0 shadow-sm relative border ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-100 border-zinc-200'
+                          }`}>
                           <img src={imgSrc} alt={`Slot ${slot} thumb`} className="w-full h-full object-cover" />
                           {isUploading && (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
@@ -4695,10 +4637,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                         </div>
 
                         <div className="flex-1">
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => isMobile ? handleMobileBannerUpload(e, slot) : handleHeroBannerUpload(e, slot)} 
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => isMobile ? handleMobileBannerUpload(e, slot) : handleHeroBannerUpload(e, slot)}
                             disabled={isUploading}
                             className={`w-full text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-normal file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-500/10 dark:file:text-indigo-400 cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-650'}`}
                           />
@@ -4730,59 +4672,53 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Tab Header Navigation */}
-              <div className={`flex flex-wrap border rounded-2xl p-1 gap-2 ${
-                theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
-              }`}>
+              <div className={`flex flex-wrap border rounded-2xl p-1 gap-2 ${theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+                }`}>
                 <button
                   type="button"
                   onClick={() => setSettingsTab('general')}
-                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
-                    settingsTab === 'general'
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${settingsTab === 'general'
                       ? 'bg-[#8b5cf6] text-white shadow-xs'
                       : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
-                  }`}
+                    }`}
                 >
                   General Settings
                 </button>
                 <button
                   type="button"
                   onClick={() => setSettingsTab('checkout')}
-                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
-                    settingsTab === 'checkout'
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${settingsTab === 'checkout'
                       ? 'bg-[#8b5cf6] text-white shadow-xs'
                       : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
-                  }`}
+                    }`}
                 >
                   Checkout Config
                 </button>
                 <button
                   type="button"
                   onClick={() => setSettingsTab('status')}
-                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
-                    settingsTab === 'status'
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${settingsTab === 'status'
                       ? 'bg-[#8b5cf6] text-white shadow-xs'
                       : theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-900/50' : 'text-zinc-650 hover:text-zinc-850 hover:bg-zinc-100'
-                  }`}
+                    }`}
                 >
                   Store Operations
                 </button>
                 <button
                   type="button"
                   onClick={() => setSettingsTab('danger')}
-                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${
-                    settingsTab === 'danger'
+                  className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer ${settingsTab === 'danger'
                       ? 'bg-red-600 text-white shadow-xs'
                       : 'text-red-500 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-500/10'
-                  }`}
+                    }`}
                 >
                   Danger Zone
                 </button>
               </div>
 
               {/* Tab Contents */}
-              <form onSubmit={handleSaveSettings} className={`p-6 rounded-3xl border transition-all ${
-                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
-              }`}>
+              <form onSubmit={handleSaveSettings} className={`p-6 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b]' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
                 {settingsTab === 'general' && (
                   <div className="space-y-4 animate-fade-in">
                     <div>
@@ -4793,21 +4729,21 @@ function DashboardPortal({ onLogout, adminUser }) {
                             <h4 className={`text-sm font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Store Logo</h4>
                             <p className="text-xs text-zinc-500 mt-1">Upload your brand logo. Recommended format: PNG with transparent background.</p>
                           </div>
-                          
+
                           <div className="flex-1 flex items-center gap-4">
                             {settings?.logoImage ? (
                               <div className="h-12 w-auto bg-zinc-100 dark:bg-zinc-800 rounded p-1 border border-zinc-200 dark:border-zinc-700">
-                                 <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `${API_BASE}${settings.logoImage}`} alt="Store Logo" className="h-full w-auto object-contain" />
+                                <img src={settings.logoImage.startsWith('http') ? settings.logoImage : `${API_BASE}${settings.logoImage}`} alt="Store Logo" className="h-full w-auto object-contain" />
                               </div>
                             ) : (
                               <div className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800 rounded flex items-center justify-center border border-zinc-200 dark:border-zinc-700">
                                 <span className="text-[10px] text-zinc-400">None</span>
                               </div>
                             )}
-                            
+
                             <div className="flex-1 relative">
-                              <input 
-                                type="file" 
+                              <input
+                                type="file"
                                 accept="image/*"
                                 onChange={handleLogoUpload}
                                 disabled={uploadingLogo}
@@ -4836,11 +4772,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           onChange={e => setSettingsForm(prev => ({ ...prev, contactPhone: e.target.value }))}
                           placeholder="+91 XXXXX XXXXX"
                           required
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -4851,11 +4786,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           onChange={e => setSettingsForm(prev => ({ ...prev, contactEmail: e.target.value }))}
                           placeholder="support@vdgfashion.com"
                           required
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                     </div>
@@ -4868,11 +4802,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={e => setSettingsForm(prev => ({ ...prev, storeAddress: e.target.value }))}
                         placeholder="Full physical address..."
                         required
-                        className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                          theme === 'dark' 
-                            ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                        className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                            ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                             : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                        }`}
+                          }`}
                       />
                     </div>
 
@@ -4884,11 +4817,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                         onChange={e => setSettingsForm(prev => ({ ...prev, aboutText: e.target.value }))}
                         placeholder="Trendy looks for every vibe. Stay stylish, every day."
                         required
-                        className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                          theme === 'dark' 
-                            ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                        className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                            ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                             : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                        }`}
+                          }`}
                       />
                     </div>
 
@@ -4900,11 +4832,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={settingsForm.facebookUrl}
                           onChange={e => setSettingsForm(prev => ({ ...prev, facebookUrl: e.target.value }))}
                           placeholder="https://facebook.com/..."
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -4914,11 +4845,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={settingsForm.instagramUrl}
                           onChange={e => setSettingsForm(prev => ({ ...prev, instagramUrl: e.target.value }))}
                           placeholder="https://instagram.com/..."
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -4928,11 +4858,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={settingsForm.youtubeUrl}
                           onChange={e => setSettingsForm(prev => ({ ...prev, youtubeUrl: e.target.value }))}
                           placeholder="https://youtube.com/..."
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                     </div>
@@ -4955,11 +4884,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           onChange={e => setSettingsForm(prev => ({ ...prev, activePromoCode: e.target.value.toUpperCase() }))}
                           placeholder="e.g. SUMMER20"
                           required
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -4971,11 +4899,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={settingsForm.activePromoDiscount}
                           onChange={e => setSettingsForm(prev => ({ ...prev, activePromoDiscount: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))}
                           required
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -4986,11 +4913,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={settingsForm.freeShippingThreshold}
                           onChange={e => setSettingsForm(prev => ({ ...prev, freeShippingThreshold: Math.max(0, parseInt(e.target.value) || 0) }))}
                           required
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -5001,11 +4927,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={settingsForm.shippingFee}
                           onChange={e => setSettingsForm(prev => ({ ...prev, shippingFee: Math.max(0, parseInt(e.target.value) || 0) }))}
                           required
-                          className={`w-full p-3 rounded-xl border outline-none text-xs ${
-                            theme === 'dark' 
-                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500' 
+                          className={`w-full p-3 rounded-xl border outline-none text-xs ${theme === 'dark'
+                              ? 'bg-zinc-950 border-[#1e293b] text-white focus:border-purple-500'
                               : 'bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-purple-500'
-                          }`}
+                            }`}
                         />
                       </div>
                     </div>
@@ -5023,11 +4948,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button
                         type="button"
                         onClick={() => setSettingsForm(prev => ({ ...prev, isStoreOpen: true }))}
-                        className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${
-                          settingsForm.isStoreOpen
+                        className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${settingsForm.isStoreOpen
                             ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400'
                             : theme === 'dark' ? 'border-[#1e293b] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
-                        }`}
+                          }`}
                       >
                         <CheckCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
                         <div>
@@ -5039,11 +4963,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button
                         type="button"
                         onClick={() => setSettingsForm(prev => ({ ...prev, isStoreOpen: false }))}
-                        className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${
-                          !settingsForm.isStoreOpen
+                        className={`p-5 rounded-2xl border text-left flex items-start space-x-4 cursor-pointer transition-all ${!settingsForm.isStoreOpen
                             ? 'border-rose-500 bg-rose-500/5 text-rose-600 dark:text-rose-400'
                             : theme === 'dark' ? 'border-[#1e293b] text-zinc-400 hover:bg-zinc-900/30' : 'border-zinc-200 text-zinc-550 hover:bg-zinc-50'
-                        }`}
+                          }`}
                       >
                         <XCircle className="h-6 w-6 mt-0.5 flex-shrink-0" />
                         <div>
@@ -5062,9 +4985,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Database maintenance, reset scripts, and system wipe controls.</p>
                     </div>
 
-                    <div className={`p-5 rounded-2xl border ${
-                      theme === 'dark' ? 'border-red-900/30 bg-red-950/10' : 'border-red-150 bg-red-50/20'
-                    }`}>
+                    <div className={`p-5 rounded-2xl border ${theme === 'dark' ? 'border-red-900/30 bg-red-950/10' : 'border-red-150 bg-red-50/20'
+                      }`}>
                       <h4 className="text-xs font-normal text-red-500 uppercase tracking-wider mb-1">Erase Registry Data</h4>
                       <p className="text-[10px] text-zinc-500 font-normal mb-4 leading-relaxed">
                         Warning: Clicking the button below will clear all registered products, categories, subcategories, customer orders, and reviews. This action is irreversible.
@@ -5078,7 +5000,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             const token = sessionStorage.getItem('access_token');
                             const res = await fetch(`${API_BASE}/api/products/clear-all/`, {
                               method: 'POST',
-                              headers: { 
+                              headers: {
                                 'Content-Type': 'application/json',
                                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                               }
@@ -5129,9 +5051,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Summary Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20">
                     <Percent className="h-6 w-6" />
                   </div>
@@ -5141,9 +5062,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-teal-500/20">
                     <Package className="h-6 w-6" />
                   </div>
@@ -5153,9 +5073,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-500/20">
                     <Star className="h-6 w-6 animate-pulse" />
                   </div>
@@ -5170,11 +5089,10 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* Grid split: Left is Active Offers list, Right is Add Offers Search */}
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-                
+
                 {/* Active Offers list: 7/12 cols */}
-                <div className={`xl:col-span-7 p-6 rounded-3xl border ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`xl:col-span-7 p-6 rounded-3xl border ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="flex justify-between items-center mb-6 border-b border-zinc-100 dark:border-[#1e293b] pb-4">
                     <div>
                       <h3 className={`font-semibold text-lg ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Active Discount Offers</h3>
@@ -5257,9 +5175,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 {/* Add Offers Catalog search: 5/12 cols */}
-                <div className={`xl:col-span-5 p-6 rounded-3xl border ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
-                }`}>
+                <div className={`xl:col-span-5 p-6 rounded-3xl border ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                  }`}>
                   <div className="mb-6 pb-4 border-b border-zinc-100 dark:border-[#1e293b]">
                     <h3 className={`font-semibold text-lg ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Search & Add Offers</h3>
                     <p className="text-[11px] text-zinc-400 font-normal mt-0.5">Search catalog products to apply promotional discounts.</p>
@@ -5272,18 +5189,17 @@ function DashboardPortal({ onLogout, adminUser }) {
                       placeholder="Search products by name..."
                       value={offersSearchQuery}
                       onChange={(e) => setOffersSearchQuery(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2.5 text-xs font-normal border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all ${
-                        theme === 'dark' 
-                          ? 'bg-[#172033] border-[#1e293b] text-zinc-100 placeholder-zinc-550 focus:border-[#8b5cf6]' 
+                      className={`w-full pl-10 pr-4 py-2.5 text-xs font-normal border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/10 transition-all ${theme === 'dark'
+                          ? 'bg-[#172033] border-[#1e293b] text-zinc-100 placeholder-zinc-550 focus:border-[#8b5cf6]'
                           : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-purple-500'
-                      }`}
+                        }`}
                     />
                   </div>
 
                   <div className="overflow-y-auto max-h-[360px] space-y-2 pr-1">
                     {(() => {
                       const nonOfferProducts = products.filter(p => p.tag_type !== 'discount');
-                      const filtered = nonOfferProducts.filter(p => 
+                      const filtered = nonOfferProducts.filter(p =>
                         p.name.toLowerCase().includes(offersSearchQuery.toLowerCase()) ||
                         (p.category_name && p.category_name.toLowerCase().includes(offersSearchQuery.toLowerCase()))
                       );
@@ -5297,9 +5213,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                       }
 
                       return filtered.map(p => (
-                        <div key={p.id} className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-colors ${
-                          theme === 'dark' ? 'bg-[#172033]/40 border-[#1e293b]/60 hover:bg-[#172033]/80' : 'bg-zinc-50/50 border-zinc-150 hover:bg-zinc-50'
-                        }`}>
+                        <div key={p.id} className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-colors ${theme === 'dark' ? 'bg-[#172033]/40 border-[#1e293b]/60 hover:bg-[#172033]/80' : 'bg-zinc-50/50 border-zinc-150 hover:bg-zinc-50'
+                          }`}>
                           <div className="flex items-center gap-2.5 min-w-0">
                             {p.image ? (
                               <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain bg-white border border-zinc-200 dark:border-[#1e293b] p-0.5 shrink-0" />
@@ -5349,9 +5264,8 @@ function DashboardPortal({ onLogout, adminUser }) {
 
               {/* 4 Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
                     <Users className="h-6 w-6" />
                   </div>
@@ -5361,9 +5275,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-500/20">
                     <UserCheck className="h-6 w-6" />
                   </div>
@@ -5373,9 +5286,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
                     <Users className="h-6 w-6 animate-pulse" />
                   </div>
@@ -5385,9 +5297,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${
-                  theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
-                }`}>
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'
+                  }`}>
                   <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
                     <UserCheck className="h-6 w-6" />
                   </div>
@@ -5399,9 +5310,8 @@ function DashboardPortal({ onLogout, adminUser }) {
               </div>
 
               {/* Table Card */}
-              <div className={`p-6 rounded-3xl border ${
-                theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
-              }`}>
+              <div className={`p-6 rounded-3xl border ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'
+                }`}>
                 {/* Search Header */}
                 <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-800/80 mb-6">
                   <div>
@@ -5410,16 +5320,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                   </div>
                   <div className="relative w-full max-w-[340px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={userSearchQuery}
                       onChange={(e) => setUserSearchQuery(e.target.value)}
                       placeholder="Search users by name, email..."
-                      className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${
-                        theme === 'dark' 
-                          ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
+                      className={`w-full rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-indigo-500 border ${theme === 'dark'
+                          ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500'
                           : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                      }`}
+                        }`}
                     />
                   </div>
                 </div>
@@ -5427,9 +5336,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                 {/* Main Table view */}
                 <div className="overflow-x-auto no-scrollbar">
                   <table className="w-full min-w-[900px] text-left text-sm font-normal">
-                    <thead className={`font-normal tracking-normal border-b pb-2.5 text-[11px] ${
-                      theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-100 text-black'
-                    }`}>
+                    <thead className={`font-normal tracking-normal border-b pb-2.5 text-[11px] ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-100 text-black'
+                      }`}>
                       <tr>
                         <th className="pb-3.5">User Identity</th>
                         <th className="pb-3.5">Full Name</th>
@@ -5461,13 +5369,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                             'from-violet-400 to-fuchsia-500'
                           ];
                           const gradient = gradients[u.id % gradients.length];
-                          
-                          const joinedDate = u.date_joined 
+
+                          const joinedDate = u.date_joined
                             ? new Date(u.date_joined).toLocaleDateString('en-IN', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })
                             : '---';
 
                           return (
@@ -5495,11 +5403,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <td className="py-4 text-center">
                                 <button
                                   onClick={() => handleToggleUserStaff(u)}
-                                  className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${
-                                    u.is_staff
+                                  className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${u.is_staff
                                       ? 'bg-purple-600 text-white border-transparent'
                                       : 'bg-emerald-600 text-white border-transparent'
-                                  }`}
+                                    }`}
                                   title="Click to toggle user role"
                                 >
                                   {u.is_staff ? 'Admin / Staff' : 'Customer'}
@@ -5508,11 +5415,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <td className="py-4 text-center">
                                 <button
                                   onClick={() => handleToggleUserActive(u)}
-                                  className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${
-                                    u.is_active
+                                  className={`px-3 py-1 rounded-full text-[9px] font-normal border transition-all duration-200 cursor-pointer active:scale-95 hover:shadow-3xs ${u.is_active
                                       ? 'bg-emerald-600 text-white border-transparent'
                                       : 'bg-red-650 text-white border-transparent'
-                                  }`}
+                                    }`}
                                   title="Click to toggle account state"
                                 >
                                   {u.is_active ? 'Active' : 'Deactivated'}
@@ -5554,7 +5460,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       Showing <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredUsers.length, (userPage - 1) * USERS_ITEMS_PER_PAGE + 1)}</span> to <span className="text-[#8b5cf6] dark:text-[#a855f7] font-normal">{Math.min(filteredUsers.length, userPage * USERS_ITEMS_PER_PAGE)}</span> of <span className="font-normal text-zinc-650 dark:text-zinc-300">{filteredUsers.length}</span> users
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <button 
+                      <button
                         disabled={userPage === 1}
                         onClick={() => setUserPage(prev => Math.max(1, prev - 1))}
                         className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
@@ -5566,17 +5472,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                           <button
                             key={pageNum}
                             onClick={() => setUserPage(pageNum)}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${
-                              userPage === pageNum
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-normal transition-all cursor-pointer active:scale-90 ${userPage === pageNum
                                 ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md'
                                 : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                            }`}
+                              }`}
                           >
                             {pageNum}
                           </button>
                         );
                       })}
-                      <button 
+                      <button
                         disabled={userPage === totalUserPages}
                         onClick={() => setUserPage(prev => Math.min(totalUserPages, prev + 1))}
                         className="py-2 px-3 bg-zinc-100 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors cursor-pointer border border-zinc-200/40 dark:border-[#1e293b] font-normal active:scale-95"
@@ -5596,9 +5501,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       {/* Loading overlay */}
       {uploadProgress !== null ? (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className={`w-full max-w-[360px] p-6 rounded-3xl border shadow-2xl transition-all duration-250 animate-fade-in ${
-            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/90' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
-          }`}>
+          <div className={`w-full max-w-[360px] p-6 rounded-3xl border shadow-2xl transition-all duration-250 animate-fade-in ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/90' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
+            }`}>
             <div className="space-y-4 text-center">
               <Loader2 size={28} className="animate-spin text-indigo-500 mx-auto" />
               <div className="space-y-1">
@@ -5607,14 +5511,14 @@ function DashboardPortal({ onLogout, adminUser }) {
                   Downloading images and saving database records...
                 </p>
               </div>
-              
+
               <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden border border-zinc-200/10 shadow-inner">
-                <div 
-                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out" 
+                <div
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-              
+
               <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 <span>{uploadProgress}% Complete</span>
                 <span>{uploadProgressInfo}</span>
@@ -5634,9 +5538,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         </div>
       ) : loadingData ? (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-normal border ${
-            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
-          }`}>
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl text-xs font-normal border ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700'
+            }`}>
             <Loader2 size={14} className="animate-spin text-indigo-500" />
             Syncing data...
           </div>
@@ -5646,806 +5549,768 @@ function DashboardPortal({ onLogout, adminUser }) {
       {/* Floating CRUD Modals */}
       {modalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className={`w-full ${modalType === 'product' ? 'max-w-[780px]' : 'max-w-[500px]'} rounded-3xl border shadow-2xl overflow-hidden transition-all duration-200 ${
-            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/85' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
-          }`}>
+          <div className={`w-full ${modalType === 'product' ? 'max-w-[780px]' : 'max-w-[500px]'} rounded-3xl border shadow-2xl overflow-hidden transition-all duration-200 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/85' : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-200/50'
+            }`}>
             <div className="max-h-[90vh] overflow-y-auto p-6 space-y-4 text-left custom-scrollbar">
-            <div className={`flex justify-between items-center pb-4 border-b ${theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200/65'}`}>
-              <h3 className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-900'} ${modalType === 'category' || modalType === 'subcategory' ? 'text-[20px] capitalize tracking-tight font-sans' : 'uppercase tracking-wider'}`}>
-                {modalMode === 'edit' ? 'Edit' : 'Create New'} {modalType === 'product' ? 'Product' : modalType === 'category' ? 'Category' : modalType === 'subcategory' ? 'Subcategory' : modalType === 'user' ? 'User Account' : modalType}
-              </h3>
-              <button onClick={() => setModalType(null)} className={`cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-800'}`}><X size={modalType === 'category' || modalType === 'subcategory' ? 20 : 16} /></button>
-            </div>
+              <div className={`flex justify-between items-center pb-4 border-b ${theme === 'dark' ? 'border-[#1e293b]' : 'border-zinc-200/65'}`}>
+                <h3 className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-900'} ${modalType === 'category' || modalType === 'subcategory' ? 'text-[20px] capitalize tracking-tight font-sans' : 'uppercase tracking-wider'}`}>
+                  {modalMode === 'edit' ? 'Edit' : 'Create New'} {modalType === 'product' ? 'Product' : modalType === 'category' ? 'Category' : modalType === 'subcategory' ? 'Subcategory' : modalType === 'user' ? 'User Account' : modalType}
+                </h3>
+                <button onClick={() => setModalType(null)} className={`cursor-pointer transition-colors ${theme === 'dark' ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-800'}`}><X size={modalType === 'category' || modalType === 'subcategory' ? 20 : 16} /></button>
+              </div>
 
-            {modalType === 'product' && (
-              <form onSubmit={handleSaveProduct} className="space-y-6 text-sm font-normal">
-                
-                {/* 1. Featured Image Section */}
-                <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
-                }`}>
-                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
-                    Media Assets
-                  </h4>
-                  <div className="space-y-1.5">
-                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
-                    <div className="relative flex items-center justify-center">
-                      <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${
-                        theme === 'dark' 
-                          ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40' 
-                          : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
+              {modalType === 'product' && (
+                <form onSubmit={handleSaveProduct} className="space-y-6 text-sm font-normal">
+
+                  {/* 1. Featured Image Section */}
+                  <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                    }`}>
+                    <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                      <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
+                      Media Assets
+                    </h4>
+                    <div className="space-y-1.5">
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
+                      <div className="relative flex items-center justify-center">
+                        <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${theme === 'dark'
+                            ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40'
+                            : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
+                          }`}>
+                          <div className="flex items-center gap-2">
+                            {uploadingImage ? (
+                              <Upload size={14} className="animate-spin text-indigo-500" />
+                            ) : productForm.image ? (
+                              <CheckCircle size={14} className="text-emerald-500" />
+                            ) : (
+                              <Upload size={14} className="animate-pulse text-zinc-400" />
+                            )}
+                            <span className="text-[10.5px] font-normal tracking-wide">
+                              {uploadingImage ? 'Uploading...' : productForm.image ? 'File Linked' : 'Choose Local File'}
+                            </span>
+                          </div>
+                          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Group & Categories Section */}
+                  <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                    }`}>
+                    <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                      <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
+                      Group & Classification
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Category Dropdown - root categories only */}
+                      <div className="space-y-1.5">
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
+                        <select
+                          required
+                          value={productForm.category}
+                          onChange={(e) => {
+                            const selectedCat = rootCategories.find(c => String(c.id) === String(e.target.value));
+                            setProductForm(prev => ({
+                              ...prev,
+                              category: e.target.value,
+                              parent_category: '' // reset subcategory when category changes
+                            }));
+                          }}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        >
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
+                          {rootCategories.map((c) => (
+                            <option key={c.id} value={c.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Subcategory Dropdown - filtered by selected category */}
+                      <div className="space-y-1.5">
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
+                        <select
+                          value={productForm.parent_category}
+                          onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value }))}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            } ${!productForm.category ? 'opacity-50' : ''}`}
+                          disabled={!productForm.category}
+                        >
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
+                          {(() => {
+                            const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
+                            return subCategories
+                              .filter(sc => sc.parent_category === selectedCatName)
+                              .map(sc => (
+                                <option key={sc.id} value={sc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
+                              ));
+                          })()}
+                        </select>
+                        {productForm.category && subCategories.filter(sc => sc.parent_category === rootCategories.find(c => String(c.id) === String(productForm.category))?.name).length === 0 && (
+                          <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this category</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Description & Core Attributes */}
+                  <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                    }`}>
+                    <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                      <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">3</span>
+                      Product Details
+                    </h4>
+                    <div className="space-y-1.5">
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={productForm.name}
+                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          }`}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Description *</label>
+                      <textarea
+                        required
+                        value={productForm.description}
+                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                        className={`w-full p-3 h-20 rounded-xl border transition-all focus:outline-none resize-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-zinc-800 border-zinc-200 focus:border-indigo-500 focus:bg-white'
+                          }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 5. Simple Product Information (Pricing & Stock) */}
+                  <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                    }`}>
+                    <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                      <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">5</span>
+                      Pricing & Inventory
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="space-y-1.5">
+                        <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Price (INR) *</label>
+                        <input
+                          type="number"
+                          required
+                          value={productForm.price}
+                          onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sale price (original)</label>
+                        <input
+                          type="number"
+                          value={productForm.original_price}
+                          onChange={(e) => setProductForm({ ...productForm, original_price: e.target.value })}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Quantity (stock) *</label>
+                        <input
+                          type="number"
+                          required
+                          value={productForm.stock}
+                          onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sku</label>
+                        <input
+                          type="text"
+                          value={productForm.sku}
+                          onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
+                          placeholder="e.g., TS-GRN-001"
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sizes Row */}
+                    <div className="space-y-1.5 pt-2">
+                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sizes (comma separated)</label>
+                      <input
+                        type="text"
+                        value={productForm.sizes || ''}
+                        onChange={(e) => setProductForm({ ...productForm, sizes: e.target.value })}
+                        placeholder="e.g., S, M, L, XL or 28, 30, 32 or 0-3M, 3-6M"
+                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                          }`}
+                      />
+                    </div>
+
+                    {/* Promotion & Tags (Offers) Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-1.5 font-normal text-left">
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product Tag (Badge)</label>
+                        <select
+                          value={productForm.tag_type || ''}
+                          onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value || null })}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        >
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>None (No Badge)</option>
+                          <option value="discount" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Discount / Offer (Shows in Offers Page)</option>
+                          <option value="new" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>New Arrival</option>
+                          <option value="bestseller" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Bestseller</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5 font-normal text-left">
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount Label / Value</label>
+                        <input
+                          type="text"
+                          value={productForm.discount || ''}
+                          onChange={(e) => setProductForm({ ...productForm, discount: e.target.value })}
+                          placeholder="e.g., 20% or 10% OFF"
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 6. Status Selection */}
+                  <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
+                    }`}>
+                    <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                      <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">6</span>
+                      Publishing Control
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div
+                        onClick={() => setProductForm({ ...productForm, status: 'published' })}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between shadow-3xs hover:shadow-2xs ${productForm.status === 'published'
+                            ? (theme === 'dark' ? 'border-emerald-500 bg-emerald-950/20' : 'border-emerald-500 bg-emerald-50/50')
+                            : (theme === 'dark' ? 'border-[#1e293b] hover:border-indigo-500/40 bg-[#172033]' : 'border-zinc-200 hover:border-indigo-500/40 bg-white')
+                          }`}
+                      >
+                        <div className="flex flex-col text-left">
+                          <span className={`font-semibold text-[12.5px] ${productForm.status === 'published'
+                              ? (theme === 'dark' ? 'text-emerald-200' : 'text-emerald-950')
+                              : (theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700')
+                            }`}>Published</span>
+                          <span className={`text-[10px] font-normal ${productForm.status === 'published'
+                              ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700')
+                              : (theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500')
+                            }`}>Live on Website catalog</span>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${productForm.status === 'published'
+                            ? 'border-emerald-500 bg-emerald-500 text-white'
+                            : (theme === 'dark' ? 'border-zinc-700' : 'border-zinc-300 border-2')
+                          }`}>
+                          {productForm.status === 'published' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => setProductForm({ ...productForm, status: 'draft' })}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between shadow-3xs hover:shadow-2xs ${productForm.status === 'draft'
+                            ? (theme === 'dark' ? 'border-emerald-500 bg-emerald-950/20' : 'border-emerald-500 bg-emerald-50/50')
+                            : (theme === 'dark' ? 'border-[#1e293b] hover:border-indigo-500/40 bg-[#172033]' : 'border-zinc-200 hover:border-indigo-500/40 bg-white')
+                          }`}
+                      >
+                        <div className="flex flex-col text-left">
+                          <span className={`font-semibold text-[12.5px] ${productForm.status === 'draft'
+                              ? (theme === 'dark' ? 'text-emerald-200' : 'text-emerald-950')
+                              : (theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700')
+                            }`}>Draft Mode</span>
+                          <span className={`text-[10px] font-normal ${productForm.status === 'draft'
+                              ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700')
+                              : (theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500')
+                            }`}>Offline Sandbox preview</span>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${productForm.status === 'draft'
+                            ? 'border-emerald-500 bg-emerald-500 text-white'
+                            : (theme === 'dark' ? 'border-zinc-700' : 'border-zinc-300 border-2')
+                          }`}>
+                          {productForm.status === 'draft' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className={`py-3 px-8 text-white font-normal rounded-xl transition-all active:scale-95 shadow-md cursor-pointer text-xs uppercase tracking-wider bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {modalType === 'category' && (
+                <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
+
+                  {/* 1. Category Image */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Category image <span className="text-red-500 ml-1">*</span>
+                    </label>
+
+                    <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
+                      } ${uploadingCategoryImage ? 'opacity-80' : ''
                       }`}>
-                        <div className="flex items-center gap-2">
-                          {uploadingImage ? (
-                            <Upload size={14} className="animate-spin text-indigo-500" />
-                          ) : productForm.image ? (
-                            <CheckCircle size={14} className="text-emerald-500" />
-                          ) : (
-                            <Upload size={14} className="animate-pulse text-zinc-400" />
-                          )}
-                          <span className="text-[10.5px] font-normal tracking-wide">
-                            {uploadingImage ? 'Uploading...' : productForm.image ? 'File Linked' : 'Choose Local File'}
+                      {/* Left side preview */}
+                      <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
+                        }`}>
+                        {categoryForm.imagePreview || categoryForm.image ? (
+                          <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
+                        ) : (
+                          <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Right side upload button area */}
+                      <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
+                        <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
+                          <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
+                          <span className="text-[14px] font-normal">
+                            {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Category Image' : 'Upload Category Image'}
                           </span>
                         </div>
-                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                        <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
+                          JPG, PNG or WEBP. Max size 2MB.
+                        </span>
+                        <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
                       </label>
                     </div>
                   </div>
-                </div>
 
-                {/* 2. Group & Categories Section */}
-                <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
-                }`}>
-                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
-                    Group & Classification
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Category Dropdown - root categories only */}
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
-                      <select
-                        required
-                        value={productForm.category}
-                        onChange={(e) => {
-                          const selectedCat = rootCategories.find(c => String(c.id) === String(e.target.value));
-                          setProductForm(prev => ({
-                            ...prev,
-                            category: e.target.value,
-                            parent_category: '' // reset subcategory when category changes
-                          }));
-                        }}
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      >
-                        <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
-                        {rootCategories.map((c) => (
-                          <option key={c.id} value={c.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Subcategory Dropdown - filtered by selected category */}
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
-                      <select
-                        value={productForm.parent_category}
-                        onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value }))}
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        } ${!productForm.category ? 'opacity-50' : ''}`}
-                        disabled={!productForm.category}
-                      >
-                        <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
-                        {(() => {
-                          const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
-                          return subCategories
-                            .filter(sc => sc.parent_category === selectedCatName)
-                            .map(sc => (
-                              <option key={sc.id} value={sc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
-                            ));
-                        })()}
-                      </select>
-                      {productForm.category && subCategories.filter(sc => sc.parent_category === rootCategories.find(c => String(c.id) === String(productForm.category))?.name).length === 0 && (
-                        <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this category</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Description & Core Attributes */}
-                <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
-                }`}>
-                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">3</span>
-                    Product Details
-                  </h4>
-                  <div className="space-y-1.5">
-                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product name *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={productForm.name} 
-                      onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} 
-                      className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                      }`}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Description *</label>
-                    <textarea 
+                  {/* 2. Category Name */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Category name <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
                       required
-                      value={productForm.description} 
-                      onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} 
-                      className={`w-full p-3 h-20 rounded-xl border transition-all focus:outline-none resize-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                        theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-zinc-800 border-zinc-200 focus:border-indigo-500 focus:bg-white'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {/* 5. Simple Product Information (Pricing & Stock) */}
-                <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
-                }`}>
-                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">5</span>
-                    Pricing & Inventory
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Price (INR) *</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={productForm.price} 
-                        onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} 
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sale price (original)</label>
-                      <input 
-                        type="number" 
-                        value={productForm.original_price} 
-                        onChange={(e) => setProductForm({ ...productForm, original_price: e.target.value })} 
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Quantity (stock) *</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={productForm.stock} 
-                        onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} 
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={`h-8 flex items-end pb-1 text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sku</label>
-                      <input 
-                        type="text" 
-                        value={productForm.sku} 
-                        onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} 
-                        placeholder="e.g., TS-GRN-001"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Sizes Row */}
-                  <div className="space-y-1.5 pt-2">
-                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Sizes (comma separated)</label>
-                    <input 
-                      type="text" 
-                      value={productForm.sizes || ''} 
-                      onChange={(e) => setProductForm({ ...productForm, sizes: e.target.value })} 
-                      placeholder="e.g., S, M, L, XL or 28, 30, 32 or 0-3M, 3-6M"
-                      className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                        theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                      }`}
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                      placeholder="Enter category name"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
                     />
                   </div>
 
-                  {/* Promotion & Tags (Offers) Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-1.5 font-normal text-left">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Product Tag (Badge)</label>
-                      <select
-                        value={productForm.tag_type || ''}
-                        onChange={(e) => setProductForm({ ...productForm, tag_type: e.target.value || null })}
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                  {/* 4. Status */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Status <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={categoryForm.is_active ? 'true' : 'false'}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
+                    >
+                      <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
+                      <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* 5. Action Buttons */}
+                  <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploadingCategoryImage || !categoryForm.image}
+                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${uploadingCategoryImage || !categoryForm.image
+                          ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
+                          : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
                         }`}
+                    >
+                      {uploadingCategoryImage ? 'Uploading...' : 'Save Category'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {modalType === 'subcategory' && (
+                <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
+
+                  {/* 1. Subcategory Image */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Subcategory image <span className="text-red-500 ml-1">*</span>
+                    </label>
+
+                    <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
+                      } ${uploadingCategoryImage ? 'opacity-80' : ''
+                      }`}>
+                      {/* Left side preview */}
+                      <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
+                        }`}>
+                        {categoryForm.imagePreview || categoryForm.image ? (
+                          <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
+                        ) : (
+                          <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Right side upload button area */}
+                      <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
+                        <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
+                          <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
+                          <span className="text-[14px] font-normal">
+                            {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Subcategory Image' : 'Upload Subcategory Image'}
+                          </span>
+                        </div>
+                        <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
+                          JPG, PNG or WEBP. Max size 2MB.
+                        </span>
+                        <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 2. Parent Category Select */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Category name select <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      required
+                      value={categoryForm.parent_category}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
+                    >
+                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
+                      {rootCategories.map((c) => (
+                        <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Subcategory Name */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Subcategory name type <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                      placeholder="Enter subcategory name"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                    />
+                  </div>
+
+                  {/* 4. Status */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Status <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={categoryForm.is_active ? 'true' : 'false'}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
+                    >
+                      <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
+                      <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* 5. Action Buttons */}
+                  <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploadingCategoryImage || !categoryForm.image}
+                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${uploadingCategoryImage || !categoryForm.image
+                          ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
+                          : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
+                        }`}
+                    >
+                      {uploadingCategoryImage ? 'Uploading...' : 'Save Subcategory'}
+                    </button>
+                  </div>
+                </form>
+              )}
+              {modalType === 'bulk' && (
+                <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal text-left">
+                  {/* Mode Switcher */}
+                  <div className="flex rounded-xl p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => { setBulkMode('file'); setBulkInput(''); }}
+                      className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${bulkMode === 'file'
+                          ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
+                          : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
+                        }`}
+                    >
+                      CSV / Excel File Upload
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setBulkMode('paste'); setBulkInput(''); }}
+                      className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${bulkMode === 'paste'
+                          ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
+                          : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
+                        }`}
+                    >
+                      Copy & Paste
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
+                    <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">Spreadsheet Guidelines:</h4>
+                    <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU / Code, Price, MRP / Budget, Category, Age Group, Stock, Image</b>).</li>
+                      <li>For images, you can paste Google Drive <b>Share links</b>, absolute local system paths (e.g. <b>F:\images\tshirt.png</b>), or place the images in the <b>backend/bulk_upload_images/</b> folder and specify just the filename (e.g. <b>tshirt.png</b>). We will import them automatically!</li>
+                    </ol>
+                  </div>
+
+                  {bulkMode === 'file' ? (
+                    <div className="space-y-1">
+                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Upload TSV / CSV File</label>
+                      <div
+                        onDragEnter={handleDrag}
+                        onDragOver={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-5 h-36 text-center cursor-pointer transition-all ${dragActive
+                            ? 'border-indigo-500 bg-indigo-500/5'
+                            : theme === 'dark'
+                              ? 'border-[#1e293b] bg-[#172033] hover:border-indigo-500/40 hover:bg-[#202736]'
+                              : 'border-zinc-200 bg-white hover:border-indigo-500/40 hover:bg-zinc-50 shadow-3xs'
+                          }`}
                       >
-                        <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>None (No Badge)</option>
-                        <option value="discount" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Discount / Offer (Shows in Offers Page)</option>
-                        <option value="new" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>New Arrival</option>
-                        <option value="bestseller" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Bestseller</option>
-                      </select>
+                        <Upload className="h-6 w-6 text-indigo-500 mb-2 animate-bounce" />
+                        <span className="text-[10px] font-bold">
+                          {bulkInput ? 'File Loaded Successfully' : 'Drag & Drop file here'}
+                        </span>
+                        <span className="text-[8.5px] text-zinc-400 mt-1 max-w-[250px]">
+                          {bulkInput ? 'Click to browse or drop another file to replace' : 'Supports .csv, .tsv, .txt files or click to browse'}
+                        </span>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleFileChange}
+                          accept=".csv,.tsv,.txt"
+                          className="hidden"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1.5 font-normal text-left">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Discount Label / Value</label>
-                      <input 
-                        type="text" 
-                        value={productForm.discount || ''} 
-                        onChange={(e) => setProductForm({ ...productForm, discount: e.target.value })} 
-                        placeholder="e.g., 20% or 10% OFF"
-                        className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs ${
-                          theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                        }`}
+                  ) : (
+                    <div className="space-y-1">
+                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}>Paste Copied Cells Here</label>
+                      <textarea
+                        value={bulkInput}
+                        onChange={(e) => setBulkInput(e.target.value)}
+                        placeholder="Name&#9;SKU&#9;Price&#9;Category&#9;Stock&#9;Image&#10;Blue Denim Jeans&#9;JEAN-01&#9;999&#9;Apparel&#9;45&#9;https://drive.google.com/file/d/xxxx/view"
+                        className={`w-full h-36 p-3 rounded-2xl border transition-all focus:outline-none resize-none font-mono text-[9px] ${theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500 font-normal'
+                          }`}
                       />
                     </div>
-                  </div>
-                </div>
+                  )}
 
-                {/* 6. Status Selection */}
-                <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${
-                  theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
-                }`}>
-                  <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">6</span>
-                    Publishing Control
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div 
-                      onClick={() => setProductForm({ ...productForm, status: 'published' })}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between shadow-3xs hover:shadow-2xs ${
-                        productForm.status === 'published'
-                          ? (theme === 'dark' ? 'border-emerald-500 bg-emerald-950/20' : 'border-emerald-500 bg-emerald-50/50')
-                          : (theme === 'dark' ? 'border-[#1e293b] hover:border-indigo-500/40 bg-[#172033]' : 'border-zinc-200 hover:border-indigo-500/40 bg-white')
-                      }`}
-                    >
-                      <div className="flex flex-col text-left">
-                        <span className={`font-semibold text-[12.5px] ${
-                          productForm.status === 'published'
-                            ? (theme === 'dark' ? 'text-emerald-200' : 'text-emerald-950')
-                            : (theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700')
-                        }`}>Published</span>
-                        <span className={`text-[10px] font-normal ${
-                          productForm.status === 'published'
-                            ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700')
-                            : (theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500')
-                        }`}>Live on Website catalog</span>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                        productForm.status === 'published'
-                          ? 'border-emerald-500 bg-emerald-500 text-white'
-                          : (theme === 'dark' ? 'border-zinc-700' : 'border-zinc-300 border-2')
-                      }`}>
-                        {productForm.status === 'published' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </div>
-                    </div>
-
-                    <div 
-                      onClick={() => setProductForm({ ...productForm, status: 'draft' })}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between shadow-3xs hover:shadow-2xs ${
-                        productForm.status === 'draft'
-                          ? (theme === 'dark' ? 'border-emerald-500 bg-emerald-950/20' : 'border-emerald-500 bg-emerald-50/50')
-                          : (theme === 'dark' ? 'border-[#1e293b] hover:border-indigo-500/40 bg-[#172033]' : 'border-zinc-200 hover:border-indigo-500/40 bg-white')
-                      }`}
-                    >
-                      <div className="flex flex-col text-left">
-                        <span className={`font-semibold text-[12.5px] ${
-                          productForm.status === 'draft'
-                            ? (theme === 'dark' ? 'text-emerald-200' : 'text-emerald-950')
-                            : (theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700')
-                        }`}>Draft Mode</span>
-                        <span className={`text-[10px] font-normal ${
-                          productForm.status === 'draft'
-                            ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700')
-                            : (theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500')
-                        }`}>Offline Sandbox preview</span>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                        productForm.status === 'draft'
-                          ? 'border-emerald-500 bg-emerald-500 text-white'
-                          : (theme === 'dark' ? 'border-zinc-700' : 'border-zinc-300 border-2')
-                      }`}>
-                        {productForm.status === 'draft' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
-                  <button 
-                    type="button" 
-                    onClick={() => setModalType(null)} 
-                    className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className={`py-3 px-8 text-white font-normal rounded-xl transition-all active:scale-95 shadow-md cursor-pointer text-xs uppercase tracking-wider bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'category' && (
-              <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
-                
-                {/* 1. Category Image */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Category image <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  
-                  <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${
-                    theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
-                  } ${
-                    uploadingCategoryImage ? 'opacity-80' : ''
-                  }`}>
-                    {/* Left side preview */}
-                    <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${
-                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
-                    }`}>
-                      {categoryForm.imagePreview || categoryForm.image ? (
-                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
-                      ) : (
-                        <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Right side upload button area */}
-                    <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
-                      <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
-                        <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
-                        <span className="text-[14px] font-normal">
-                          {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Category Image' : 'Upload Category Image'}
-                        </span>
-                      </div>
-                      <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
-                        JPG, PNG or WEBP. Max size 2MB.
-                      </span>
-                      <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
-                    </label>
-                  </div>
-                </div>
-
-                {/* 2. Category Name */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Category name <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={categoryForm.name}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                    placeholder="Enter category name"
-                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
-                  />
-                </div>
-
-                {/* 4. Status */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Status <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={categoryForm.is_active ? 'true' : 'false'}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
-                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
-                  >
-                    <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
-                    <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
-                  </select>
-                </div>
-
-                {/* 5. Action Buttons */}
-                <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
-                  <button 
-                    type="button" 
-                    onClick={() => setModalType(null)} 
-                    className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={uploadingCategoryImage || !categoryForm.image}
-                    className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${
-                      uploadingCategoryImage || !categoryForm.image
-                        ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
-                        : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
-                    }`}
-                  >
-                    {uploadingCategoryImage ? 'Uploading...' : 'Save Category'}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'subcategory' && (
-              <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
-                
-                {/* 1. Subcategory Image */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Subcategory image <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  
-                  <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${
-                    theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
-                  } ${
-                    uploadingCategoryImage ? 'opacity-80' : ''
-                  }`}>
-                    {/* Left side preview */}
-                    <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${
-                      theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
-                    }`}>
-                      {categoryForm.imagePreview || categoryForm.image ? (
-                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
-                      ) : (
-                        <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Right side upload button area */}
-                    <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
-                      <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
-                        <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
-                        <span className="text-[14px] font-normal">
-                          {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Subcategory Image' : 'Upload Subcategory Image'}
-                        </span>
-                      </div>
-                      <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
-                        JPG, PNG or WEBP. Max size 2MB.
-                      </span>
-                      <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
-                    </label>
-                  </div>
-                </div>
-
-                {/* 2. Parent Category Select */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Category name select <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    required
-                    value={categoryForm.parent_category}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
-                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
-                  >
-                    <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
-                    {rootCategories.map((c) => (
-                      <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 3. Subcategory Name */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Subcategory name type <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={categoryForm.name}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                    placeholder="Enter subcategory name"
-                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
-                  />
-                </div>
-
-                {/* 4. Status */}
-                <div className="space-y-2">
-                  <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                    Status <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={categoryForm.is_active ? 'true' : 'false'}
-                    onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
-                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
-                  >
-                    <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
-                    <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
-                  </select>
-                </div>
-
-                {/* 5. Action Buttons */}
-                <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
-                  <button 
-                    type="button" 
-                    onClick={() => setModalType(null)} 
-                    className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={uploadingCategoryImage || !categoryForm.image}
-                    className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${
-                      uploadingCategoryImage || !categoryForm.image
-                        ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
-                        : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
-                    }`}
-                  >
-                    {uploadingCategoryImage ? 'Uploading...' : 'Save Subcategory'}
-                  </button>
-                </div>
-              </form>
-            )}
-            {modalType === 'bulk' && (
-              <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal text-left">
-                {/* Mode Switcher */}
-                <div className="flex rounded-xl p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => { setBulkMode('file'); setBulkInput(''); }}
-                    className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${
-                      bulkMode === 'file'
-                        ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
-                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
-                    }`}
-                  >
-                    CSV / Excel File Upload
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setBulkMode('paste'); setBulkInput(''); }}
-                    className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${
-                      bulkMode === 'paste'
-                        ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
-                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
-                    }`}
-                  >
-                    Copy & Paste
-                  </button>
-                </div>
-
-                <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
-                  <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">Spreadsheet Guidelines:</h4>
-                  <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU / Code, Price, MRP / Budget, Category, Age Group, Stock, Image</b>).</li>
-                    <li>For images in Google Drive, paste the Drive <b>Share link</b> directly in the Image column. We will download it automatically!</li>
-                  </ol>
-                </div>
-
-                {bulkMode === 'file' ? (
-                  <div className="space-y-1">
-                    <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Upload TSV / CSV File</label>
-                    <div
-                      onDragEnter={handleDrag}
-                      onDragOver={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-5 h-36 text-center cursor-pointer transition-all ${
-                        dragActive
-                          ? 'border-indigo-500 bg-indigo-500/5'
-                          : theme === 'dark'
-                          ? 'border-[#1e293b] bg-[#172033] hover:border-indigo-500/40 hover:bg-[#202736]'
-                          : 'border-zinc-200 bg-white hover:border-indigo-500/40 hover:bg-zinc-50 shadow-3xs'
-                      }`}
-                    >
-                      <Upload className="h-6 w-6 text-indigo-500 mb-2 animate-bounce" />
-                      <span className="text-[10px] font-bold">
-                        {bulkInput ? 'File Loaded Successfully' : 'Drag & Drop file here'}
-                      </span>
-                      <span className="text-[8.5px] text-zinc-400 mt-1 max-w-[250px]">
-                        {bulkInput ? 'Click to browse or drop another file to replace' : 'Supports .csv, .tsv, .txt files or click to browse'}
-                      </span>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept=".csv,.tsv,.txt"
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}>Paste Copied Cells Here</label>
-                    <textarea 
-                      value={bulkInput} 
-                      onChange={(e) => setBulkInput(e.target.value)} 
-                      placeholder="Name&#9;SKU&#9;Price&#9;Category&#9;Stock&#9;Image&#10;Blue Denim Jeans&#9;JEAN-01&#9;999&#9;Apparel&#9;45&#9;https://drive.google.com/file/d/xxxx/view"
-                      className={`w-full h-36 p-3 rounded-2xl border transition-all focus:outline-none resize-none font-mono text-[9px] ${
-                        theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500 font-normal'
-                      }`}
-                    />
-                  </div>
-                )}
-
-                {parsedBulkPreview.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}`}>
-                      Parsed Preview (Showing up to {parsedBulkPreview.length} Items)
-                    </label>
-                    <div className={`border rounded-xl overflow-auto max-h-60 text-[10px] ${theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-200 bg-zinc-50'}`}>
-                      <table className="w-full text-left min-w-[650px]">
-                        <thead className={`font-semibold border-b ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-650'}`}>
-                          <tr>
-                            <th className="p-2 w-20">Images</th>
-                            <th className="p-2">Name</th>
-                            <th className="p-2">SKU</th>
-                            <th className="p-2">Category</th>
-                            <th className="p-2 text-right">Price</th>
-                            <th className="p-2 text-right">Stock</th>
-                            <th className="p-2">Image Link</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200/50 dark:divide-[#1e293b]/60">
-                          {parsedBulkPreview.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-white/2">
-                              <td className="p-2 flex gap-1.5 items-center min-h-[40px]">
-                                {item.image ? (
-                                  <img 
-                                    src={getImageUrl(item.image)} 
-                                    alt="Img 1" 
-                                    className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
-                                    title="Main Image"
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                  />
-                                ) : null}
-                                {item.image_2 ? (
-                                  <img 
-                                    src={getImageUrl(item.image_2)} 
-                                    alt="Img 2" 
-                                    className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
-                                    title="Second Image"
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                  />
-                                ) : null}
-                                {item.image_3 ? (
-                                  <img 
-                                    src={getImageUrl(item.image_3)} 
-                                    alt="Img 3" 
-                                    className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
-                                    title="Third Image"
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                  />
-                                ) : null}
-                                {!item.image && !item.image_2 && !item.image_3 && (
-                                  <span className="text-zinc-500 font-mono text-[9px]">No Image</span>
-                                )}
-                              </td>
-                              <td className="p-2 font-semibold truncate max-w-[120px]">{item.name}</td>
-                              <td className="p-2 font-mono">{item.sku || 'N/A'}</td>
-                              <td className="p-2">{item.category_name}</td>
-                              <td className="p-2 text-right">₹{item.price}</td>
-                              <td className="p-2 text-right">{item.stock}</td>
-                              <td className="p-2 truncate max-w-[150px] font-mono text-[9px] text-zinc-450">{item.image || 'N/A'}</td>
+                  {parsedBulkPreview.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}`}>
+                        Parsed Preview (Showing up to {parsedBulkPreview.length} Items)
+                      </label>
+                      <div className={`border rounded-xl overflow-auto max-h-60 text-[10px] ${theme === 'dark' ? 'border-[#1e293b] bg-[#172033]/50' : 'border-zinc-200 bg-zinc-50'}`}>
+                        <table className="w-full text-left min-w-[650px]">
+                          <thead className={`font-semibold border-b ${theme === 'dark' ? 'border-[#1e293b] text-zinc-400' : 'border-zinc-200 text-zinc-650'}`}>
+                            <tr>
+                              <th className="p-2 w-20">Images</th>
+                              <th className="p-2">Name</th>
+                              <th className="p-2">SKU</th>
+                              <th className="p-2">Category</th>
+                              <th className="p-2 text-right">Price</th>
+                              <th className="p-2 text-right">Stock</th>
+                              <th className="p-2">Image Link</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200/50 dark:divide-[#1e293b]/60">
+                            {parsedBulkPreview.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-white/2">
+                                <td className="p-2 flex gap-1.5 items-center min-h-[40px]">
+                                  {item.image ? (
+                                    <img
+                                      src={getImageUrl(item.image)}
+                                      alt="Img 1"
+                                      className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
+                                      title="Main Image"
+                                      onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                  ) : null}
+                                  {item.image_2 ? (
+                                    <img
+                                      src={getImageUrl(item.image_2)}
+                                      alt="Img 2"
+                                      className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
+                                      title="Second Image"
+                                      onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                  ) : null}
+                                  {item.image_3 ? (
+                                    <img
+                                      src={getImageUrl(item.image_3)}
+                                      alt="Img 3"
+                                      className="w-8 h-8 rounded-md object-contain border border-zinc-200/20 dark:border-zinc-800 bg-white p-0.5 hover:scale-200 transition-all cursor-zoom-in"
+                                      title="Third Image"
+                                      onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                  ) : null}
+                                  {!item.image && !item.image_2 && !item.image_3 && (
+                                    <span className="text-zinc-500 font-mono text-[9px]">No Image</span>
+                                  )}
+                                </td>
+                                <td className="p-2 font-semibold truncate max-w-[120px]">{item.name}</td>
+                                <td className="p-2 font-mono">{item.sku || 'N/A'}</td>
+                                <td className="p-2">{item.category_name}</td>
+                                <td className="p-2 text-right">₹{item.price}</td>
+                                <td className="p-2 text-right">{item.stock}</td>
+                                <td className="p-2 truncate max-w-[150px] font-mono text-[9px] text-zinc-450">{item.image || 'N/A'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 justify-end pt-2 border-t border-zinc-150 dark:border-zinc-800/80">
+                    <button type="button" onClick={() => setModalType(null)} className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}>Cancel</button>
+                    <button
+                      type="submit"
+                      className={`py-2.5 px-4 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+                    >
+                      <Upload size={12} /> Execute Bulk Import
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {modalType === 'user' && (
+                <form onSubmit={handleSaveUser} className="space-y-4 text-left text-sm">
+
+                  <div className={`p-4 rounded-xl border space-y-1 ${theme === "dark" ? "bg-[#172033] border-[#1e293b]" : "bg-zinc-50 border-zinc-200"}`}>
+                    <span className="text-[10px] text-zinc-400 font-normal uppercase tracking-wider">Username (Immutable)</span>
+                    <p className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{userForm.username}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                      Email Address <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={userForm.email}
+                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                      placeholder="e.g. john@example.com"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>First Name</label>
+                      <input
+                        type="text"
+                        value={userForm.first_name}
+                        onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
+                        placeholder="John"
+                        className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Last Name</label>
+                      <input
+                        type="text"
+                        value={userForm.last_name}
+                        onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
+                        placeholder="Doe"
+                        className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                      />
                     </div>
                   </div>
-                )}
 
-                <div className="flex gap-3 justify-end pt-2 border-t border-zinc-150 dark:border-zinc-800/80">
-                  <button type="button" onClick={() => setModalType(null)} className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}>Cancel</button>
-                  <button 
-                    type="submit" 
-                    className={`py-2.5 px-4 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
-                  >
-                    <Upload size={12} /> Execute Bulk Import
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'user' && (
-              <form onSubmit={handleSaveUser} className="space-y-4 text-left text-sm">
-                
-                <div className={`p-4 rounded-xl border space-y-1 ${theme === "dark" ? "bg-[#172033] border-[#1e293b]" : "bg-zinc-50 border-zinc-200"}`}>
-                  <span className="text-[10px] text-zinc-400 font-normal uppercase tracking-wider">Username (Immutable)</span>
-                  <p className={`text-base font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{userForm.username}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
-                    Email Address <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    placeholder="e.g. john@example.com"
-                    className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>First Name</label>
-                    <input
-                      type="text"
-                      value={userForm.first_name}
-                      onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
-                      placeholder="John"
-                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
-                    />
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="form_is_staff"
+                        checked={userForm.is_staff}
+                        onChange={(e) => setUserForm({ ...userForm, is_staff: e.target.checked })}
+                        className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <label htmlFor="form_is_staff" className={`text-xs font-semibold select-none cursor-pointer ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                        Is Staff Admin
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="form_is_active"
+                        checked={userForm.is_active}
+                        onChange={(e) => setUserForm({ ...userForm, is_active: e.target.checked })}
+                        className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <label htmlFor="form_is_active" className={`text-xs font-semibold select-none cursor-pointer ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                        Account Active
+                      </label>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Last Name</label>
-                    <input
-                      type="text"
-                      value={userForm.last_name}
-                      onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
-                      placeholder="Doe"
-                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="form_is_staff"
-                      checked={userForm.is_staff}
-                      onChange={(e) => setUserForm({ ...userForm, is_staff: e.target.checked })}
-                      className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <label htmlFor="form_is_staff" className={`text-xs font-semibold select-none cursor-pointer ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
-                      Is Staff Admin
-                    </label>
+                  <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className={`py-3 px-5 border rounded-xl font-normal cursor-pointer text-xs transition-all active:scale-95 ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className={`py-3 px-5 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+                    >
+                      {modalMode === 'edit' ? 'Save Changes' : 'Create Account'}
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="form_is_active"
-                      checked={userForm.is_active}
-                      onChange={(e) => setUserForm({ ...userForm, is_active: e.target.checked })}
-                      className="w-4 h-4 rounded text-indigo-650 accent-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <label htmlFor="form_is_active" className={`text-xs font-semibold select-none cursor-pointer ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
-                      Account Active
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80 mt-6">
-                  <button 
-                    type="button" 
-                    onClick={() => setModalType(null)} 
-                    className={`py-3 px-5 border rounded-xl font-normal cursor-pointer text-xs transition-all active:scale-95 ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className={`py-3 px-5 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
-                  >
-                    {modalMode === 'edit' ? 'Save Changes' : 'Create Account'}
-                  </button>
-                </div>
-              </form>
-            )}
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -6454,9 +6319,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       {/* Offers Modal */}
       {isOfferModalOpen && selectedProductForOffer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
-          <div className={`w-full max-w-[500px] rounded-[2rem] border p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all transform scale-100 ${
-            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-purple-500/5' : 'bg-white border-zinc-200 text-[#0f172a]'
-          }`}>
+          <div className={`w-full max-w-[500px] rounded-[2rem] border p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all transform scale-100 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-purple-500/5' : 'bg-white border-zinc-200 text-[#0f172a]'
+            }`}>
             <div className="flex justify-between items-center mb-6 pb-3 border-b border-zinc-150 dark:border-zinc-800">
               <h3 className="text-lg font-bold">
                 {offerModalMode === 'edit' ? 'Edit Offer Configuration' : 'Configure Offer'}
@@ -6473,13 +6337,12 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
 
             <form onSubmit={handleSaveOffer} className="space-y-4 text-left text-sm">
-              <div className={`p-4 rounded-xl border flex items-center gap-3 ${
-                theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
-              }`}>
+              <div className={`p-4 rounded-xl border flex items-center gap-3 ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+                }`}>
                 {selectedProductForOffer.image ? (
-                  <img 
-                    src={getImageUrl(selectedProductForOffer.image)} 
-                    alt={selectedProductForOffer.name} 
+                  <img
+                    src={getImageUrl(selectedProductForOffer.image)}
+                    alt={selectedProductForOffer.name}
                     className="w-12 h-12 rounded-lg object-contain bg-white border"
                   />
                 ) : (
@@ -6538,11 +6401,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                   placeholder="e.g. 20% OFF or Flat 500 Off"
                   value={offerDiscountStr}
                   onChange={(e) => setOfferDiscountStr(e.target.value)}
-                  className={`w-full p-3.5 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm transition-all ${
-                    theme === 'dark' 
-                      ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
+                  className={`w-full p-3.5 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm transition-all ${theme === 'dark'
+                      ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500'
                       : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -6556,11 +6418,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                   placeholder="e.g. 799"
                   value={offerPromoPrice}
                   onChange={(e) => setOfferPromoPrice(e.target.value)}
-                  className={`w-full p-3.5 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm transition-all ${
-                    theme === 'dark' 
-                      ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500' 
+                  className={`w-full p-3.5 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm transition-all ${theme === 'dark'
+                      ? 'bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500'
                       : 'bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400'
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -6571,11 +6432,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                     setIsOfferModalOpen(false);
                     setSelectedProductForOffer(null);
                   }}
-                  className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${
-                    theme === 'dark' 
-                      ? 'bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300' 
+                  className={`py-2.5 px-4 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === 'dark'
+                      ? 'bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300'
                       : 'bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700'
-                  }`}
+                    }`}
                 >
                   Cancel
                 </button>
@@ -6596,15 +6456,14 @@ function DashboardPortal({ onLogout, adminUser }) {
 
 function NavItem({ icon, label, active, onClick, theme }) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className={`w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 ${
-        active 
-          ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md shadow-purple-500/10' 
+      className={`w-full px-5 py-4 rounded-2xl text-[18px] font-normal transition-all flex items-center gap-4 cursor-pointer select-none active:scale-98 ${active
+          ? 'bg-gradient-to-r from-[#8b5cf6] to-[#a855f7] text-white shadow-md shadow-purple-500/10'
           : theme === 'dark'
             ? 'text-zinc-400 hover:bg-[#172033] hover:text-white'
             : 'text-zinc-500 hover:bg-zinc-50 hover:text-[#0f172a]'
-      }`}
+        }`}
     >
       {icon}
       <span>{label}</span>
@@ -6614,11 +6473,10 @@ function NavItem({ icon, label, active, onClick, theme }) {
 
 function GridStat({ color, label, value, icon, theme }) {
   return (
-    <div className={`p-5 rounded-3xl border transition-all duration-300 ease-out transform hover:scale-[1.04] text-left shadow-2xs hover:shadow-lg ${
-      theme === 'dark' 
-        ? 'bg-[#0f1626] border-[#1e293b] text-white hover:shadow-purple-500/5' 
+    <div className={`p-5 rounded-3xl border transition-all duration-300 ease-out transform hover:scale-[1.04] text-left shadow-2xs hover:shadow-lg ${theme === 'dark'
+        ? 'bg-[#0f1626] border-[#1e293b] text-white hover:shadow-purple-500/5'
         : 'bg-white border-zinc-200 text-[#0f172a] hover:shadow-zinc-300/30'
-    }`}>
+      }`}>
       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-normal text-sm ${color} mb-4 shadow-md transition-transform duration-300 hover:rotate-6`}>
         {icon}
       </div>
@@ -6658,9 +6516,8 @@ function OrderRow({ id, date, amount, status, name, gradient, initials, theme })
   };
 
   return (
-    <div className={`flex items-center justify-between border-b py-3 sm:py-3.5 last:border-b-0 gap-2 sm:gap-4 ${
-      theme === 'dark' ? 'border-[#1e293b]/60' : 'border-zinc-100'
-    }`}>
+    <div className={`flex items-center justify-between border-b py-3 sm:py-3.5 last:border-b-0 gap-2 sm:gap-4 ${theme === 'dark' ? 'border-[#1e293b]/60' : 'border-zinc-100'
+      }`}>
       <div className="flex items-center gap-2.5 sm:gap-3.5 text-left min-w-0">
         <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${gradient} flex items-center justify-center font-normal text-[10px] sm:text-[12px] text-white shadow-2xs shrink-0 select-none`}>
           {initials}
@@ -6682,22 +6539,20 @@ function OrderRow({ id, date, amount, status, name, gradient, initials, theme })
 
 function TopProductRow({ name, category, sold, rev, image, theme }) {
   return (
-    <tr className={`transition-colors border-b last:border-b-0 ${
-      theme === 'dark' 
-        ? 'hover:bg-white/2 border-[#1e293b]/60' 
+    <tr className={`transition-colors border-b last:border-b-0 ${theme === 'dark'
+        ? 'hover:bg-white/2 border-[#1e293b]/60'
         : 'hover:bg-zinc-50/50 border-zinc-150'
-    }`}>
+      }`}>
       <td className="py-3.5 font-normal flex items-center gap-3">
         {image ? (
-          <img 
-            src={image} 
-            alt={name} 
-            className="w-8 h-8 rounded-lg object-contain border border-zinc-200 dark:border-[#1e293b] bg-white p-0.5 shadow-3xs" 
+          <img
+            src={image}
+            alt={name}
+            className="w-8 h-8 rounded-lg object-contain border border-zinc-200 dark:border-[#1e293b] bg-white p-0.5 shadow-3xs"
           />
         ) : (
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-3xs ${
-            theme === 'dark' ? 'bg-[#172033]' : 'bg-zinc-100'
-          }`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-3xs ${theme === 'dark' ? 'bg-[#172033]' : 'bg-zinc-100'
+            }`}>
             <Package size={14} className="text-zinc-400" />
           </div>
         )}
@@ -6715,11 +6570,10 @@ function TopProductRow({ name, category, sold, rev, image, theme }) {
 
 function StatCard({ icon, label, value, desc, theme, bgClass }) {
   return (
-    <div className={`p-6 rounded-3xl border transition-all text-left ${
-      theme === 'dark' 
-        ? 'bg-[#0f1626] border-[#1e293b] text-white' 
+    <div className={`p-6 rounded-3xl border transition-all text-left ${theme === 'dark'
+        ? 'bg-[#0f1626] border-[#1e293b] text-white'
         : 'bg-white border-zinc-200 text-[#0f172a] shadow-3xs'
-    }`}>
+      }`}>
       <div className="flex items-center justify-between mb-4">
         <span className="text-[12px] font-normal text-zinc-400 uppercase tracking-wider">{label}</span>
         <div className={`p-2.5 rounded-xl ${bgClass || 'bg-indigo-50 dark:bg-[#172033]'} flex items-center justify-center`}>

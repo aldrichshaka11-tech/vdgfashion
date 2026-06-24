@@ -233,6 +233,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='bulk-upload')
     def bulk_upload(self, request):
+        import os
         import re
         import time
         import requests
@@ -248,6 +249,41 @@ class ProductViewSet(viewsets.ModelViewSet):
             if not img_url:
                 return None
             img_url = img_url.strip()
+            
+            # Try to resolve as local system file path
+            local_path = img_url
+            if local_path.startswith('file:///'):
+                local_path = local_path.replace('file:///', '')
+            elif local_path.startswith('file://'):
+                local_path = local_path.replace('file://', '')
+            
+            local_path = os.path.normpath(local_path)
+            
+            possible_paths = [
+                local_path,
+                os.path.join(settings.BASE_DIR, 'bulk_upload_images', local_path),
+                os.path.join(settings.BASE_DIR, 'bulk_upload_images', os.path.basename(local_path))
+            ]
+            
+            resolved_path = None
+            for p in possible_paths:
+                if os.path.exists(p) and os.path.isfile(p):
+                    resolved_path = p
+                    break
+            
+            if resolved_path:
+                try:
+                    ext = os.path.splitext(resolved_path)[1].lstrip('.').lower() or 'jpg'
+                    with open(resolved_path, 'rb') as f:
+                        file_content = f.read()
+                    filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
+                    path = default_storage.save(filename, ContentFile(file_content))
+                    Product.objects.filter(pk=prod_id).update(**{field_name: path})
+                    return path
+                except Exception as e:
+                    print(f"[IMAGE UPLOADER] Error reading local file {resolved_path}: {e}")
+                return None
+
             if not img_url.startswith('http'):
                 return None
             
@@ -304,28 +340,62 @@ class ProductViewSet(viewsets.ModelViewSet):
 
                 # Check for category image if specified in data
                 cat_image_url = item.get('category_image', '')
-                if cat_image_url and cat_image_url.startswith('http') and not category.image:
-                    drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', cat_image_url)
-                    if not drive_match:
-                        drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', cat_image_url)
-                    if drive_match:
-                        file_id = drive_match.group(1)
-                        cat_image_url = f'https://drive.google.com/uc?export=download&id={file_id}'
-                    try:
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                        }
-                        r = requests.get(cat_image_url, headers=headers, timeout=10, verify=False)
-                        if r.status_code == 200:
-                            ext = 'jpg'
-                            if 'png' in r.headers.get('content-type', ''): ext = 'png'
-                            elif 'webp' in r.headers.get('content-type', ''): ext = 'webp'
+                if cat_image_url and not category.image:
+                    cat_image_url = cat_image_url.strip()
+                    cat_local_path = cat_image_url
+                    if cat_local_path.startswith('file:///'):
+                        cat_local_path = cat_local_path.replace('file:///', '')
+                    elif cat_local_path.startswith('file://'):
+                        cat_local_path = cat_local_path.replace('file://', '')
+                    
+                    cat_local_path = os.path.normpath(cat_local_path)
+                    
+                    possible_cat_paths = [
+                        cat_local_path,
+                        os.path.join(settings.BASE_DIR, 'bulk_upload_images', cat_local_path),
+                        os.path.join(settings.BASE_DIR, 'bulk_upload_images', os.path.basename(cat_local_path))
+                    ]
+                    
+                    resolved_cat_path = None
+                    for p in possible_cat_paths:
+                        if os.path.exists(p) and os.path.isfile(p):
+                            resolved_cat_path = p
+                            break
+                            
+                    if resolved_cat_path:
+                        try:
+                            ext = os.path.splitext(resolved_cat_path)[1].lstrip('.').lower() or 'jpg'
+                            with open(resolved_cat_path, 'rb') as f:
+                                file_content = f.read()
+                            
                             cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
-                            path = default_storage.save(cat_filename, ContentFile(r.content))
+                            path = default_storage.save(cat_filename, ContentFile(file_content))
                             category.image = path
                             category.save()
-                    except Exception:
-                        pass
+                        except Exception as e:
+                            print(f"[CATEGORY IMAGE UPLOADER] Error reading local file {resolved_cat_path}: {e}")
+                    elif cat_image_url.startswith('http'):
+                        drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', cat_image_url)
+                        if not drive_match:
+                            drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', cat_image_url)
+                        if drive_match:
+                            file_id = drive_match.group(1)
+                            cat_image_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+                        try:
+                            headers = {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                            }
+                            r = requests.get(cat_image_url, headers=headers, timeout=10, verify=False)
+                            if r.status_code == 200:
+                                ext = 'jpg'
+                                if 'png' in r.headers.get('content-type', ''): ext = 'png'
+                                elif 'webp' in r.headers.get('content-type', ''): ext = 'webp'
+                                cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                path = default_storage.save(cat_filename, ContentFile(r.content))
+                                category.image = path
+                                category.save()
+                        except Exception:
+                            pass
 
                 # Check if product already exists (by SKU first, then by exact name) to prevent duplicates
                 sku = item.get('sku')

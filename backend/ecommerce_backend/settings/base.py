@@ -222,8 +222,17 @@ JAZZMIN_UI_TWEAKS = {
         "secondary": "btn-secondary",
         "info": "btn-info",
         "warning": "btn-warning",
-        "danger": "btn-danger",
-
         "success": "btn-success"
     }
 }
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env.str('SMTP_HOST', 'smtp.gmail.com')
+EMAIL_PORT = env.int('SMTP_PORT', 2525)
+EMAIL_HOST_USER = env.str('SMTP_USER', '')
+EMAIL_HOST_PASSWORD = env.str('SMTP_PASS', '')
+EMAIL_USE_TLS = env.bool('SMTP_USE_TLS', True)
+EMAIL_USE_SSL = env.bool('SMTP_USE_SSL', False)
+DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
