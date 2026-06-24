@@ -24,7 +24,7 @@ router.register(r'addresses', UserAddressViewSet, basename='address')
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # path('admin/', admin.site.urls),  # Disabled default Django admin panel
     path('api/', include(router.urls)),
     path('api/auth/', include('authentication.urls')),
 ]
