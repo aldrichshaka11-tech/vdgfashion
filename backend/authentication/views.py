@@ -111,31 +111,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # Admin users require OTP verification
-        if user.is_staff or user.is_superuser:
-            otp = f"{random.randint(100000, 999999)}"
-            cache_key = f"otp_login_{user.username}"
-            cache.set(cache_key, otp, timeout=300) # 5 minutes
-
-            print(f"\n========================================\n[SECURITY OTP] Admin Login OTP for {user.username} ({user.email}): {otp}\n========================================\n")
-            
-            try:
-                html_body = f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p><p>This code will expire in 5 minutes.</p>"
-                send_resend_email(
-                    'vdgfashion Admin Portal - Login OTP Verification',
-                    html_body,
-                    user.email,
-                )
-            except Exception as e:
-                print(f"[SECURITY OTP] Failed to send email: {e}")
-
-            return Response({
-                'otp_required': True,
-                'username': user.username,
-                'message': 'Verification code has been sent to your registered email.'
-            }, status=status.HTTP_200_OK)
-
-        # Customer users bypass OTP
+        # All users bypass OTP
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
