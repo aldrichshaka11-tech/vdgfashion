@@ -588,6 +588,18 @@ class MarketingBannerViewSet(viewsets.ModelViewSet):
         context['request'] = self.request
         return context
 
+    @action(detail=False, methods=['POST'], url_path='upload-image')
+    def upload_image(self, request):
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            path = _save_file(file_obj, 'marketing')
+            url = f"{settings.MEDIA_URL}{path}" if not path.startswith('/') else path
+            return Response({'success': True, 'path': path, 'url': url})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.filter(is_active=True).order_by('-created_at')

@@ -494,6 +494,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
   const [mobileBanners, setMobileBanners] = useState([]);
+  const [marketingBanners, setMarketingBanners] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [userPage, setUserPage] = useState(1);
@@ -967,6 +968,12 @@ function DashboardPortal({ onLogout, adminUser }) {
     title: '', subtitle: '', alt: '', link: '', order: 0
   });
 
+  const [marketingBannerForm, setMarketingBannerForm] = useState({
+    title: '', description: '', bg: 'bg-teal-50', buttonText: 'SHOP NOW', categoryRef: '', image: '', imagePreview: '', order: 0
+  });
+
+  const [uploadingMarketingBannerImage, setUploadingMarketingBannerImage] = useState(false);
+
   const [bulkInput, setBulkInput] = useState('');
   const [bulkImages, setBulkImages] = useState({}); // { index: { file, path, preview } }
   const [uploadingBulkImages, setUploadingBulkImages] = useState({});
@@ -1060,6 +1067,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (banRes.ok) setBanners(await banRes.json());
       const mobBanRes = await fetch(`${API_BASE}/api/mobile-banners/`, { cache: 'no-store' });
       if (mobBanRes.ok) setMobileBanners(await mobBanRes.json());
+      const marketBanRes = await fetch(`${API_BASE}/api/marketing-banners/`);
+      if (marketBanRes.ok) setMarketingBanners(await marketBanRes.json());
       const revRes = await fetch(`${API_BASE}/api/reviews/`);
       if (revRes.ok) setReviews(await revRes.json());
       const usersRes = await fetch(`${API_BASE}/api/auth/users/`, { headers: authHeader });
@@ -2036,6 +2045,139 @@ function DashboardPortal({ onLogout, adminUser }) {
     }
   };
 
+  const handleMarketingBannerImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingMarketingBannerImage(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${API_BASE}/api/marketing-banners/upload-image/`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMarketingBannerForm((prev) => ({ ...prev, image: data.path, imagePreview: data.url }));
+        showToast('Marketing banner image uploaded!', 'success');
+      } else {
+        showToast(data.error || 'Failed to upload image.', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error during image upload.', 'warning');
+    } finally {
+      setUploadingMarketingBannerImage(false);
+    }
+  };
+
+  const handleOpenMarketingBannerModal = (mode, item = null) => {
+    setModalType('marketing-banner');
+    setModalMode(mode);
+    setSelectedItem(item);
+    if (mode === 'edit' && item) {
+      setMarketingBannerForm({
+        title: item.title || '',
+        description: item.description || '',
+        bg: item.bg || 'bg-teal-50',
+        buttonText: item.buttonText || 'SHOP NOW',
+        categoryRef: item.categoryRef || '',
+        image: item.image || '',
+        imagePreview: item.img || '',
+        order: item.order || 0
+      });
+    } else {
+      setMarketingBannerForm({
+        title: '',
+        description: '',
+        bg: 'bg-teal-50',
+        buttonText: 'SHOP NOW',
+        categoryRef: '',
+        image: '',
+        imagePreview: '',
+        order: 0
+      });
+    }
+  };
+
+  const handleSaveMarketingBanner = async (e) => {
+    e.preventDefault();
+    const url = modalMode === 'edit'
+      ? `${API_BASE}/api/marketing-banners/${selectedItem.id}/`
+      : `${API_BASE}/api/marketing-banners/`;
+    const method = modalMode === 'edit' ? 'PATCH' : 'POST';
+
+    let imagePath = marketingBannerForm.image || null;
+    if (imagePath && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
+      const mediaIdx = imagePath.indexOf('/media/');
+      if (mediaIdx !== -1) {
+        imagePath = imagePath.substring(mediaIdx + 7);
+      } else {
+        imagePath = null;
+      }
+    }
+
+    const payload = {
+      title: marketingBannerForm.title,
+      description: marketingBannerForm.description,
+      bg: marketingBannerForm.bg,
+      buttonText: marketingBannerForm.buttonText,
+      categoryRef: marketingBannerForm.categoryRef,
+      order: parseInt(marketingBannerForm.order || 0),
+      is_active: true,
+      ...(imagePath ? { image: imagePath } : {})
+    };
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showToast(modalMode === 'edit' ? 'Marketing banner updated successfully' : 'Marketing banner created successfully', 'success');
+        showSuccessPopup(
+          modalMode === 'edit' ? 'Banner Updated!' : 'Banner Added!',
+          modalMode === 'edit'
+            ? `"${marketingBannerForm.title}" has been updated.`
+            : `"${marketingBannerForm.title}" has been created.`
+        );
+        setModalType(null);
+        syncData();
+      } else {
+        try {
+          const errData = await res.json();
+          const errMessage = Object.entries(errData)
+            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+            .join(' | ');
+          showToast(`Error: ${errMessage || 'Error saving banner.'}`, 'warning');
+        } catch (e) {
+          showToast('Error saving banner.', 'warning');
+        }
+      }
+    } catch (err) {
+      showToast('Network error saving marketing banner', 'warning');
+    }
+  };
+
+  const handleDeleteMarketingBanner = async (id) => {
+    if (!confirm('Are you sure you want to delete this marketing banner?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/marketing-banners/${id}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast('Marketing banner deleted successfully', 'success');
+        showDeletePopup('Banner Deleted!', 'The marketing banner has been deleted successfully.');
+        syncData();
+      } else {
+        showToast('Failed to delete marketing banner', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error deleting banner', 'warning');
+    }
+  };
+
   const handleOpenProductModal = (mode, item = null) => {
     setModalType('product');
     setModalMode(mode);
@@ -2669,6 +2811,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           <NavItem theme={theme} icon={<BarChart3 size={20} />} label="Analytics" active={activePage === 'analytics'} onClick={() => handlePageChange('analytics')} />
           <NavItem theme={theme} icon={<Users size={20} />} label="Users" active={activePage === 'users'} onClick={() => handlePageChange('users')} />
           <NavItem theme={theme} icon={<Megaphone size={20} />} label="Index Banners" active={activePage === 'hero-banners'} onClick={() => handlePageChange('hero-banners')} />
+          <NavItem theme={theme} icon={<Megaphone size={20} />} label="Marketing Banners" active={activePage === 'marketing-banners'} onClick={() => handlePageChange('marketing-banners')} />
           <NavItem theme={theme} icon={<Percent size={20} />} label="Offers" active={activePage === 'offers'} onClick={() => handlePageChange('offers')} />
           <NavItem theme={theme} icon={<Settings size={20} />} label="Settings" active={activePage === 'settings'} onClick={() => handlePageChange('settings')} />
 
@@ -4664,6 +4807,101 @@ function DashboardPortal({ onLogout, adminUser }) {
           )}
 
 
+          {activePage === 'marketing-banners' && (
+            <div className="space-y-6 text-left animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Marketing Banners</h2>
+                  <p className="text-xs text-zinc-500 font-normal mt-1">Manage promotional banners displayed on the storefront index page.</p>
+                </div>
+                <button
+                  onClick={() => handleOpenMarketingBannerModal('add')}
+                  className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+                >
+                  <Plus size={14} /> Add Marketing Banner
+                </button>
+              </div>
+
+              {/* Marketing Banners Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {marketingBanners.map((banner) => {
+                  let imgSrc = banner.img || banner.image;
+                  if (imgSrc && imgSrc.startsWith('/media/')) imgSrc = `${API_BASE}${imgSrc}`;
+                  if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) imgSrc = `${API_BASE}/media/${imgSrc}`;
+
+                  return (
+                    <div
+                      key={banner.id}
+                      className={`rounded-3xl border p-5 flex flex-col gap-4 shadow-3xs relative overflow-hidden transition-all ${
+                        theme === 'dark' ? 'border-[#1e293b] bg-[#0f1626]' : 'border-zinc-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-1 text-left min-w-0">
+                          <h3 className={`font-semibold text-base truncate ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{banner.title}</h3>
+                          <p className="text-xs text-zinc-500 line-clamp-2">{banner.description}</p>
+                        </div>
+                        <span className={`text-[10px] font-normal px-2 py-0.5 rounded-md shrink-0 border uppercase tracking-wider ${
+                          banner.bg === 'bg-teal-50' ? 'bg-teal-500/10 text-teal-655 border-teal-500/20' :
+                          banner.bg === 'bg-pink-50' ? 'bg-pink-500/10 text-pink-655 border-pink-500/20' :
+                          'bg-indigo-500/10 text-indigo-550 border-indigo-500/20'
+                        }`}>
+                          {banner.bg}
+                        </span>
+                      </div>
+
+                      <div className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-inner border border-zinc-200/50">
+                        {imgSrc ? (
+                          <img src={imgSrc} alt={banner.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                            <Plus size={24} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+                        <div className="space-y-1">
+                          <p>Button: <strong className="text-zinc-800 dark:text-zinc-350">{banner.buttonText}</strong></p>
+                          <p>Category: <strong className="text-zinc-800 dark:text-zinc-355">{banner.categoryRef}</strong></p>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <p>Order: <strong className="text-zinc-800 dark:text-zinc-350">{banner.order}</strong></p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2.5 mt-2.5">
+                        <button
+                          onClick={() => handleOpenMarketingBannerModal('edit', banner)}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-normal border transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${
+                            theme === 'dark' ? 'bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-350' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                          }`}
+                        >
+                          <Edit size={13} /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMarketingBanner(banner.id)}
+                          className="flex-1 py-2.5 rounded-xl text-xs font-normal bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 text-red-650 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {marketingBanners.length === 0 && (
+                  <div className={`col-span-full py-16 text-center rounded-3xl border border-dashed ${
+                    theme === 'dark' ? 'border-[#1e293b] text-zinc-500' : 'border-zinc-200 text-zinc-400'
+                  }`}>
+                    <Plus size={36} className="mx-auto opacity-40 mb-3" />
+                    <p className="text-sm">No marketing banners configured. Click "Add Marketing Banner" to get started.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+
           {activePage === 'settings' && (
             <div className="space-y-6 text-left animate-fade-in admin-settings-container">
               <div>
@@ -6307,6 +6545,130 @@ function DashboardPortal({ onLogout, adminUser }) {
                       className={`py-3 px-5 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
                     >
                       {modalMode === 'edit' ? 'Save Changes' : 'Create Account'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {modalType === 'marketing-banner' && (
+                <form onSubmit={handleSaveMarketingBanner} className="space-y-4 text-left text-sm">
+                  <div className="space-y-2">
+                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                      Title <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={marketingBannerForm.title}
+                      onChange={(e) => setMarketingBannerForm({ ...marketingBannerForm, title: e.target.value })}
+                      placeholder="e.g. Playful Montessori Wooden Toys"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                      Description <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={marketingBannerForm.description}
+                      onChange={(e) => setMarketingBannerForm({ ...marketingBannerForm, description: e.target.value })}
+                      placeholder="e.g. Inspire your child's imagination and early development..."
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Button Text</label>
+                      <input
+                        type="text"
+                        value={marketingBannerForm.buttonText}
+                        onChange={(e) => setMarketingBannerForm({ ...marketingBannerForm, buttonText: e.target.value })}
+                        placeholder="e.g. SHOP NOW"
+                        className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Category Link (Category Ref)</label>
+                      <input
+                        type="text"
+                        value={marketingBannerForm.categoryRef}
+                        onChange={(e) => setMarketingBannerForm({ ...marketingBannerForm, categoryRef: e.target.value })}
+                        placeholder="e.g. Toys"
+                        className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Tailwind Bg Class</label>
+                      <input
+                        type="text"
+                        value={marketingBannerForm.bg}
+                        onChange={(e) => setMarketingBannerForm({ ...marketingBannerForm, bg: e.target.value })}
+                        placeholder="e.g. bg-teal-50"
+                        className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Sort Order</label>
+                      <input
+                        type="number"
+                        value={marketingBannerForm.order}
+                        onChange={(e) => setMarketingBannerForm({ ...marketingBannerForm, order: parseInt(e.target.value || 0) })}
+                        placeholder="e.g. 1"
+                        className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={`text-[14px] font-semibold ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>Banner Image</label>
+                    <div className="flex items-center gap-4">
+                      {marketingBannerForm.imagePreview ? (
+                        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border bg-white p-1">
+                          <img src={marketingBannerForm.imagePreview} alt="Preview" className="w-full h-full object-contain" />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-zinc-150 flex items-center justify-center shrink-0 border text-zinc-400">
+                          <Plus size={20} />
+                        </div>
+                      )}
+                      <div className="flex-1 relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleMarketingBannerImageUpload}
+                          disabled={uploadingMarketingBannerImage}
+                          className="w-full text-xs file:mr-3 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-purple-500/10 dark:file:text-purple-400 cursor-pointer"
+                        />
+                        {uploadingMarketingBannerImage && (
+                          <div className="absolute inset-y-0 right-3 flex items-center">
+                            <Loader2 className="animate-spin text-purple-600 h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className={`py-3 px-5 border rounded-xl font-normal cursor-pointer text-xs transition-all active:scale-95 ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700"}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploadingMarketingBannerImage}
+                      className={`py-3 px-5 text-white font-normal rounded-xl cursor-pointer text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
+                    >
+                      {modalMode === 'edit' ? 'Save Changes' : 'Create Banner'}
                     </button>
                   </div>
                 </form>
