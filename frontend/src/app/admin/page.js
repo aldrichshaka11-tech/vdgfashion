@@ -1281,7 +1281,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     e.preventDefault();
     const url = modalMode === 'edit'
       ? `${API_BASE}/api/auth/users/${selectedItem.id}/`
-      : '${API_BASE}/api/auth/register/';
+      : `${API_BASE}/api/auth/register/`;
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
@@ -1448,7 +1448,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     }
     const url = modalMode === 'edit'
       ? `${API_BASE}/api/categories/${selectedItem.id}/`
-      : '${API_BASE}/api/categories/';
+      : `${API_BASE}/api/categories/`;
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
