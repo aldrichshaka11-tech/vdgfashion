@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
+import razorpay
 from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 from .serializers import (
     CategorySerializer, ProductSerializer, OrderCreateSerializer,
@@ -518,6 +519,54 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order = serializer.save()
             return Response({'success': True, 'order_id': order.order_id, 'message': 'Order placed successfully!'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['POST'], url_path='create-razorpay-order')
+    def create_razorpay_order(self, request):
+        amount = request.data.get('amount')
+        if not amount:
+            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            # Create order (amount must be in paise)
+            payment = client.order.create({
+                "amount": int(float(amount) * 100),
+                "currency": "INR",
+                "payment_capture": "1"
+            })
+            return Response({
+                'success': True,
+                'order_id': payment['id'],
+                'amount': payment['amount'],
+                'currency': payment['currency'],
+                'key_id': settings.RAZORPAY_KEY_ID
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['POST'], url_path='verify-razorpay-payment')
+    def verify_razorpay_payment(self, request):
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_signature = request.data.get('razorpay_signature')
+        
+        if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
+            return Response({'error': 'Missing payment verification details'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+            # verify the signature
+            client.utility.verify_payment_signature(params_dict)
+            return Response({'success': True, 'message': 'Payment verified successfully'})
+        except razorpay.errors.SignatureVerificationError:
+            return Response({'error': 'Invalid payment signature'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PaymentViewSet(viewsets.ModelViewSet):

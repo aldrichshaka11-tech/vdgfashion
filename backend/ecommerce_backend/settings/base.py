@@ -236,3 +236,6 @@ EMAIL_USE_TLS = env.bool('SMTP_USE_TLS', True)
 EMAIL_USE_SSL = env.bool('SMTP_USE_SSL', False)
 DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
+# Razorpay Configuration
+RAZORPAY_KEY_ID = env.str('RAZORPAY_KEY_ID', '')
+RAZORPAY_KEY_SECRET = env.str('RAZORPAY_KEY_SECRET', '')

@@ -40,9 +40,7 @@ export default function CheckoutPage() {
     pinCode: ''
   });
 
-  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'upi' | 'cod'
-  const [cardData, setCardData] = useState({ number: '', expiry: '', cvv: '', name: '' });
-  const [upiId, setUpiId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' | 'cod'
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStep, setProcessStep] = useState('');
 
@@ -120,8 +118,8 @@ export default function CheckoutPage() {
 
   const handleAddressSave = async (e) => {
     e.preventDefault();
-    if (!addressForm.name || !addressForm.phone || !addressForm.street || !addressForm.city || !addressForm.pinCode) {
-      alert('Please fill out all address fields.');
+    if (!addressForm.name || !addressForm.phone || !addressForm.street || !addressForm.city || !addressForm.state || !addressForm.pinCode) {
+      alert('Please fill out all address fields, including state.');
       return;
     }
 
@@ -173,7 +171,8 @@ export default function CheckoutPage() {
         }
         setIsAddressModalOpen(false);
       } else {
-        alert('Failed to save address. Please check inputs.');
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Failed to save address: ${JSON.stringify(errorData)}`);
       }
     } catch (err) {
       console.error(err);
@@ -254,45 +253,47 @@ export default function CheckoutPage() {
     }
   }, [cart, isProcessing]);
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCardChange = (e) => {
-    const { name, value } = e.target;
-    setCardData(prev => ({ ...prev, [name]: value }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone || !formData.street || !formData.city || !formData.pinCode) {
-      alert('Please fill out all required shipping fields.');
+    if (!formData.name || !formData.phone || !formData.street || !formData.city || !formData.state || !formData.pinCode) {
+      alert('Please fill out all required shipping fields, including state.');
       return;
     }
 
     setIsProcessing(true);
     setProcessStep('Verifying address parameters...');
 
-    // Auto-save address if user checked the box and has entered a new address
     if (user && user.token && selectedAddressId === 'new' && saveAddressForFuture) {
       setProcessStep('Saving new address to account...');
       try {
         const addressPayload = {
+          label: 'Saved Address',
           recipient_name: formData.name,
           phone: formData.phone,
           street_address: formData.street,
           city: formData.city,
-          state: formData.state || '',
+          state: formData.state,
           pin_code: formData.pinCode,
           is_default: savedAddresses.length === 0
         };
         await fetch(`${API_BASE}/api/addresses/`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
           body: JSON.stringify(addressPayload)
         });
       } catch (err) {
@@ -310,7 +311,7 @@ export default function CheckoutPage() {
       city: formData.city,
       state: formData.state || '',
       pin_code: formData.pinCode,
-      payment_method: paymentMethod,
+      payment_method: paymentMethod === 'razorpay' ? 'card' : paymentMethod,
       subtotal: cartSubtotal,
       discount_amount: couponDiscount,
       shipping_fee: shippingFee,
@@ -323,15 +324,13 @@ export default function CheckoutPage() {
       }))
     };
 
-    setTimeout(() => {
+    const finalizeOrder = (finalOrderId) => {
       setProcessStep('Saving order details in secure database...');
-      
       const headers = { 'Content-Type': 'application/json' };
-      if (user && user.token) {
-        headers['Authorization'] = `Bearer ${user.token}`;
-      }
+      if (user && user.token) headers['Authorization'] = `Bearer ${user.token}`;
 
-      // Perform actual fetch to Django API
+      orderPayload.order_id = finalOrderId || generatedOrderId;
+
       fetch(`${API_BASE}/api/orders/`, {
         method: 'POST',
         headers: headers,
@@ -341,46 +340,113 @@ export default function CheckoutPage() {
         if (!res.ok) {
           if (res.status === 401) {
             logoutUser();
-            throw new Error('Your session has expired. You have been logged out. Please try placing the order again to checkout as a guest, or log in again.');
+            throw new Error('Session expired.');
           }
-          let errorDetail = `Status ${res.status}`;
-          try {
-            const errData = await res.json();
-            errorDetail = typeof errData === 'object' ? JSON.stringify(errData) : errData;
-          } catch {}
-          throw new Error(errorDetail);
+          throw new Error('Order creation failed');
         }
         return res.json();
       })
       .then(data => {
-        setProcessStep('Authenticating SSL encrypted transaction...');
-        setTimeout(() => {
-          setProcessStep('Confirming final order details...');
-          setTimeout(() => {
-            const orderDetails = {
-              orderId: data.order_id || generatedOrderId,
-              customerName: formData.name,
-              itemsCount: cartCount,
-              totalAmount: cartTotal,
-              shippingAddress: `${formData.street}, ${formData.city}, ${formData.state} - ${formData.pinCode}`,
-              paymentMethod: paymentMethod === 'card' ? 'Credit Card' : paymentMethod === 'upi' ? 'UPI Transfer' : 'Cash on Delivery',
-              date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-            };
-            
-            sessionStorage.setItem('vdgfashion_last_order', JSON.stringify(orderDetails));
-            clearCart();
-            setIsProcessing(false);
-            router.push('/order-success');
-          }, 1000);
-        }, 1000);
+        const orderDetails = {
+          orderId: data.order_id || finalOrderId || generatedOrderId,
+          customerName: formData.name,
+          itemsCount: cartCount,
+          totalAmount: cartTotal,
+          shippingAddress: `${formData.street}, ${formData.city}, ${formData.state} - ${formData.pinCode}`,
+          paymentMethod: paymentMethod === 'razorpay' ? 'Razorpay Secure' : 'Cash on Delivery',
+          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+        };
+        sessionStorage.setItem('vdgfashion_last_order', JSON.stringify(orderDetails));
+        clearCart();
+        setIsProcessing(false);
+        router.push('/order-success');
       })
       .catch(err => {
-        console.error('Order placement failed:', err);
         setIsProcessing(false);
-        setProcessStep('');
-        alert(`⚠️ Order could not be placed. Error: ${err.message}`);
+        alert('Order placement failed. ' + err.message);
       });
-    }, 1000);
+    };
+
+    if (paymentMethod === 'razorpay') {
+      setProcessStep('Initializing Secure Payment...');
+      const res = await loadRazorpayScript();
+      if (!res) {
+        alert('Razorpay SDK failed to load. Are you online?');
+        setIsProcessing(false);
+        return;
+      }
+
+      try {
+        const result = await fetch(`${API_BASE}/api/orders/create-razorpay-order/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: cartTotal })
+        });
+        const data = await result.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to create order');
+        }
+
+        const options = {
+          key: data.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_HERE', 
+          amount: data.amount,
+          currency: data.currency,
+          name: 'vdgfashion',
+          description: 'Order Payment',
+          order_id: data.order_id,
+          handler: async function (response) {
+            setProcessStep('Verifying Payment...');
+            setIsProcessing(true); // show loader again after modal closes
+            try {
+              const verifyRes = await fetch(`${API_BASE}/api/orders/verify-razorpay-payment/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature
+                })
+              });
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                finalizeOrder(data.order_id);
+              } else {
+                alert('Payment Verification Failed!');
+                setIsProcessing(false);
+                router.push('/payment-failure');
+              }
+            } catch (err) {
+              alert('Payment Verification Error: ' + err.message);
+              setIsProcessing(false);
+            }
+          },
+          prefill: {
+            name: formData.name,
+            email: formData.email,
+            contact: formData.phone
+          },
+          theme: {
+            color: '#5c51db'
+          }
+        };
+
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.on('payment.failed', function (response) {
+          alert('Payment failed! Reason: ' + response.error.description);
+          setIsProcessing(false);
+        });
+        
+        // Stop loader when modal opens
+        setIsProcessing(false);
+        paymentObject.open();
+      } catch (err) {
+        alert('Failed to initialize payment: ' + err.message);
+        setIsProcessing(false);
+      }
+    } else {
+      finalizeOrder(generatedOrderId);
+    }
   };
 
   const discountValue = couponDiscount;
@@ -677,42 +743,23 @@ export default function CheckoutPage() {
                   <div className="bg-white border border-zinc-150 rounded-[2rem] p-6 sm:p-8 shadow-xs space-y-5" data-aos="fade-up" data-aos-delay="50">
                     <h3 className="text-xl sm:text-2xl font-black text-zinc-950 tracking-tight">2. Payment Method</h3>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {/* Card Selection */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Razorpay Selection */}
                       <div 
-                        onClick={() => setPaymentMethod('card')}
+                        onClick={() => setPaymentMethod('razorpay')}
                         className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 ${
-                          paymentMethod === 'card' ? 'border-[#5c51db] bg-indigo-50/10' : 'border-zinc-200 hover:border-zinc-300 bg-white'
+                          paymentMethod === 'razorpay' ? 'border-[#5c51db] bg-indigo-50/10' : 'border-zinc-200 hover:border-zinc-300 bg-white'
                         }`}
                       >
                         <div className="flex justify-between items-center">
-                          <CreditCard className={`h-5 w-5 ${paymentMethod === 'card' ? 'text-[#5c51db]' : 'text-zinc-400'}`} />
-                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center ${paymentMethod === 'card' ? 'border-[#5c51db] bg-[#5c51db]' : 'border-zinc-300'}`}>
-                            {paymentMethod === 'card' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                          <CreditCard className={`h-5 w-5 ${paymentMethod === 'razorpay' ? 'text-[#5c51db]' : 'text-zinc-400'}`} />
+                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center ${paymentMethod === 'razorpay' ? 'border-[#5c51db] bg-[#5c51db]' : 'border-zinc-300'}`}>
+                            {paymentMethod === 'razorpay' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                           </div>
                         </div>
                         <div>
-                          <p className="text-sm sm:text-base font-semibold text-zinc-900 leading-tight">Card Payment</p>
-                          <p className="text-xs text-zinc-500 font-normal mt-1 leading-tight">Visa, Mastercard, AMEX</p>
-                        </div>
-                      </div>
-
-                      {/* UPI Selection */}
-                      <div 
-                        onClick={() => setPaymentMethod('upi')}
-                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 ${
-                          paymentMethod === 'upi' ? 'border-[#5c51db] bg-indigo-50/10' : 'border-zinc-200 hover:border-zinc-300 bg-white'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <Landmark className={`h-5 w-5 ${paymentMethod === 'upi' ? 'text-[#5c51db]' : 'text-zinc-400'}`} />
-                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center ${paymentMethod === 'upi' ? 'border-[#5c51db] bg-[#5c51db]' : 'border-zinc-300'}`}>
-                            {paymentMethod === 'upi' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-sm sm:text-base font-semibold text-zinc-900 leading-tight">UPI Transfer</p>
-                          <p className="text-xs text-zinc-500 font-normal mt-1 leading-tight">Google Pay, PhonePe, Paytm</p>
+                          <p className="text-sm sm:text-base font-semibold text-zinc-900 leading-tight">Pay Online (Razorpay)</p>
+                          <p className="text-xs text-zinc-500 font-normal mt-1 leading-tight">Cards, UPI, Netbanking</p>
                         </div>
                       </div>
 
@@ -735,79 +782,6 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Conditional Input Fields */}
-                    {paymentMethod === 'card' && (
-                      <div className="p-5 bg-zinc-50/50 border border-zinc-150 rounded-2xl space-y-4 animate-fade-in">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-zinc-500">Card Number</label>
-                            <input
-                              type="text"
-                              name="number"
-                              value={cardData.number}
-                              onChange={handleCardChange}
-                              placeholder="4111 2222 3333 4444"
-                              className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-normal focus:outline-none focus:ring-1 focus:ring-[#5c51db]"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-zinc-500">Cardholder Name</label>
-                            <input
-                              type="text"
-                              name="name"
-                              value={cardData.name}
-                              onChange={handleCardChange}
-                              placeholder="Johnathan Doe"
-                              className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-normal focus:outline-none focus:ring-1 focus:ring-[#5c51db]"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-zinc-500">Expiry Date</label>
-                            <input
-                              type="text"
-                              name="expiry"
-                              value={cardData.expiry}
-                              onChange={handleCardChange}
-                              placeholder="MM/YY"
-                              className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-normal focus:outline-none focus:ring-1 focus:ring-[#5c51db]"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-zinc-500">CVV</label>
-                            <input
-                              type="password"
-                              name="cvv"
-                              value={cardData.cvv}
-                              onChange={handleCardChange}
-                              placeholder="123"
-                              maxLength="3"
-                              className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-normal focus:outline-none focus:ring-1 focus:ring-[#5c51db]"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {paymentMethod === 'upi' && (
-                      <div className="p-5 bg-zinc-50/50 border border-zinc-150 rounded-2xl space-y-3 animate-fade-in">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-zinc-500">Enter UPI ID *</label>
-                          <input
-                            type="text"
-                            value={upiId}
-                            onChange={(e) => setUpiId(e.target.value)}
-                            placeholder="johndoe@okaxis, john@ybl"
-                            className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-normal focus:outline-none focus:ring-1 focus:ring-[#5c51db]"
-                          />
-                        </div>
-                        <p className="text-[10px] text-zinc-400 font-normal leading-normal">
-                          * A payment request will be sent to your UPI app. Please approve within 5 minutes.
-                        </p>
-                      </div>
-                    )}
 
                     {paymentMethod === 'cod' && (
                       <div className="p-5 bg-emerald-50/30 border border-emerald-100 rounded-2xl animate-fade-in flex items-start gap-2.5">
