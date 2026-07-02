@@ -1775,7 +1775,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         setBulkInput('');
         syncData();
       } else {
-        showToast(`All imports failed. Failures: ${failedCount}`, 'warning');
+        const errorDetail = errors.length > 0 ? JSON.stringify(errors[0].errors || errors[0].error) : 'Unknown error';
+        showToast(`All imports failed. Reason: ${errorDetail}`, 'warning');
       }
     } catch (err) {
       showToast(err.message || 'Invalid structure. Please check input formatting.', 'warning');
