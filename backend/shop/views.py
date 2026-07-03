@@ -398,14 +398,13 @@ class ProductViewSet(viewsets.ModelViewSet):
                         except Exception:
                             pass
 
-                # Check if product already exists (by SKU first, then by exact name) to prevent duplicates
+                # Check if product already exists by SKU to prevent duplicates. 
+                # (Product name can be identical across different products, so we only check SKU)
                 sku = item.get('sku')
                 name = item.get('name')
                 existing_product = None
                 if sku:
                     existing_product = Product.objects.filter(sku=sku, is_active=True).first()
-                if not existing_product and name:
-                    existing_product = Product.objects.filter(name__iexact=name.strip(), is_active=True).first()
 
                 serializer_data = {
                     'name': name.strip() if name else '',
