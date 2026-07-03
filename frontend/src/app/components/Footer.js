@@ -257,11 +257,19 @@ export default function Footer() {
 
         </div>
 
-        {/* Bottom Bar: Copyright notice only */}
-        <div className="pt-6 border-t border-zinc-200/60 flex items-center justify-center w-full">
+        {/* Bottom Bar: Copyright notice and developer link */}
+        <div className="pt-6 border-t border-zinc-200/60 flex flex-col sm:flex-row items-center justify-between w-full gap-4">
           <span className="text-[15.5px] font-normal text-zinc-500">
-            &copy; 2026 vdgfashion. All rights reserved.
+            &copy; {new Date().getFullYear()} vdgfashion. All rights reserved.
           </span>
+          <a 
+            href="https://kairatechnologies.in/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-[14.5px] font-medium text-zinc-500 hover:text-[#e11d48] transition-colors"
+          >
+            Made with Kaira Technologies
+          </a>
         </div>
 
       </div>
