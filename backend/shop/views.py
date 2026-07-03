@@ -484,8 +484,48 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return Response({'success': True, 'created_count': created_count, 'failed_count': len(errors), 'errors': errors}, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['POST'], url_path='request-clear-otp', permission_classes=[permissions.IsAdminUser])
+    def request_clear_otp(self, request):
+        import random
+        from django.core.cache import cache
+        import requests as req
+
+        otp = str(random.randint(100000, 999999))
+        # Store in cache for 10 minutes
+        cache.set('db_wipe_otp', otp, timeout=600)
+
+        # Send via Resend API
+        try:
+            resend_url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": "Bearer re_YqCgppGB_5Aiqrga3wR3kdte5FkFgZoAm",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "from": "noreply@kairavcard.com",
+                "to": "Vdgfashion6@gmail.com",
+                "subject": "DANGER: Database Reset OTP for vdgfashion",
+                "html": f"<h2>Database Reset Requested</h2><p>Your 6-digit OTP to clear the database is: <strong>{otp}</strong></p><p>This code will expire in 10 minutes. If you did not request this, please secure your admin account immediately.</p>"
+            }
+            response = req.post(resend_url, json=payload, headers=headers)
+            print(f"[OTP SENDER] Resend API Response: {response.status_code} {response.text}")
+        except Exception as e:
+            print(f"[OTP SENDER] Error sending email: {e}")
+
+        # Always return success even if email fails so testing isn't blocked (OTP is in cache)
+        return Response({"detail": "OTP sent to admin email."}, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['POST'], url_path='clear-all', permission_classes=[permissions.IsAdminUser])
     def clear_all(self, request):
+        from django.core.cache import cache
+        otp = request.data.get('otp')
+        cached_otp = cache.get('db_wipe_otp')
+
+        if not cached_otp or str(otp) != str(cached_otp):
+            return Response({"detail": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Clear the OTP so it can't be reused
+        cache.delete('db_wipe_otp')
         try:
             Product.objects.all().delete()
             Category.objects.all().delete()

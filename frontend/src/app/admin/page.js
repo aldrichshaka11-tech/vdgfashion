@@ -520,6 +520,8 @@ function DashboardPortal({ onLogout, adminUser }) {
   // Store context settings and forms
   const { settings, saveStoreSettings } = useStore();
   const [settingsTab, setSettingsTab] = useState('general');
+  const [showWipeOtpModal, setShowWipeOtpModal] = useState(false);
+  const [wipeOtp, setWipeOtp] = useState('');
   const [settingsForm, setSettingsForm] = useState({
     contactPhone: '',
     contactEmail: '',
@@ -5233,11 +5235,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <button
                         type="button"
                         onClick={async () => {
-                          if (!confirm('WARNING: This will completely erase all products, categories, orders, and banners from the database! Are you sure?')) return;
+                          if (!confirm('WARNING: This will trigger a database reset OTP. Are you sure?')) return;
                           setLoadingData(true);
                           try {
                             const token = sessionStorage.getItem('access_token');
-                            const res = await fetch(`${API_BASE}/api/products/clear-all/`, {
+                            const res = await fetch(`${API_BASE}/api/products/request-clear-otp/`, {
                               method: 'POST',
                               headers: {
                                 'Content-Type': 'application/json',
@@ -5245,13 +5247,13 @@ function DashboardPortal({ onLogout, adminUser }) {
                               }
                             });
                             if (res.ok) {
-                              showToast('Database wiped clean!', 'success');
-                              syncData();
+                              showToast('OTP sent to admin email!', 'success');
+                              setShowWipeOtpModal(true);
                             } else {
-                              showToast('Failed to clear database.', 'warning');
+                              showToast('Failed to request OTP.', 'warning');
                             }
                           } catch (e) {
-                            showToast('Network error clearing database.', 'warning');
+                            showToast('Network error requesting OTP.', 'warning');
                           } finally {
                             setLoadingData(false);
                           }
@@ -5260,6 +5262,73 @@ function DashboardPortal({ onLogout, adminUser }) {
                       >
                         Reset / Clear Database
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Wipe OTP Modal */}
+                {showWipeOtpModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className={`w-full max-w-sm rounded-2xl shadow-xl overflow-hidden ${theme === 'dark' ? 'bg-[#0f172a] border border-[#1e293b]' : 'bg-white'}`}>
+                      <div className="p-6">
+                        <h3 className={`text-lg font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Verify Database Wipe</h3>
+                        <p className={`text-xs mb-4 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                          A 6-digit OTP has been sent to Vdgfashion6@gmail.com. It expires in 10 minutes.
+                        </p>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={wipeOtp}
+                          onChange={(e) => setWipeOtp(e.target.value)}
+                          placeholder="Enter 6-digit OTP"
+                          className={`w-full h-10 px-3 rounded-lg text-sm border focus:outline-none focus:ring-1 focus:ring-rose-500 text-center tracking-widest font-mono mb-4 ${theme === 'dark' ? 'bg-[#1e293b] border-[#334155] text-white' : 'bg-zinc-50 border-zinc-200'}`}
+                        />
+                        <div className="flex gap-3 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowWipeOtpModal(false);
+                              setWipeOtp('');
+                            }}
+                            className={`flex-1 py-2 rounded-xl text-xs font-medium border ${theme === 'dark' ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-zinc-200 hover:bg-zinc-100 text-zinc-700'}`}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (wipeOtp.length !== 6) return showToast('Enter 6-digit OTP', 'warning');
+                              setLoadingData(true);
+                              try {
+                                const token = sessionStorage.getItem('access_token');
+                                const res = await fetch(`${API_BASE}/api/products/clear-all/`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                                  },
+                                  body: JSON.stringify({ otp: wipeOtp })
+                                });
+                                if (res.ok) {
+                                  showToast('Database wiped clean!', 'success');
+                                  setShowWipeOtpModal(false);
+                                  setWipeOtp('');
+                                  syncData();
+                                } else {
+                                  showToast('Invalid or expired OTP.', 'error');
+                                }
+                              } catch (e) {
+                                showToast('Network error clearing database.', 'warning');
+                              } finally {
+                                setLoadingData(false);
+                              }
+                            }}
+                            className="flex-1 py-2 rounded-xl text-xs font-medium bg-red-600 hover:bg-red-500 text-white"
+                          >
+                            Confirm Erase
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
