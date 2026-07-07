@@ -6374,30 +6374,6 @@ function DashboardPortal({ onLogout, adminUser }) {
               )}
               {modalType === 'bulk' && (
                 <form onSubmit={handleBulkUpload} className="space-y-4 text-xs font-normal text-left">
-                  {/* Mode Switcher */}
-                  <div className="flex rounded-xl p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-800">
-                    <button
-                      type="button"
-                      onClick={() => { setBulkMode('file'); setBulkInput(''); }}
-                      className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${bulkMode === 'file'
-                          ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
-                          : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
-                        }`}
-                    >
-                      CSV / Excel File Upload
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setBulkMode('paste'); setBulkInput(''); }}
-                      className={`flex-1 py-2 rounded-lg text-center text-xs font-semibold cursor-pointer transition-all ${bulkMode === 'paste'
-                          ? 'bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-black/5'
-                          : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'
-                        }`}
-                    >
-                      Copy & Paste
-                    </button>
-                  </div>
-
                   <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
                     <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">Spreadsheet Guidelines:</h4>
                     <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
@@ -6406,50 +6382,37 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </ol>
                   </div>
 
-                  {bulkMode === 'file' ? (
-                    <div className="space-y-1">
-                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Upload TSV / CSV File</label>
-                      <div
-                        onDragEnter={handleDrag}
-                        onDragOver={handleDrag}
-                        onDragLeave={handleDrag}
-                        onDrop={handleDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-5 h-36 text-center cursor-pointer transition-all ${dragActive
-                            ? 'border-indigo-500 bg-indigo-500/5'
-                            : theme === 'dark'
-                              ? 'border-[#1e293b] bg-[#172033] hover:border-indigo-500/40 hover:bg-[#202736]'
-                              : 'border-zinc-200 bg-white hover:border-indigo-500/40 hover:bg-zinc-50 shadow-3xs'
-                          }`}
-                      >
-                        <Upload className="h-6 w-6 text-indigo-500 mb-2 animate-bounce" />
-                        <span className="text-[10px] font-bold">
-                          {bulkInput ? 'File Loaded Successfully' : 'Drag & Drop file here'}
-                        </span>
-                        <span className="text-[8.5px] text-zinc-400 mt-1 max-w-[250px]">
-                          {bulkInput ? 'Click to browse or drop another file to replace' : 'Supports .csv, .tsv, .txt files or click to browse'}
-                        </span>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleFileChange}
-                          accept=".csv,.tsv,.txt"
-                          className="hidden"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-550'}>Paste Copied Cells Here</label>
-                      <textarea
-                        value={bulkInput}
-                        onChange={(e) => setBulkInput(e.target.value)}
-                        placeholder="Name&#9;SKU&#9;Price&#9;Category&#9;Stock&#9;Image&#10;Blue Denim Jeans&#9;JEAN-01&#9;999&#9;Apparel&#9;45&#9;https://drive.google.com/file/d/xxxx/view"
-                        className={`w-full h-36 p-3 rounded-2xl border transition-all focus:outline-none resize-none font-mono text-[9px] ${theme === 'dark' ? 'bg-[#172033] text-white border-[#1e293b] focus:border-indigo-500' : 'bg-white text-[#0f172a] border-zinc-200 focus:border-indigo-500 font-normal'
-                          }`}
+                  <div className="space-y-1 mt-4">
+                    <label className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>Upload TSV / CSV File</label>
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-5 h-36 text-center cursor-pointer transition-all ${dragActive
+                          ? 'border-indigo-500 bg-indigo-500/5'
+                          : theme === 'dark'
+                            ? 'border-[#1e293b] bg-[#172033] hover:border-indigo-500/40 hover:bg-[#202736]'
+                            : 'border-zinc-200 bg-white hover:border-indigo-500/40 hover:bg-zinc-50 shadow-3xs'
+                        }`}
+                    >
+                      <Upload className="h-6 w-6 text-indigo-500 mb-2 animate-bounce" />
+                      <span className="text-[10px] font-bold">
+                        {bulkInput ? 'File Loaded Successfully' : 'Drag & Drop file here'}
+                      </span>
+                      <span className="text-[8.5px] text-zinc-400 mt-1 max-w-[250px]">
+                        {bulkInput ? 'Click to browse or drop another file to replace' : 'Supports .csv, .tsv, .txt files or click to browse'}
+                      </span>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".csv,.tsv,.txt"
+                        className="hidden"
                       />
                     </div>
-                  )}
+                  </div>
 
                   {parsedBulkPreview.length > 0 && (
                     <div className="space-y-1.5">
