@@ -292,9 +292,38 @@ class ProductViewSet(viewsets.ModelViewSet):
             drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', img_url)
             if not drive_match:
                 drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', img_url)
+            
             if drive_match:
                 file_id = drive_match.group(1)
-                img_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+                try:
+                    session = requests.Session()
+                    url = "https://docs.google.com/uc?export=download"
+                    r = session.get(url, params={'id': file_id}, verify=False)
+                    
+                    token = None
+                    for key, value in r.cookies.items():
+                        if key.startswith('download_warning'):
+                            token = value
+                            break
+                    if token:
+                        r = session.get(url, params={'id': file_id, 'confirm': token}, verify=False)
+                    
+                    content_type = r.headers.get('content-type', '').lower()
+                    if r.status_code == 200 and 'image' in content_type:
+                        ext = 'jpg'
+                        if 'png' in content_type: ext = 'png'
+                        elif 'webp' in content_type: ext = 'webp'
+                        elif 'jpeg' in content_type: ext = 'jpeg'
+                        
+                        filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
+                        path = default_storage.save(filename, ContentFile(r.content))
+                        Product.objects.filter(pk=prod_id).update(**{field_name: path})
+                        return path
+                    else:
+                        print(f"[IMAGE UPLOADER] Failed to download Drive image {file_id}: status={r.status_code}, type={content_type}")
+                except Exception as e:
+                    print(f"[IMAGE UPLOADER] Error downloading Drive image {file_id}: {e}")
+                return None
             
             # Dropbox URL helper
             elif 'dropbox.com' in img_url:
@@ -309,16 +338,17 @@ class ProductViewSet(viewsets.ModelViewSet):
                 }
                 r = requests.get(img_url, headers=headers, timeout=15, verify=False)
                 if r.status_code == 200:
-                    ext = 'jpg'
                     content_type = r.headers.get('content-type', '').lower()
-                    if 'png' in content_type: ext = 'png'
-                    elif 'webp' in content_type: ext = 'webp'
-                    elif 'jpeg' in content_type: ext = 'jpeg'
-                    
-                    filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
-                    path = default_storage.save(filename, ContentFile(r.content))
-                    Product.objects.filter(pk=prod_id).update(**{field_name: path})
-                    return path
+                    if 'image' in content_type:
+                        ext = 'jpg'
+                        if 'png' in content_type: ext = 'png'
+                        elif 'webp' in content_type: ext = 'webp'
+                        elif 'jpeg' in content_type: ext = 'jpeg'
+                        
+                        filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
+                        path = default_storage.save(filename, ContentFile(r.content))
+                        Product.objects.filter(pk=prod_id).update(**{field_name: path})
+                        return path
             except Exception as e:
                 print(f"[IMAGE UPLOADER] Error downloading {img_url}: {e}")
             return None
@@ -379,24 +409,52 @@ class ProductViewSet(viewsets.ModelViewSet):
                         drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', cat_image_url)
                         if not drive_match:
                             drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', cat_image_url)
+                            
                         if drive_match:
                             file_id = drive_match.group(1)
-                            cat_image_url = f'https://drive.google.com/uc?export=download&id={file_id}'
-                        try:
-                            headers = {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                            }
-                            r = requests.get(cat_image_url, headers=headers, timeout=10, verify=False)
-                            if r.status_code == 200:
-                                ext = 'jpg'
-                                if 'png' in r.headers.get('content-type', ''): ext = 'png'
-                                elif 'webp' in r.headers.get('content-type', ''): ext = 'webp'
-                                cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
-                                path = default_storage.save(cat_filename, ContentFile(r.content))
-                                category.image = path
-                                category.save()
-                        except Exception:
-                            pass
+                            try:
+                                session = requests.Session()
+                                url = "https://docs.google.com/uc?export=download"
+                                r = session.get(url, params={'id': file_id}, verify=False)
+                                
+                                token = None
+                                for key, value in r.cookies.items():
+                                    if key.startswith('download_warning'):
+                                        token = value
+                                        break
+                                if token:
+                                    r = session.get(url, params={'id': file_id, 'confirm': token}, verify=False)
+                                
+                                content_type = r.headers.get('content-type', '').lower()
+                                if r.status_code == 200 and 'image' in content_type:
+                                    ext = 'jpg'
+                                    if 'png' in content_type: ext = 'png'
+                                    elif 'webp' in content_type: ext = 'webp'
+                                    elif 'jpeg' in content_type: ext = 'jpeg'
+                                    cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                    path = default_storage.save(cat_filename, ContentFile(r.content))
+                                    category.image = path
+                                    category.save()
+                            except Exception:
+                                pass
+                        else:
+                            try:
+                                headers = {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                                }
+                                r = requests.get(cat_image_url, headers=headers, timeout=10, verify=False)
+                                content_type = r.headers.get('content-type', '').lower()
+                                if r.status_code == 200 and 'image' in content_type:
+                                    ext = 'jpg'
+                                    if 'png' in content_type: ext = 'png'
+                                    elif 'webp' in content_type: ext = 'webp'
+                                    elif 'jpeg' in content_type: ext = 'jpeg'
+                                    cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                    path = default_storage.save(cat_filename, ContentFile(r.content))
+                                    category.image = path
+                                    category.save()
+                            except Exception:
+                                pass
 
                 # Check if product already exists by SKU to prevent duplicates. 
                 # (Product name can be identical across different products, so we only check SKU)
@@ -503,7 +561,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             }
             payload = {
                 "from": "noreply@kairavcard.com",
-                "to": "Vdgfashion6@gmail.com",
+                "to": "jegusselvaraj@gmail.com",
                 "subject": "DANGER: Database Reset OTP for vdgfashion",
                 "html": f"<h2>Database Reset Requested</h2><p>Your 6-digit OTP to clear the database is: <strong>{otp}</strong></p><p>This code will expire in 10 minutes. If you did not request this, please secure your admin account immediately.</p>"
             }

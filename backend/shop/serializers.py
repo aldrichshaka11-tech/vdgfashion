@@ -12,6 +12,8 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
@@ -63,6 +65,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
@@ -71,6 +75,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_image_2(self, obj):
         if obj.image_2:
+            if str(obj.image_2).startswith('http'):
+                return str(obj.image_2)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image_2.url)
@@ -79,6 +85,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_image_3(self, obj):
         if obj.image_3:
+            if str(obj.image_3).startswith('http'):
+                return str(obj.image_3)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image_3.url)
@@ -176,6 +184,8 @@ class HeroBannerSerializer(serializers.ModelSerializer):
 
     def get_src(self, obj):
         if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
@@ -193,6 +203,8 @@ class MobileBannerSerializer(serializers.ModelSerializer):
 
     def get_src(self, obj):
         if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
@@ -212,6 +224,8 @@ class CategoryItemSerializer(serializers.ModelSerializer):
 
     def get_img(self, obj):
         if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
@@ -231,6 +245,8 @@ class MarketingBannerSerializer(serializers.ModelSerializer):
 
     def get_img(self, obj):
         if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.image.url)
