@@ -566,7 +566,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             }
             payload = {
                 "from": "noreply@kairavcard.com",
-                "to": "jegusselvaraj@gmail.com",
+                "to": "Vdgfashion6@gmail.com",
                 "subject": "DANGER: Database Reset OTP for vdgfashion",
                 "html": f"<h2>Database Reset Requested</h2><p>Your 6-digit OTP to clear the database is: <strong>{otp}</strong></p><p>This code will expire in 10 minutes. If you did not request this, please secure your admin account immediately.</p>"
             }
