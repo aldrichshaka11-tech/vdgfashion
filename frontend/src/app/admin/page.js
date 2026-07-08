@@ -1528,21 +1528,52 @@ function DashboardPortal({ onLogout, adminUser }) {
   };
 
   const parseTSV = (text) => {
-    const lines = text.trim().split('\n');
-    if (lines.length < 2) return [];
-
-    // Parse headers (detect tab vs comma vs semicolon)
-    const firstLine = lines[0];
     let separator = ',';
-    if (firstLine.includes('\t')) {
-      separator = '\t';
-    } else if (firstLine.includes(';')) {
-      separator = ';';
-    } else if (firstLine.includes(',')) {
-      separator = ',';
-    }
-    const headers = firstLine.split(separator).map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+    const firstLineEnd = text.indexOf('\n');
+    const firstLine = firstLineEnd !== -1 ? text.slice(0, firstLineEnd) : text;
+    if (firstLine.includes('\t')) separator = '\t';
+    else if (firstLine.includes(';')) separator = ';';
 
+    const parseCSV = (str) => {
+      const result = [];
+      let row = [];
+      let col = '';
+      let insideQuote = false;
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        const nextChar = str[i + 1];
+        if (char === '"') {
+          if (insideQuote && nextChar === '"') {
+            col += '"';
+            i++;
+          } else {
+            insideQuote = !insideQuote;
+          }
+        } else if (char === separator && !insideQuote) {
+          row.push(col);
+          col = '';
+        } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !insideQuote) {
+          row.push(col);
+          result.push(row);
+          row = [];
+          col = '';
+          if (char === '\r') i++;
+        } else {
+          if (char !== '\r' || insideQuote) col += char;
+        }
+      }
+      if (col || row.length) {
+        row.push(col);
+        result.push(row);
+      }
+      return result;
+    };
+
+    const parsedRows = parseCSV(text.trim());
+    if (parsedRows.length < 2) return [];
+
+    const headers = parsedRows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+    
     // Find column indices
     const nameIdx = headers.findIndex(h => {
       const norm = h.replace(/[^a-z0-9]/g, '');
@@ -1611,28 +1642,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     });
 
     const parsed = [];
-    for (let i = 1; i < lines.length; i++) {
-      let cols = [];
-      if (separator === ',' || separator === ';') {
-        let row = lines[i];
-        let arr = [];
-        let insideQuote = false;
-        let entry = '';
-        for (let char of row) {
-          if (char === '"') {
-            insideQuote = !insideQuote;
-          } else if (char === separator && !insideQuote) {
-            arr.push(entry.trim());
-            entry = '';
-          } else {
-            entry += char;
-          }
-        }
-        arr.push(entry.trim());
-        cols = arr;
-      } else {
-        cols = lines[i].split(separator);
-      }
+    for (let i = 1; i < parsedRows.length; i++) {
+      const cols = parsedRows[i];
       if (cols.length < 1) continue;
 
       const item = {};
