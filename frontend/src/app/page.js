@@ -86,7 +86,6 @@ export default function Home() {
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [filterCategory, setFilterCategory] = useState(null);
 
   const reviewsRef = React.useRef(null);
@@ -120,7 +119,7 @@ export default function Home() {
   // Refresh AOS scroll positions when filters or active product details view state shifts
   useEffect(() => {
     AOS.refresh();
-  }, [selectedCategory, searchQuery, selectedProduct, showFiltersPanel]);
+  }, [selectedCategory, searchQuery, selectedProduct]);
 
   // Filtering logic
   const filteredProducts = useMemo(() => {
@@ -139,8 +138,9 @@ export default function Home() {
         return checkedCategories.some((cat) => {
           const catName = (p.category_name || '').toLowerCase();
           const parentCat = (p.parent_category || '').toLowerCase();
+          const subCat = (p.sub_category || '').toLowerCase();
           const c = cat.toLowerCase();
-          return catName === c || parentCat === c;
+          return catName === c || parentCat === c || subCat === c;
         });
       });
     } else if (selectedCategory !== 'ALL') {
@@ -148,7 +148,8 @@ export default function Home() {
       result = result.filter((p) => {
         const catName = (p.category_name || '').toLowerCase();
         const parentCat = (p.parent_category || '').toLowerCase();
-        return catName === sel || parentCat === sel;
+        const subCat = (p.sub_category || '').toLowerCase();
+        return catName === sel || parentCat === sel || subCat === sel;
       });
     }
 
@@ -339,19 +340,6 @@ export default function Home() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* Collapsible toggle Filters indicator */}
-                    <button
-                      onClick={() => setShowFiltersPanel(!showFiltersPanel)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all ${
-                        showFiltersPanel
-                          ? 'bg-[#e11d48] border-[#e11d48] text-white'
-                          : 'border-zinc-200 text-zinc-650 hover:bg-zinc-50'
-                      }`}
-                    >
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      FILTERS
-                    </button>
-
                     <button
                       onClick={() => {
                         setSelectedCategory('ALL');
@@ -368,15 +356,13 @@ export default function Home() {
                 {/* Main section: grid or dynamic filters side panel */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   
-                  {/* Slide open Sidebar Filters */}
-                  {showFiltersPanel && (
-                    <div className="lg:col-span-3" data-aos="fade-right">
-                      <ProductFilters filterCategory={filterCategory} onClose={() => { setShowFiltersPanel(false); setFilterCategory(null); }} />
-                    </div>
-                  )}
+                  {/* Sidebar Filters always open */}
+                  <div className="lg:col-span-3" data-aos="fade-right">
+                    <ProductFilters filterCategory={filterCategory} />
+                  </div>
 
                   {/* Main Catalog grid with staggered AOS load waves */}
-                  <div className={showFiltersPanel ? 'lg:col-span-9' : 'lg:col-span-12'}>
+                  <div className="lg:col-span-9">
                     {filteredProducts.length === 0 ? (
                       <div className="bg-white rounded-3xl p-12 text-center border border-zinc-200 vdgfashion-card-shadow flex flex-col items-center justify-center min-h-[260px]">
                         <Grid className="h-9 w-9 text-zinc-400 mb-2" />

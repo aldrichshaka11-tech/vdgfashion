@@ -743,9 +743,13 @@ function DashboardPortal({ onLogout, adminUser }) {
     return categories.filter(c => !c.parent_category);
   }, [categories]);
 
+  const mainCategories = useMemo(() => {
+    return categories.filter(c => c.parent_category && rootCategories.some(root => root.name === c.parent_category));
+  }, [categories, rootCategories]);
+
   const subCategories = useMemo(() => {
-    return categories.filter(c => c.parent_category);
-  }, [categories]);
+    return categories.filter(c => c.parent_category && mainCategories.some(main => main.name === c.parent_category));
+  }, [categories, mainCategories]);
 
   // Dynamic Dashboard Metrics calculated directly from the real database lists
   const totalSalesVal = useMemo(() => {
@@ -957,7 +961,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
     cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
     width: '', height: '', length: '', product_type: 'simple', status: 'published',
-    category: '', parent_category: 'New Born (0-3 Months)', image: '',
+    category: '', parent_category: 'New Born (0-3 Months)', sub_category: '', image: '',
     razorpay_buy_now_link: '',
     sizes: 'S, M, L, XL'
   });
@@ -1140,13 +1144,15 @@ function DashboardPortal({ onLogout, adminUser }) {
       return;
     }
 
-    const isBogoStr = offerDiscountStr && (
+    const isSpecialOffer = offerDiscountStr && (
       offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') ||
       offerDiscountStr.toUpperCase().includes('BOGO') ||
-      offerDiscountStr.toUpperCase().includes('B1G1')
+      offerDiscountStr.toUpperCase().includes('B1G1') ||
+      offerDiscountStr.toUpperCase().includes('BUY 5 GET 2') ||
+      offerDiscountStr.toUpperCase().includes('B5G2')
     );
 
-    if (promoPriceNum >= originalPriceNum && !isBogoStr) {
+    if (promoPriceNum >= originalPriceNum && !isSpecialOffer) {
       if (!confirm(`Warning: The promotional price (₹${promoPriceNum}) is higher than or equal to the original price (₹${originalPriceNum}). Do you still want to proceed?`)) {
         return;
       }
@@ -1211,16 +1217,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       let finalCatId = parseInt(productForm.category) || null;
       let finalParentCat = productForm.parent_category || '';
-
-      if (finalParentCat) {
-        // Find subcategory object matching parentCategory name and parentCat name
-        const rootCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
-        const subCatObj = subCategories.find(sc => sc.name === finalParentCat && sc.parent_category === rootCatName);
-        if (subCatObj) {
-          finalCatId = subCatObj.id; // set category relation to subcategory Category ID!
-          finalParentCat = rootCatName; // set parent_category string to parent category name!
-        }
-      }
+      let finalSubCat = productForm.sub_category || '';
 
       const payload = {
         name: productForm.name,
@@ -1229,6 +1226,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         sku: productForm.sku || null,
         category: finalCatId,
         parent_category: finalParentCat,
+        sub_category: finalSubCat,
         price: parseFloat(productForm.price),
         original_price: parseFloat(productForm.original_price || productForm.price),
         discount: productForm.discount || null,
@@ -1444,7 +1442,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleSaveCategory = async (e) => {
     e.preventDefault();
-    if (!categoryForm.image) {
+    if (modalType === 'category' && !categoryForm.image) {
       showToast('Please upload a category image first!', 'warning');
       return;
     }
@@ -1561,7 +1559,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     });
     const catIdx = headers.findIndex(h => {
       const norm = h.replace(/[^a-z0-9]/g, '');
-      return (norm.includes('cat') || norm.includes('group')) && !norm.includes('age') && !norm.includes('sub');
+      return (norm.includes('cat') || norm.includes('group')) && !norm.includes('age') && !norm.includes('sub') && !norm.includes('main') && !norm.includes('parent');
     });
     const priceIdx = headers.findIndex(h => {
       const norm = h.replace(/[^a-z0-9]/g, '');
@@ -1603,9 +1601,13 @@ function DashboardPortal({ onLogout, adminUser }) {
       const norm = h.replace(/[^a-z0-9]/g, '');
       return norm.includes('size');
     });
-    const parentCatIdx = headers.findIndex(h => {
+    const mainCatIdx = headers.findIndex(h => {
       const norm = h.replace(/[^a-z0-9]/g, '');
-      return norm.includes('parentcategory') || norm.includes('parentcat') || norm.includes('subcategory') || norm.includes('subcat');
+      return norm.includes('maincategory') || norm.includes('maincat') || norm.includes('parentcategory') || norm.includes('parentcat');
+    });
+    const subCatIdx = headers.findIndex(h => {
+      const norm = h.replace(/[^a-z0-9]/g, '');
+      return norm.includes('subcategory') || norm.includes('subcat');
     });
 
     const parsed = [];
@@ -1651,7 +1653,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         item.parent_category = val;
       }
       if (sizeIdx !== -1 && cols[sizeIdx]) item.size = cols[sizeIdx].trim().replace(/^"|"$/g, '');
-      if (parentCatIdx !== -1 && cols[parentCatIdx] && !item.parent_category) item.parent_category = cols[parentCatIdx].trim().replace(/^"|"$/g, '');
+      if (mainCatIdx !== -1 && cols[mainCatIdx] && !item.parent_category) item.parent_category = cols[mainCatIdx].trim().replace(/^"|"$/g, '');
+      if (subCatIdx !== -1 && cols[subCatIdx]) item.sub_category = cols[subCatIdx].trim().replace(/^"|"$/g, '');
 
       // Fill defaults
       if (!item.name) continue; // Skip items without a name
@@ -2215,6 +2218,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         sku: item.sku || '',
         category: formCatId,
         parent_category: formSubCatName,
+        sub_category: item.sub_category || '',
         price: item.price || '',
         original_price: item.original_price || '',
         discount: item.discount || '',
@@ -2234,7 +2238,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       });
     } else {
       setProductForm({
-        name: '', slug: '', unit: 'pc', sku: '', category: rootCategories[0]?.id || '', parent_category: '',
+        name: '', slug: '', unit: 'pc', sku: '', category: rootCategories[0]?.id || '', parent_category: '', sub_category: '',
         price: '', original_price: '', discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
         cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
         width: '', height: '', length: '', product_type: 'simple', status: 'published', image: '',
@@ -2263,6 +2267,24 @@ function DashboardPortal({ onLogout, adminUser }) {
 
   const handleOpenSubcategoryModal = (mode, item = null) => {
     setModalType('subcategory');
+    setModalMode(mode);
+    setSelectedItem(item);
+    if (mode === 'edit' && item) {
+      setCategoryForm({
+        name: item.name || '',
+        parent_category: item.parent_category || '',
+        image: item.image || '',
+        imagePreview: item.image_url || '',
+        is_active: item.is_active !== undefined ? item.is_active : true
+      });
+    } else {
+      const defaultParent = rootCategories[0]?.name || '';
+      setCategoryForm({ name: '', parent_category: defaultParent, image: '', imagePreview: '', is_active: true });
+    }
+  };
+
+  const handleOpenMainCategoryModal = (mode, item = null) => {
+    setModalType('maincategory');
     setModalMode(mode);
     setSelectedItem(item);
     if (mode === 'edit' && item) {
@@ -3374,7 +3396,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                           {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain border border-[#1e293b] bg-white p-0.5" />}
                           <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</span>
                         </td>
-                        <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                        <td className="p-4 font-normal text-zinc-400">
+                          {p.category_name || 'Unassigned'}
+                          {p.parent_category ? ` > ${p.parent_category}` : ''}
+                          {p.sub_category ? ` > ${p.sub_category}` : ''}
+                        </td>
                         <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
                         <td className="p-4 text-right">
                           {inlineStockEdit[p.id] !== undefined ? (
@@ -3605,7 +3631,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">SKU: {p.sku || 'N/A'}</span>
                               </div>
                             </td>
-                            <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                            <td className="p-4 font-normal text-zinc-400">
+                              {p.category_name || 'Unassigned'}
+                              {p.parent_category ? ` > ${p.parent_category}` : ''}
+                              {p.sub_category ? ` > ${p.sub_category}` : ''}
+                            </td>
                             <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
                             <td className="p-4 text-center">
                               <div className="flex flex-col items-center gap-1.5 justify-center">
@@ -3746,6 +3776,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                     <Plus size={14} /> Add Category
                   </button>
                   <button
+                    onClick={() => handleOpenMainCategoryModal('add')}
+                    className="py-2.5 px-4 bg-pink-600 hover:bg-pink-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add Main Category
+                  </button>
+                  <button
                     onClick={() => handleOpenSubcategoryModal('add')}
                     className="py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                   >
@@ -3843,6 +3879,20 @@ function DashboardPortal({ onLogout, adminUser }) {
                       )}
                     </button>
                     <button
+                      onClick={() => setCategoriesActiveTab('maincategories')}
+                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'maincategories'
+                          ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
+                          : theme === 'dark'
+                            ? 'text-zinc-450 hover:text-white'
+                            : 'text-zinc-550 hover:text-zinc-850'
+                        }`}
+                    >
+                      Main Categories
+                      {categoriesActiveTab === 'maincategories' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-fade-in" />
+                      )}
+                    </button>
+                    <button
                       onClick={() => setCategoriesActiveTab('subcategories')}
                       className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'subcategories'
                           ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
@@ -3886,7 +3936,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
 
                 {/* Categories Table View */}
-                {categoriesActiveTab === 'categories' ? (
+                {categoriesActiveTab === 'categories' && (
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full min-w-[700px] text-left text-sm">
                       <thead className={`font-normal tracking-normal border-b text-[12px] ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
@@ -3968,8 +4018,86 @@ function DashboardPortal({ onLogout, adminUser }) {
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  // All Subcategories view
+                )}
+
+                {categoriesActiveTab === 'maincategories' && (
+                  <div className="overflow-x-auto no-scrollbar animate-fade-in">
+                    <table className="w-full min-w-[700px] text-left text-sm">
+                      <thead className={`font-normal tracking-normal border-b text-[12px] ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
+                        }`}>
+                        <tr>
+                          <th className="p-4 w-12 text-center">#</th>
+                          <th className="p-4">Main Category Name</th>
+                          <th className="p-4">Parent Category</th>
+                          <th className="p-4 text-center">Image</th>
+                          <th className="p-4 text-center">Subcategories</th>
+                          <th className="p-4 text-center">Status</th>
+                          <th className="p-4 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
+                        {mainCategories
+                          .filter(main => main.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                          .map((main, index) => {
+                            const subsCount = subCategories.filter(sub => sub.parent_category === main.name).length;
+
+                            return (
+                              <tr key={main.id} className={`transition-all duration-150 ${theme === 'dark' ? 'hover:bg-white/2' : 'hover:bg-zinc-50/50'}`}>
+                                <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
+                                <td className="p-4 font-normal">
+                                  <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{main.name}</span>
+                                </td>
+                                <td className="p-4 font-normal text-indigo-500">
+                                  <span>{main.parent_category}</span>
+                                </td>
+                                <td className="p-4 text-center">
+                                  <div className="flex justify-center">
+                                    {main.image_url || main.image ? (
+                                      <img src={getImageUrl(main.image_url || main.image)} alt={main.name} className="w-9 h-9 rounded-xl object-contain border border-zinc-200 dark:border-[#1e293b] p-0.5 bg-white shadow-3xs" />
+                                    ) : (
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+                                        }`}>
+                                        <Folders size={16} className="text-zinc-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-center font-normal text-zinc-650 dark:text-zinc-350">{subsCount}</td>
+                                <td className="p-4 text-center">
+                                  <span className={`px-3 py-1 rounded-full text-[9px] font-normal border ${main.is_active
+                                      ? 'bg-emerald-600 text-white border-transparent'
+                                      : 'bg-rose-600 text-white border-transparent'
+                                    }`}>
+                                    {main.is_active ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleOpenMainCategoryModal('edit', main)}
+                                      className="p-2 rounded-xl bg-zinc-50 border border-zinc-200/60 text-zinc-650 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-150/60 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-400 dark:hover:border-indigo-900/30 transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs hover:shadow-2xs"
+                                      title="Edit Main Category"
+                                    >
+                                      <Edit size={13} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCategory(main.id)}
+                                      className="p-2 rounded-xl bg-zinc-50 border border-zinc-200/60 text-zinc-650 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-150/60 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/30 transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs hover:shadow-2xs"
+                                      title="Delete Main Category"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {categoriesActiveTab === 'subcategories' && (
                   <div className="overflow-x-auto no-scrollbar animate-fade-in">
                     <table className="w-full min-w-[700px] text-left text-sm">
                       <thead className={`font-normal tracking-normal border-b text-[12px] ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-455' : 'bg-zinc-50/50 border-zinc-150 text-zinc-500'
@@ -4510,7 +4638,11 @@ function DashboardPortal({ onLogout, adminUser }) {
                               <p className="text-[10px] text-zinc-500">PROD-00{p.id}</p>
                             </div>
                           </td>
-                          <td className="p-4 font-normal text-zinc-400">{p.category_name || 'Unassigned'}</td>
+                          <td className="p-4 font-normal text-zinc-400">
+                            {p.category_name || 'Unassigned'}
+                            {p.parent_category ? ` > ${p.parent_category}` : ''}
+                            {p.sub_category ? ` > ${p.sub_category}` : ''}
+                          </td>
                           <td className="p-4 text-right">
                             <div className="flex items-center gap-1.5 justify-end">
                               <input
@@ -5934,28 +6066,52 @@ function DashboardPortal({ onLogout, adminUser }) {
                         </select>
                       </div>
 
-                      {/* Subcategory Dropdown - filtered by selected category */}
+                      {/* Main Category Dropdown - filtered by selected category */}
                       <div className="space-y-1.5">
-                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Main Category</label>
                         <select
                           value={productForm.parent_category}
-                          onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value }))}
+                          onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value, sub_category: '' }))}
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                             } ${!productForm.category ? 'opacity-50' : ''}`}
                           disabled={!productForm.category}
                         >
-                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
                           {(() => {
                             const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
+                            return mainCategories
+                              .filter(mc => mc.parent_category === selectedCatName)
+                              .map(mc => (
+                                <option key={mc.id} value={mc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{mc.name}</option>
+                              ));
+                          })()}
+                        </select>
+                        {productForm.category && mainCategories.filter(mc => mc.parent_category === rootCategories.find(c => String(c.id) === String(productForm.category))?.name).length === 0 && (
+                          <p className="text-[10px] text-zinc-400 font-normal mt-1">No main categories for this category</p>
+                        )}
+                      </div>
+
+                      {/* Subcategory Dropdown - filtered by selected main category */}
+                      <div className="space-y-1.5">
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
+                        <select
+                          value={productForm.sub_category}
+                          onChange={(e) => setProductForm(prev => ({ ...prev, sub_category: e.target.value }))}
+                          className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
+                            } ${!productForm.parent_category ? 'opacity-50' : ''}`}
+                          disabled={!productForm.parent_category}
+                        >
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
+                          {(() => {
                             return subCategories
-                              .filter(sc => sc.parent_category === selectedCatName)
+                              .filter(sc => sc.parent_category === productForm.parent_category)
                               .map(sc => (
                                 <option key={sc.id} value={sc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
                               ));
                           })()}
                         </select>
-                        {productForm.category && subCategories.filter(sc => sc.parent_category === rootCategories.find(c => String(c.id) === String(productForm.category))?.name).length === 0 && (
-                          <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this category</p>
+                        {productForm.parent_category && subCategories.filter(sc => sc.parent_category === productForm.parent_category).length === 0 && (
+                          <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this main category</p>
                         )}
                       </div>
                     </div>
@@ -6260,52 +6416,15 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </form>
               )}
 
-              {modalType === 'subcategory' && (
+              {modalType === 'maincategory' && (
                 <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
 
-                  {/* 1. Subcategory Image */}
-                  <div className="space-y-2">
-                    <label className={`text-xs sm:text-sm font-normal flex items-center ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                      Subcategory image <span className="text-red-500 ml-1">*</span>
-                    </label>
 
-                    <div className={`flex items-center p-6 border border-dashed rounded-2xl gap-5 transition-all ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50/50 border-indigo-200'
-                      } ${uploadingCategoryImage ? 'opacity-80' : ''
-                      }`}>
-                      {/* Left side preview */}
-                      <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center overflow-hidden shrink-0 shadow-3xs ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200/60'
-                        }`}>
-                        {categoryForm.imagePreview || categoryForm.image ? (
-                          <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
-                        ) : (
-                          <svg className="w-8 h-8 text-indigo-300 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                        )}
-                      </div>
-
-                      {/* Right side upload button area */}
-                      <label className="flex-1 flex flex-col items-start justify-center cursor-pointer select-none">
-                        <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700">
-                          <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
-                          <span className="text-[14px] font-normal">
-                            {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Subcategory Image' : 'Upload Subcategory Image'}
-                          </span>
-                        </div>
-                        <span className={`text-[11px] font-normal mt-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
-                          JPG, PNG or WEBP. Max size 2MB.
-                        </span>
-                        <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
-                      </label>
-                    </div>
-                  </div>
 
                   {/* 2. Parent Category Select */}
                   <div className="space-y-2">
                     <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                      Category name select <span className="text-red-500 ml-1">*</span>
+                      Root Category name select <span className="text-red-500 ml-1">*</span>
                     </label>
                     <select
                       required
@@ -6313,8 +6432,81 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
                       className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                     >
-                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
+                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Root Category...</option>
                       {rootCategories.map((c) => (
+                        <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Main Category Name */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Main Category name type <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                      placeholder="Enter main category name"
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm placeholder-zinc-400 transition-all shadow-3xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white placeholder-zinc-500" : "bg-white border-zinc-200 text-zinc-800 placeholder-zinc-400"}`}
+                    />
+                  </div>
+
+                  {/* 4. Status */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Status <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={categoryForm.is_active ? 'true' : 'false'}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.value === 'true' })}
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
+                    >
+                      <option value="true" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Active</option>
+                      <option value="false" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* 5. Action Buttons */}
+                  <div className="flex gap-3 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className={`py-3 px-6 border rounded-xl font-normal transition-all active:scale-95 cursor-pointer text-xs ${theme === "dark" ? "bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300" : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-700"}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={false}
+                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white hover:opacity-90 shadow-purple-500/20 cursor-pointer`}
+                    >
+                      Save Main Category
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {modalType === 'subcategory' && (
+                <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
+
+
+
+                  {/* 2. Parent Category Select */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Main Category name select <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      required
+                      value={categoryForm.parent_category}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
+                    >
+                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
+                      {mainCategories.map((c) => (
                         <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                       ))}
                     </select>
@@ -6361,13 +6553,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </button>
                     <button
                       type="submit"
-                      disabled={uploadingCategoryImage || !categoryForm.image}
-                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${uploadingCategoryImage || !categoryForm.image
-                          ? 'opacity-70 cursor-not-allowed grayscale-[20%] shadow-none'
-                          : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'
-                        }`}
+                      disabled={false}
+                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white hover:opacity-90 shadow-purple-500/20 cursor-pointer`}
                     >
-                      {uploadingCategoryImage ? 'Uploading...' : 'Save Subcategory'}
+                      Save Subcategory
                     </button>
                   </div>
                 </form>
@@ -6377,7 +6566,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15">
                     <h4 className="font-semibold text-indigo-600 dark:text-indigo-400 mb-1">Spreadsheet Guidelines:</h4>
                     <ol className="list-decimal pl-4.5 space-y-1 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU / Code, Price, MRP / Budget, Category, Age Group, Stock, Image</b>).</li>
+                      <li>Ensure your sheet has a header row at the top (e.g. <b>Name, SKU / Code, Price, MRP / Budget, Category, Main Category, Subcategory, Age Group, Stock, Image</b>).</li>
                       <li>For images, you can paste Google Drive <b>Share links</b>, absolute local system paths (e.g. <b>F:\images\tshirt.png</b>), or place the images in the <b>backend/bulk_upload_images/</b> folder and specify just the filename (e.g. <b>tshirt.png</b>). We will import them automatically!</li>
                     </ol>
                   </div>
@@ -6755,12 +6944,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                 <label className={`text-[14px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                   Offer Type
                 </label>
-                <div className="flex gap-4 p-3.5 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                <div className="flex gap-4 p-3.5 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 flex-wrap">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="radio"
                       name="offerType"
-                      checked={!(offerDiscountStr && (offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') || offerDiscountStr.toUpperCase().includes('BOGO') || offerDiscountStr.toUpperCase().includes('B1G1')))}
+                      checked={!(offerDiscountStr && (offerDiscountStr.toUpperCase().includes('BUY 1 GET 1') || offerDiscountStr.toUpperCase().includes('BOGO') || offerDiscountStr.toUpperCase().includes('B1G1') || offerDiscountStr.toUpperCase().includes('BUY 5 GET 2') || offerDiscountStr.toUpperCase().includes('B5G2')))}
                       onChange={() => {
                         setOfferDiscountStr('20% OFF');
                         const currentPrice = parseFloat(selectedProductForOffer.original_price || selectedProductForOffer.price);
@@ -6782,6 +6971,19 @@ function DashboardPortal({ onLogout, adminUser }) {
                       className="w-4 h-4 accent-[#8b5cf6]"
                     />
                     <span>Buy 1 Get 1 (BOGO)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="offerType"
+                      checked={!!(offerDiscountStr && (offerDiscountStr.toUpperCase().includes('BUY 5 GET 2') || offerDiscountStr.toUpperCase().includes('B5G2')))}
+                      onChange={() => {
+                        setOfferDiscountStr('BUY 5 GET 2 FREE');
+                        setOfferPromoPrice(selectedProductForOffer.original_price || selectedProductForOffer.price);
+                      }}
+                      className="w-4 h-4 accent-[#8b5cf6]"
+                    />
+                    <span>Buy 5 Get 2</span>
                   </label>
                 </div>
               </div>

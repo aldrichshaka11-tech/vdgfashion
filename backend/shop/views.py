@@ -361,16 +361,27 @@ class ProductViewSet(viewsets.ModelViewSet):
         created_count = 0
         errors = []
         for idx, item in enumerate(products_data):
+            level1 = None
             try:
-                raw_cat_name = item.get('category_name', 'General')
+                raw_cat_name = item.get('category_name', item.get('category', 'General'))
                 category_name = " ".join(raw_cat_name.split()) if raw_cat_name else 'General'
                 
-                raw_parent_cat = item.get('parent_category', '')
+                raw_parent_cat = item.get('parent_category', item.get('main_category', item.get('main', '')))
                 parent_category = " ".join(raw_parent_cat.split()) if raw_parent_cat else ''
                 
-                if parent_category:
-                    parent_cat, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
-                    category, _ = Category.objects.get_or_create(name=parent_category, parent_category=parent_cat.name)
+                raw_sub_cat = item.get('sub_category', item.get('subcat', ''))
+                sub_category = " ".join(raw_sub_cat.split()) if raw_sub_cat else ''
+                
+                if sub_category and parent_category:
+                    # Level 1
+                    level1, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
+                    # Level 2
+                    level2, _ = Category.objects.get_or_create(name=parent_category, parent_category=level1.name)
+                    # Level 3
+                    category, _ = Category.objects.get_or_create(name=sub_category, parent_category=level2.name)
+                elif parent_category:
+                    level1, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
+                    category, _ = Category.objects.get_or_create(name=parent_category, parent_category=level1.name)
                 else:
                     category, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
 
@@ -474,8 +485,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'slug': item.get('slug'),
                     'unit': item.get('unit', 'pc'),
                     'sku': sku,
-                    'category': category.id,
-                    'parent_category': category_name if parent_category else '',
+                    'category': level1.id if level1 else category.id,
+                    'parent_category': parent_category if parent_category else '',
+                    'sub_category': sub_category if sub_category else '',
                     'price': item.get('price'),
                     'original_price': item.get('original_price', item.get('price')),
                     'discount': item.get('discount'),

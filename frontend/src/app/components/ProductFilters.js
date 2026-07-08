@@ -18,6 +18,7 @@ export default function ProductFilters() {
     setSelectedSize,
     resetFilters,
     categoryItems,
+    allCategories,
     showOnlyOffers,
     setShowOnlyOffers,
   } = useStore();
@@ -25,16 +26,20 @@ export default function ProductFilters() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(true);
   const [showAllCategories, setShowAllCategories] = useState(false);
 
-  // Build category list from root categories only (categoryItems = root only, filtered in StoreContext)
-  const categoriesList = categoryItems.map((cat) => {
-    const count = products.filter((p) => {
-      const catName = p.category_name || '';
-      const parentCat = p.parent_category || '';
-      return catName.toLowerCase() === cat.name.toLowerCase() ||
-             parentCat.toLowerCase() === cat.name.toLowerCase();
+  // Helper for category product counts
+  const getProductCount = (catName) => {
+    return products.filter((p) => {
+      const pCat = (p.category_name || '').toLowerCase();
+      const pParent = (p.parent_category || '').toLowerCase();
+      const pSub = (p.sub_category || '').toLowerCase();
+      const c = catName.toLowerCase();
+      return pCat === c || pParent === c || pSub === c;
     }).length;
-    return { name: cat.name, count };
-  });
+  };
+
+  const rootCategories = (allCategories || []).filter(c => !c.parent_category);
+  const mainCategories = (allCategories || []).filter(c => c.parent_category && rootCategories.some(r => r.name === c.parent_category));
+  const subCategories = (allCategories || []).filter(c => c.parent_category && mainCategories.some(m => m.name === c.parent_category));
 
   const colors = [
     { name: 'Orange-Red', hex: '#fa5252' },
@@ -56,8 +61,8 @@ export default function ProductFilters() {
   };
 
   const visibleCategories = showAllCategories 
-    ? categoriesList 
-    : categoriesList.slice(0, 5);
+    ? rootCategories 
+    : rootCategories.slice(0, 5);
 
   return (
     <div
@@ -95,26 +100,75 @@ export default function ProductFilters() {
 
           {isCategoryOpen && (
             <div className="space-y-2.5 pt-1">
-              {visibleCategories.map((cat) => {
-                const isChecked = checkedCategories.includes(cat.name);
+              {visibleCategories.map((rootCat) => {
+                const isRootChecked = checkedCategories.includes(rootCat.name);
+                const rootMains = mainCategories.filter(m => m.parent_category === rootCat.name);
                 return (
-                  <label
-                    key={cat.name}
-                    className="flex items-center justify-between text-[13.5px] font-normal text-zinc-650 cursor-pointer select-none"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleCategory(cat.name)}
-                        className="h-4 w-4 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
-                      />
-                      <span className={isChecked ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
-                        {cat.name}
-                      </span>
-                    </div>
-                    <span className="text-xs text-zinc-400 font-normal">({cat.count})</span>
-                  </label>
+                  <div key={rootCat.id} className="space-y-1.5 pb-2">
+                    <label className="flex items-center justify-between text-[13.5px] font-normal text-zinc-650 cursor-pointer select-none">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isRootChecked}
+                          onChange={() => handleToggleCategory(rootCat.name)}
+                          className="h-4 w-4 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+                        />
+                        <span className={isRootChecked ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
+                          {rootCat.name}
+                        </span>
+                      </div>
+                      <span className="text-xs text-zinc-400 font-normal">({getProductCount(rootCat.name)})</span>
+                    </label>
+
+                    {/* Main Categories */}
+                    {rootMains.map((mainCat) => {
+                      const isMainChecked = checkedCategories.includes(mainCat.name);
+                      const mainSubs = subCategories.filter(s => s.parent_category === mainCat.name);
+                      return (
+                        <div key={mainCat.id} className="pl-5 space-y-1.5 border-l-2 border-zinc-100 ml-[7px] my-2">
+                          <label className="flex items-center justify-between text-[12.5px] font-normal text-zinc-550 cursor-pointer select-none">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isMainChecked}
+                                onChange={() => handleToggleCategory(mainCat.name)}
+                                className="h-3.5 w-3.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+                              />
+                              <span className={isMainChecked ? 'text-zinc-900 font-bold' : 'text-zinc-500'}>
+                                {mainCat.name}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-zinc-400 font-normal">({getProductCount(mainCat.name)})</span>
+                          </label>
+
+                          {/* Sub Categories */}
+                          {mainSubs.length > 0 && (
+                            <div className="pl-4 space-y-1.5 border-l border-zinc-100 ml-1.5 mt-1.5 mb-2">
+                              {mainSubs.map((subCat) => {
+                                const isSubChecked = checkedCategories.includes(subCat.name);
+                                return (
+                                  <label key={subCat.id} className="flex items-center justify-between text-[11.5px] font-normal text-zinc-450 cursor-pointer select-none">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSubChecked}
+                                        onChange={() => handleToggleCategory(subCat.name)}
+                                        className="h-3 w-3 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+                                      />
+                                      <span className={isSubChecked ? 'text-zinc-800 font-bold' : 'text-zinc-400'}>
+                                        {subCat.name}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-zinc-400 font-normal">({getProductCount(subCat.name)})</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 );
               })}
               

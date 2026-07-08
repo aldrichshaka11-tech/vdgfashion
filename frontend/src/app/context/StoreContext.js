@@ -333,15 +333,43 @@ export function StoreProvider({ children }) {
 
   // ─── Cart totals ─────────────────────────────────────────────
   const cartCount = cart.reduce((t, item) => t + item.quantity, 0);
-  const cartSubtotal = cart.reduce((t, item) => {
-    const isBogo = item.product.discount && (
-      item.product.discount.toUpperCase().includes('BUY 1 GET 1') || 
-      item.product.discount.toUpperCase().includes('BOGO') || 
-      item.product.discount.toUpperCase().includes('B1G1')
-    );
-    const effectiveQty = isBogo ? Math.ceil(item.quantity / 2) : item.quantity;
-    return t + item.product.price * effectiveQty;
-  }, 0);
+  const cartSubtotal = (() => {
+    let subtotal = 0;
+    let bogoPrices = [];
+    let b5g2Prices = [];
+
+    cart.forEach(item => {
+      const discountStr = (item.product.discount || '').toUpperCase();
+      const isBogo = discountStr.includes('BUY 1 GET 1') || discountStr.includes('BOGO') || discountStr.includes('B1G1');
+      const isB5G2 = discountStr.includes('BUY 5 GET 2') || discountStr.includes('B5G2');
+
+      for (let i = 0; i < item.quantity; i++) {
+        if (isBogo) {
+          bogoPrices.push(parseFloat(item.product.price));
+        } else if (isB5G2) {
+          b5g2Prices.push(parseFloat(item.product.price));
+        } else {
+          subtotal += parseFloat(item.product.price);
+        }
+      }
+    });
+
+    // BOGO calculation
+    bogoPrices.sort((a, b) => a - b);
+    const bogoFreeCount = Math.floor(bogoPrices.length / 2);
+    for (let i = bogoFreeCount; i < bogoPrices.length; i++) {
+      subtotal += bogoPrices[i];
+    }
+
+    // B5G2 calculation
+    b5g2Prices.sort((a, b) => a - b);
+    const b5g2FreeCount = Math.floor(b5g2Prices.length / 5) * 2;
+    for (let i = b5g2FreeCount; i < b5g2Prices.length; i++) {
+      subtotal += b5g2Prices[i];
+    }
+
+    return subtotal;
+  })();
   const freeShipThreshold = parseFloat(settings.freeShippingThreshold || 3000);
   const shippingFee = cartSubtotal === 0 || cartSubtotal > freeShipThreshold ? 0 : parseFloat(settings.shippingFee || 99);
   const couponDiscount = appliedCoupon === settings.activePromoCode
