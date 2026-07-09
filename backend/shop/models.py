@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Category(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     parent_category = models.CharField(max_length=255, blank=True, null=True)
     image = models.ImageField(upload_to='categories/', max_length=500, blank=True, null=True)
     order = models.IntegerField(default=0)

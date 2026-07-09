@@ -51,7 +51,7 @@ export default function RootLayout({ children }) {
           <div className="fixed bottom-6 right-6 z-40 flex items-center justify-center">
             <div className="absolute inset-0 bg-[#25D366] rounded-full animate-ping opacity-60 pointer-events-none" style={{ animationDuration: '2.5s' }} />
             <a
-              href="https://wa.me/919999999999?text=Hi!%20I%20have%20a%20question%20about%20VGD%20Fashion%20products!"
+              href="https://wa.me/918300112996?text=Hi!%20I%20have%20a%20question%20about%20VGD%20Fashion%20products!"
               target="_blank"
               rel="noopener noreferrer"
               className="relative bg-[#25D366] text-white p-3.5 rounded-full shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 hover:bg-[#20ba5a] hover:shadow-emerald-500/35 transition-all duration-300 flex items-center justify-center"

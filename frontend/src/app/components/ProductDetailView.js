@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Star, Heart, Plus, Minus, ShoppingBag, Truck, RefreshCw, CheckCircle2, ChevronDown, X, Info, CreditCard } from 'lucide-react';
+import { ChevronRight, Star, Heart, Plus, Minus, ShoppingBag, Truck, RefreshCw, CheckCircle2, ChevronDown, X, Info, CreditCard, Share2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import Image from 'next/image';
 import { formatINR } from '../utils/currency';
 import { API_BASE } from '../../lib/api';
+import ProductShareModal from './ProductShareModal';
 
 export default function ProductDetailView() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function ProductDetailView() {
   const [quantity, setQuantity] = useState(1);
   const [openAccordionIdx, setOpenAccordionIdx] = useState(0);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Sync state whenever selected product changes
   useEffect(() => {
@@ -134,6 +136,15 @@ export default function ProductDetailView() {
               aria-label="Toggle Wishlist"
             >
               <Heart className={`h-5.5 w-5.5 ${isLiked ? 'fill-red-600 text-red-600' : ''}`} />
+            </button>
+
+            {/* Share toggle overlay */}
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="absolute top-5 right-20 z-10 h-11 w-11 bg-white rounded-full flex items-center justify-center shadow-lg border border-zinc-100 hover:scale-110 active:scale-95 transition-all text-zinc-400 hover:text-indigo-500"
+              aria-label="Share Product"
+            >
+              <Share2 className="h-5 w-5" />
             </button>
 
             {/* Display active image */}
@@ -427,6 +438,13 @@ export default function ProductDetailView() {
           </div>
         </div>
       )}
+
+      {/* Share Modal */}
+      <ProductShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        product={selectedProduct}
+      />
 
     </div>
   );
