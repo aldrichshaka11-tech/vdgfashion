@@ -160,9 +160,9 @@ export default function ProductShareModal({ isOpen, onClose, product }) {
             </div>
 
             {/* Reseller Question */}
-            <div className="flex items-center justify-between bg-white">
-                <span className="text-[13px] font-bold text-zinc-800">Are you reselling this product?</span>
-                <div className="flex bg-zinc-100 rounded-full p-1 border border-zinc-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white gap-3 sm:gap-0">
+                <span className="text-xs sm:text-[13px] font-bold text-zinc-800">Are you reselling this product?</span>
+                <div className="flex self-start sm:self-auto bg-zinc-100 rounded-full p-1 border border-zinc-200">
                     <button 
                         onClick={() => setIsReselling(false)}
                         className={`px-4 py-1.5 rounded-full text-xs font-black transition-all ${!isReselling ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
@@ -184,36 +184,36 @@ export default function ProductShareModal({ isOpen, onClose, product }) {
             <div className="space-y-4">
                 <h5 className="text-xs font-bold text-zinc-600">Choose an option to share</h5>
                 
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-y-6 gap-x-2">
-                    <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center gap-2 group">
+                <div className="flex flex-wrap gap-4 sm:gap-y-6 sm:gap-x-2">
+                    <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center gap-2 group w-[70px] sm:w-auto">
                         <div className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                             <MessageCircle className="w-6 h-6 fill-current" />
                         </div>
-                        <span className="text-[10px] font-semibold text-zinc-700 text-center">WhatsApp</span>
+                        <span className="text-[10px] font-semibold text-zinc-700 text-center leading-tight">WhatsApp</span>
                     </button>
 
-                    <button onClick={() => handleShare('facebook')} className="flex flex-col items-center gap-2 group">
+                    <button onClick={() => handleShare('facebook')} className="flex flex-col items-center gap-2 group w-[70px] sm:w-auto">
                         <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                             <FacebookIcon className="w-6 h-6 fill-current" />
                         </div>
-                        <span className="text-[10px] font-semibold text-zinc-700 text-center">Facebook</span>
+                        <span className="text-[10px] font-semibold text-zinc-700 text-center leading-tight">Facebook</span>
                     </button>
 
-                    <button onClick={() => handleShare('instagram')} className="flex flex-col items-center gap-2 group">
+                    <button onClick={() => handleShare('instagram')} className="flex flex-col items-center gap-2 group w-[70px] sm:w-auto">
                         <div className="w-12 h-12 bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 text-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                             <InstagramIcon className="w-6 h-6" />
                         </div>
-                        <span className="text-[10px] font-semibold text-zinc-700 text-center">Instagram</span>
+                        <span className="text-[10px] font-semibold text-zinc-700 text-center leading-tight">Instagram</span>
                     </button>
 
-                    <button onClick={() => handleShare('telegram')} className="flex flex-col items-center gap-2 group">
+                    <button onClick={() => handleShare('telegram')} className="flex flex-col items-center gap-2 group w-[70px] sm:w-auto">
                         <div className="w-12 h-12 bg-sky-500 text-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform pr-0.5">
                             <Send className="w-5 h-5 fill-current" />
                         </div>
-                        <span className="text-[10px] font-semibold text-zinc-700 text-center">Telegram</span>
+                        <span className="text-[10px] font-semibold text-zinc-700 text-center leading-tight">Telegram</span>
                     </button>
 
-                    <button onClick={() => handleShare('copy')} className="flex flex-col items-center gap-2 group">
+                    <button onClick={() => handleShare('copy')} className="flex flex-col items-center gap-2 group w-[70px] sm:w-auto">
                         <div className="w-12 h-12 bg-zinc-200 text-zinc-700 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                             <Copy className="w-5 h-5" />
                         </div>

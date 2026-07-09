@@ -129,19 +129,19 @@ export default function ProductDetailView() {
             className="sm:col-span-10 order-1 sm:order-2 relative aspect-square rounded-[1.8rem] border border-zinc-150 overflow-hidden"
             style={{ backgroundColor: selectedProduct.colorHex || '#f4f4f5' }}
           >
-            {/* Heart wishlist toggle overlay */}
+            {/* Heart toggle overlay */}
             <button
               onClick={() => toggleWishlist(selectedProduct.id)}
-              className="absolute top-5 right-5 z-10 h-11 w-11 bg-white rounded-full flex items-center justify-center shadow-lg border border-zinc-100 hover:scale-110 active:scale-95 transition-all text-zinc-400 hover:text-red-500"
+              className="absolute top-3 right-3 sm:top-5 sm:right-5 z-10 h-10 w-10 sm:h-11 sm:w-11 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-zinc-100 hover:scale-110 active:scale-95 transition-all text-zinc-400 hover:text-red-500"
               aria-label="Toggle Wishlist"
             >
-              <Heart className={`h-5.5 w-5.5 ${isLiked ? 'fill-red-600 text-red-600' : ''}`} />
+              <Heart className={`h-5 w-5 sm:h-5.5 sm:w-5.5 ${isLiked ? 'fill-red-600 text-red-600' : ''}`} />
             </button>
 
             {/* Share toggle overlay */}
             <button
               onClick={() => setShowShareModal(true)}
-              className="absolute top-5 right-20 z-10 h-11 w-11 bg-white rounded-full flex items-center justify-center shadow-lg border border-zinc-100 hover:scale-110 active:scale-95 transition-all text-zinc-400 hover:text-indigo-500"
+              className="absolute top-3 right-14 sm:top-5 sm:right-20 z-10 h-10 w-10 sm:h-11 sm:w-11 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-zinc-100 hover:scale-110 active:scale-95 transition-all text-zinc-400 hover:text-indigo-500"
               aria-label="Share Product"
             >
               <Share2 className="h-5 w-5" />
