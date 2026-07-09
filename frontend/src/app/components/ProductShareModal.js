@@ -127,9 +127,9 @@ export default function ProductShareModal({ isOpen, onClose, product }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-12 sm:pt-16 bg-black/60 backdrop-blur-sm transition-opacity">
       <div 
-        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-slide-up sm:animate-fade-in shadow-2xl border border-zinc-200"
+        className="bg-white w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in shadow-2xl border border-zinc-200"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-zinc-150">

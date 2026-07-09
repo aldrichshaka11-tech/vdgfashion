@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, RotateCcw, Minus, Plus } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { formatINR } from '../utils/currency';
 
@@ -12,19 +12,26 @@ export default function ProductFilters() {
     setCheckedCategories,
     priceRange,
     setPriceRange,
-    selectedColor,
-    setSelectedColor,
-    selectedSize,
-    setSelectedSize,
     resetFilters,
-    categoryItems,
     allCategories,
     showOnlyOffers,
     setShowOnlyOffers,
   } = useStore();
 
   const [isCategoryOpen, setIsCategoryOpen] = useState(true);
+  const [isPriceOpen, setIsPriceOpen] = useState(true);
+  const [isOffersOpen, setIsOffersOpen] = useState(true);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+
+  const toggleExpand = (catName, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedCategories(prev => ({
+      ...prev,
+      [catName]: !prev[catName]
+    }));
+  };
 
   // Helper for category product counts
   const getProductCount = (catName) => {
@@ -40,17 +47,6 @@ export default function ProductFilters() {
   const rootCategories = (allCategories || []).filter(c => !c.parent_category);
   const mainCategories = (allCategories || []).filter(c => c.parent_category && rootCategories.some(r => r.name === c.parent_category));
   const subCategories = (allCategories || []).filter(c => c.parent_category && mainCategories.some(m => m.name === c.parent_category));
-
-  const colors = [
-    { name: 'Orange-Red', hex: '#fa5252' },
-    { name: 'Green', hex: '#12b886' },
-    { name: 'Blue', hex: '#228be6' },
-    { name: 'Purple', hex: '#7950f2' },
-    { name: 'Dark Gray', hex: '#25262b' },
-    { name: 'White', hex: '#f8f9fa' }
-  ];
-
-  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   const handleToggleCategory = (catName) => {
     if (checkedCategories.includes(catName)) {
@@ -88,7 +84,7 @@ export default function ProductFilters() {
         <div className="space-y-3.5">
           <button
             onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-            className="w-full flex items-center justify-between font-black text-[13.5px] text-zinc-900 tracking-tight"
+            className="w-full flex items-center justify-between font-black text-[13.5px] text-zinc-900 tracking-tight transition-opacity hover:opacity-80"
           >
             <span>Category</span>
             {isCategoryOpen ? (
@@ -98,98 +94,130 @@ export default function ProductFilters() {
             )}
           </button>
 
-          {isCategoryOpen && (
-            <div className="space-y-2.5 pt-1">
-              {visibleCategories.map((rootCat) => {
-                const isRootChecked = checkedCategories.includes(rootCat.name);
-                const rootMains = mainCategories.filter(m => m.parent_category === rootCat.name);
-                return (
-                  <div key={rootCat.id} className="space-y-1.5 pb-2">
-                    <label className="flex items-center justify-between text-[13.5px] font-normal text-zinc-650 cursor-pointer select-none">
-                      <div className="flex items-center gap-2.5">
-                        <input
-                          type="checkbox"
-                          checked={isRootChecked}
-                          onChange={() => handleToggleCategory(rootCat.name)}
-                          className="h-4 w-4 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
-                        />
-                        <span className={isRootChecked ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
-                          {rootCat.name}
-                        </span>
-                      </div>
+          <div className={`space-y-2.5 pt-1 overflow-hidden transition-all duration-300 ease-in-out ${isCategoryOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {visibleCategories.map((rootCat) => {
+              const isRootChecked = checkedCategories.includes(rootCat.name);
+              const rootMains = mainCategories.filter(m => m.parent_category === rootCat.name);
+              const isExpanded = expandedCategories[rootCat.name];
+
+              return (
+                <div key={rootCat.id} className="space-y-1.5 pb-2">
+                  <label className="flex items-center justify-between text-[13.5px] font-normal text-zinc-650 cursor-pointer select-none">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isRootChecked}
+                        onChange={() => handleToggleCategory(rootCat.name)}
+                        className="h-4 w-4 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+                      />
+                      <span className={isRootChecked ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
+                        {rootCat.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
                       <span className="text-xs text-zinc-400 font-normal">({getProductCount(rootCat.name)})</span>
-                    </label>
+                      {rootMains.length > 0 && (
+                        <button 
+                          onClick={(e) => toggleExpand(rootCat.name, e)}
+                          className="p-1 hover:bg-zinc-100 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
+                        >
+                          {isExpanded ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
+                    </div>
+                  </label>
 
-                    {/* Main Categories */}
-                    {rootMains.map((mainCat) => {
-                      const isMainChecked = checkedCategories.includes(mainCat.name);
-                      const mainSubs = subCategories.filter(s => s.parent_category === mainCat.name);
-                      return (
-                        <div key={mainCat.id} className="pl-5 space-y-1.5 border-l-2 border-zinc-100 ml-[7px] my-2">
-                          <label className="flex items-center justify-between text-[12.5px] font-normal text-zinc-550 cursor-pointer select-none">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={isMainChecked}
-                                onChange={() => handleToggleCategory(mainCat.name)}
-                                className="h-3.5 w-3.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
-                              />
-                              <span className={isMainChecked ? 'text-zinc-900 font-bold' : 'text-zinc-500'}>
-                                {mainCat.name}
-                              </span>
-                            </div>
+                  {/* Main Categories */}
+                  {isExpanded && rootMains.map((mainCat) => {
+                    const isMainChecked = checkedCategories.includes(mainCat.name);
+                    const mainSubs = subCategories.filter(s => s.parent_category === mainCat.name);
+                    const isMainExpanded = expandedCategories[mainCat.name];
+
+                    return (
+                      <div key={mainCat.id} className="pl-5 space-y-1.5 border-l-2 border-zinc-100 ml-[7px] my-2 animate-fade-in">
+                        <label className="flex items-center justify-between text-[12.5px] font-normal text-zinc-550 cursor-pointer select-none">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isMainChecked}
+                              onChange={() => handleToggleCategory(mainCat.name)}
+                              className="h-3.5 w-3.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+                            />
+                            <span className={isMainChecked ? 'text-zinc-900 font-bold' : 'text-zinc-500'}>
+                              {mainCat.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
                             <span className="text-[10px] text-zinc-400 font-normal">({getProductCount(mainCat.name)})</span>
-                          </label>
+                            {mainSubs.length > 0 && (
+                              <button 
+                                onClick={(e) => toggleExpand(mainCat.name, e)}
+                                className="p-0.5 hover:bg-zinc-100 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
+                              >
+                                {isMainExpanded ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                              </button>
+                            )}
+                          </div>
+                        </label>
 
-                          {/* Sub Categories */}
-                          {mainSubs.length > 0 && (
-                            <div className="pl-4 space-y-1.5 border-l border-zinc-100 ml-1.5 mt-1.5 mb-2">
-                              {mainSubs.map((subCat) => {
-                                const isSubChecked = checkedCategories.includes(subCat.name);
-                                return (
-                                  <label key={subCat.id} className="flex items-center justify-between text-[11.5px] font-normal text-zinc-450 cursor-pointer select-none">
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={isSubChecked}
-                                        onChange={() => handleToggleCategory(subCat.name)}
-                                        className="h-3 w-3 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
-                                      />
-                                      <span className={isSubChecked ? 'text-zinc-800 font-bold' : 'text-zinc-400'}>
-                                        {subCat.name}
-                                      </span>
-                                    </div>
-                                    <span className="text-[10px] text-zinc-400 font-normal">({getProductCount(subCat.name)})</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-              
-              <button
-                type="button"
-                onClick={() => setShowAllCategories(!showAllCategories)}
-                className="text-[12px] font-bold text-[#7c3aed] hover:text-[#6d28d9] transition pt-1 block"
-              >
-                {showAllCategories ? '- View Less' : '+ View More'}
-              </button>
-            </div>
-          )}
+                        {/* Sub Categories */}
+                        {isMainExpanded && mainSubs.length > 0 && (
+                          <div className="pl-4 space-y-1.5 border-l border-zinc-100 ml-1.5 mt-1.5 mb-2 animate-fade-in">
+                            {mainSubs.map((subCat) => {
+                              const isSubChecked = checkedCategories.includes(subCat.name);
+                              return (
+                                <label key={subCat.id} className="flex items-center justify-between text-[11.5px] font-normal text-zinc-450 cursor-pointer select-none">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSubChecked}
+                                      onChange={() => handleToggleCategory(subCat.name)}
+                                      className="h-3 w-3 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+                                    />
+                                    <span className={isSubChecked ? 'text-zinc-800 font-bold' : 'text-zinc-400'}>
+                                      {subCat.name}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400 font-normal">({getProductCount(subCat.name)})</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            
+            <button
+              type="button"
+              onClick={() => setShowAllCategories(!showAllCategories)}
+              className="text-[12px] font-bold text-[#7c3aed] hover:text-[#6d28d9] transition pt-1 block"
+            >
+              {showAllCategories ? '- View Less' : '+ View More'}
+            </button>
+          </div>
         </div>
 
         <hr className="border-zinc-100" />
 
         {/* Price Range */}
         <div className="space-y-3.5">
-          <h4 className="font-black text-[13.5px] text-zinc-900 tracking-tight">Price Range</h4>
+          <button
+            onClick={() => setIsPriceOpen(!isPriceOpen)}
+            className="w-full flex items-center justify-between font-black text-[13.5px] text-zinc-900 tracking-tight transition-opacity hover:opacity-80"
+          >
+            <span>Price Range</span>
+            {isPriceOpen ? (
+              <ChevronUp className="h-4.5 w-4.5 text-zinc-500" />
+            ) : (
+              <ChevronDown className="h-4.5 w-4.5 text-zinc-500" />
+            )}
+          </button>
           
-          <div className="pt-2 px-1 relative space-y-4">
+          <div className={`pt-2 px-1 relative space-y-4 overflow-hidden transition-all duration-300 ease-in-out ${isPriceOpen ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0 py-0'}`}>
             <input
               type="range"
               min="100"
@@ -229,23 +257,35 @@ export default function ProductFilters() {
           </div>
         </div>
 
-
-
         <hr className="border-zinc-100" />
 
         {/* Offers Checkbox */}
         <div className="space-y-3.5">
-          <label className="flex items-center gap-2.5 text-[13.5px] font-bold text-zinc-900 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showOnlyOffers}
-              onChange={(e) => setShowOnlyOffers(e.target.checked)}
-              className="h-4.5 w-4.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
-            />
-            <span className={showOnlyOffers ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
-              Offers & Discounts Only
-            </span>
-          </label>
+          <button
+            onClick={() => setIsOffersOpen(!isOffersOpen)}
+            className="w-full flex items-center justify-between font-black text-[13.5px] text-zinc-900 tracking-tight transition-opacity hover:opacity-80"
+          >
+            <span>Promotions</span>
+            {isOffersOpen ? (
+              <ChevronUp className="h-4.5 w-4.5 text-zinc-500" />
+            ) : (
+              <ChevronDown className="h-4.5 w-4.5 text-zinc-500" />
+            )}
+          </button>
+          
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOffersOpen ? 'max-h-[100px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <label className="flex items-center gap-2.5 text-[13.5px] font-bold text-zinc-900 cursor-pointer select-none pt-2">
+              <input
+                type="checkbox"
+                checked={showOnlyOffers}
+                onChange={(e) => setShowOnlyOffers(e.target.checked)}
+                className="h-4.5 w-4.5 rounded border-zinc-300 text-[#e11d48] focus:ring-[#e11d48] transition cursor-pointer"
+              />
+              <span className={showOnlyOffers ? 'text-zinc-950 font-bold' : 'text-zinc-600'}>
+                Offers & Discounts Only
+              </span>
+            </label>
+          </div>
         </div>
 
       </div>

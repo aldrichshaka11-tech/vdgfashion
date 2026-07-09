@@ -6430,7 +6430,28 @@ function DashboardPortal({ onLogout, adminUser }) {
               {modalType === 'maincategory' && (
                 <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
 
-
+                  {/* 1. Category Image (Optional) */}
+                  <div className="flex flex-col gap-2">
+                    <label className={`font-semibold tracking-wide ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                      Category image <span className="text-zinc-400 ml-1 text-xs font-normal">(optional)</span>
+                    </label>
+                    <div
+                      className={`relative flex items-center justify-center border-2 border-dashed ${theme === "dark" ? "border-zinc-700 bg-[#172033]" : "border-zinc-200 bg-zinc-50"} rounded-2xl w-full h-40 overflow-hidden group cursor-pointer transition-all hover:border-[#a855f7] ${uploadingCategoryImage ? 'opacity-80' : ''}`}
+                      onClick={() => !uploadingCategoryImage && document.getElementById('mainCategoryImageUpload').click()}
+                    >
+                      {categoryForm.imagePreview || categoryForm.image ? (
+                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-[#a855f7] transition-colors">
+                          <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
+                          <span className="text-[10px] uppercase font-bold tracking-wider">
+                            {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Category Image' : 'Upload Category Image'}
+                          </span>
+                        </div>
+                      )}
+                      <input type="file" id="mainCategoryImageUpload" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
+                    </div>
+                  </div>
 
                   {/* 2. Parent Category Select */}
                   <div className="space-y-2">
@@ -6491,10 +6512,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </button>
                     <button
                       type="submit"
-                      disabled={false}
-                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white hover:opacity-90 shadow-purple-500/20 cursor-pointer`}
+                      disabled={uploadingCategoryImage}
+                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${uploadingCategoryImage ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'}`}
                     >
-                      Save Main Category
+                      {uploadingCategoryImage ? 'Uploading...' : 'Save Main Category'}
                     </button>
                   </div>
                 </form>
@@ -6503,7 +6524,28 @@ function DashboardPortal({ onLogout, adminUser }) {
               {modalType === 'subcategory' && (
                 <form onSubmit={handleSaveCategory} className="space-y-5 text-left text-sm">
 
-
+                  {/* 1. Category Image (Optional) */}
+                  <div className="flex flex-col gap-2">
+                    <label className={`font-semibold tracking-wide ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                      Category image <span className="text-zinc-400 ml-1 text-xs font-normal">(optional)</span>
+                    </label>
+                    <div
+                      className={`relative flex items-center justify-center border-2 border-dashed ${theme === "dark" ? "border-zinc-700 bg-[#172033]" : "border-zinc-200 bg-zinc-50"} rounded-2xl w-full h-40 overflow-hidden group cursor-pointer transition-all hover:border-[#a855f7] ${uploadingCategoryImage ? 'opacity-80' : ''}`}
+                      onClick={() => !uploadingCategoryImage && document.getElementById('subCategoryImageUpload').click()}
+                    >
+                      {categoryForm.imagePreview || categoryForm.image ? (
+                        <img src={getImageUrl(categoryForm.imagePreview || categoryForm.image)} alt="Preview" className="w-full h-full object-contain p-0.5" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-[#a855f7] transition-colors">
+                          <Upload size={16} className={uploadingCategoryImage ? 'animate-spin' : ''} />
+                          <span className="text-[10px] uppercase font-bold tracking-wider">
+                            {uploadingCategoryImage ? 'Uploading Image...' : categoryForm.imagePreview ? 'Change Category Image' : 'Upload Category Image'}
+                          </span>
+                        </div>
+                      )}
+                      <input type="file" id="subCategoryImageUpload" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
+                    </div>
+                  </div>
 
                   {/* 2. Parent Category Select */}
                   <div className="space-y-2">
@@ -6564,10 +6606,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </button>
                     <button
                       type="submit"
-                      disabled={false}
-                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white hover:opacity-90 shadow-purple-500/20 cursor-pointer`}
+                      disabled={uploadingCategoryImage}
+                      className={`py-3 px-8 rounded-xl font-normal transition-all active:scale-95 shadow-md text-xs bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] text-white ${uploadingCategoryImage ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 shadow-purple-500/20 cursor-pointer'}`}
                     >
-                      Save Subcategory
+                      {uploadingCategoryImage ? 'Uploading...' : 'Save Subcategory'}
                     </button>
                   </div>
                 </form>

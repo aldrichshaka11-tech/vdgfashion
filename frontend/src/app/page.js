@@ -79,7 +79,8 @@ export default function Home() {
     setCheckedCategories,
     resetFilters,
     reviews,
-    showOnlyOffers
+    showOnlyOffers,
+    allCategories
   } = useStore();
 
   const router = useRouter();
@@ -87,6 +88,10 @@ export default function Home() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterCategory, setFilterCategory] = useState(null);
+
+  // Active track selections for dynamic filtering
+  const [activeRootCat, setActiveRootCat] = useState(null);
+  const [activeMainCat, setActiveMainCat] = useState(null);
 
   const reviewsRef = React.useRef(null);
   const handleScrollReviews = (direction) => {
@@ -188,6 +193,40 @@ export default function Home() {
   // Categories Horizontal track list
   const categoryTrack = categoryItems || [];
 
+  // Default selection logic on initial load
+  useEffect(() => {
+    if (categoryTrack.length > 0 && !activeRootCat) {
+      setActiveRootCat(categoryTrack[0].categoryRef);
+    }
+  }, [categoryTrack, activeRootCat]);
+
+  // Actually, to correctly identify main categories, we check if their parent has NO parent.
+  // Root categories have NO parent.
+  const rootCategoryNames = useMemo(() => (allCategories || []).filter(c => !c.parent_category).map(c => c.name), [allCategories]);
+  
+  const mainCategoryList = useMemo(() => {
+    const mains = (allCategories || []).filter(c => c.parent_category && rootCategoryNames.includes(c.parent_category));
+    if (!activeRootCat) return mains;
+    return mains.filter(c => c.parent_category === activeRootCat);
+  }, [allCategories, rootCategoryNames, activeRootCat]);
+
+  // Update activeMainCat when activeRootCat changes
+  useEffect(() => {
+    if (mainCategoryList.length > 0) {
+      if (!activeMainCat || !mainCategoryList.some(m => m.name === activeMainCat)) {
+        setActiveMainCat(mainCategoryList[0].name);
+      }
+    } else {
+      setActiveMainCat(null);
+    }
+  }, [mainCategoryList, activeMainCat]);
+
+  const subCategoryList = useMemo(() => {
+    const subs = (allCategories || []).filter(c => c.parent_category && !rootCategoryNames.includes(c.parent_category));
+    if (!activeMainCat) return subs;
+    return subs.filter(c => c.parent_category === activeMainCat);
+  }, [allCategories, rootCategoryNames, activeMainCat]);
+
   const handleScrollToShop = () => {
     const catalogElement = document.getElementById('shop-catalog');
     if (catalogElement) {
@@ -259,17 +298,16 @@ export default function Home() {
                       <div
                         key={idx}
                         onClick={() => {
+                          setActiveRootCat(cat.categoryRef);
                           setSelectedCategory(cat.categoryRef);
                           setCheckedCategories([cat.categoryRef]);
-                          router.push('/categories');
                         }}
                         data-aos="zoom-in"
                         data-aos-delay={idx * 50}
                         className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
                       >
-                        {/* Circle photo container */}
                         <div
-                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center p-3.5 relative overflow-hidden shadow-2xs transition-all duration-300 ${
+                          className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-2 sm:p-3 relative overflow-hidden shadow-2xs transition-all duration-300 ${
                             isSelected ? 'ring-3 ring-[#e11d48] ring-offset-2 scale-102' : 'hover:shadow-sm'
                           }`}
                           style={{ backgroundColor: cat.bg }}
@@ -282,7 +320,7 @@ export default function Home() {
                         </div>
                         
                         {/* Plain text label below */}
-                        <span className={`mt-2.5 text-xs sm:text-sm font-bold tracking-tight text-center transition-colors ${
+                        <span className={`mt-2.5 text-[10px] sm:text-xs md:text-sm font-bold tracking-tight text-center transition-colors ${
                           isSelected ? 'text-[#e11d48]' : 'text-zinc-700'
                         }`}>
                           {cat.name}
@@ -292,6 +330,116 @@ export default function Home() {
                   })}
                 </div>
               </div>
+
+              {/* Main Categories Horizontal track */}
+              {mainCategoryList.length > 0 && (
+                <div className="space-y-6 pt-4" data-aos="fade-up">
+                  <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
+                    <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
+                      <Grid className="h-5 w-5 fill-indigo-500 text-indigo-500" />
+                      Explore Collections
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
+                    {mainCategoryList.map((cat, idx) => {
+                      const isSelected = selectedCategory === cat.name;
+                      const fallbackColors = ['#fdf0d5', '#e2f2ed', '#ffe4e6', '#e0e7ff', '#fef3c7'];
+                      const bgColor = fallbackColors[idx % fallbackColors.length];
+                      return (
+                        <div
+                          key={cat.id || idx}
+                          onClick={() => {
+                            setActiveMainCat(cat.name);
+                            setSelectedCategory(cat.name);
+                            setCheckedCategories([cat.name]);
+                          }}
+                          data-aos="zoom-in"
+                          data-aos-delay={(idx % 10) * 50}
+                          className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
+                        >
+                          {/* Circle photo container */}
+                          <div
+                            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-1.5 sm:p-2 relative overflow-hidden shadow-2xs transition-all duration-300 ${
+                              isSelected ? 'ring-3 ring-indigo-500 ring-offset-2 scale-102' : 'hover:shadow-sm'
+                            }`}
+                            style={{ backgroundColor: bgColor }}
+                          >
+                            <div className="relative w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white/50">
+                              {cat.image ? (
+                                <Image src={cat.image.startsWith('http') ? cat.image : `${mediaUrl}${cat.image}`} alt={cat.name} fill className="object-cover" />
+                              ) : (
+                                <span className="text-sm font-bold text-zinc-400">{cat.name.substring(0, 2).toUpperCase()}</span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <span className={`mt-2.5 text-[10px] sm:text-xs md:text-sm font-bold tracking-tight text-center transition-colors ${
+                            isSelected ? 'text-indigo-600' : 'text-zinc-700'
+                          }`}>
+                            {cat.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Subcategories Horizontal track */}
+              {subCategoryList.length > 0 && (
+                <div className="space-y-6 pt-4" data-aos="fade-up">
+                  <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
+                    <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
+                      <Sparkles className="h-5 w-5 fill-teal-500 text-teal-500" />
+                      Discover More
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
+                    {subCategoryList.map((cat, idx) => {
+                      const isSelected = selectedCategory === cat.name;
+                      const fallbackColors = ['#f3e8ff', '#dcfce7', '#ffedd5', '#e0f2fe', '#fce7f3'];
+                      const bgColor = fallbackColors[idx % fallbackColors.length];
+                      return (
+                        <div
+                          key={cat.id || idx}
+                          onClick={() => {
+                            setSelectedCategory(cat.name);
+                            setCheckedCategories([cat.name]);
+                            handleScrollToShop();
+                          }}
+                          data-aos="zoom-in"
+                          data-aos-delay={(idx % 10) * 50}
+                          className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
+                        >
+                          {/* Squircle photo container */}
+                          <div
+                            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center p-1 sm:p-1.5 relative overflow-hidden shadow-2xs transition-all duration-300 ${
+                              isSelected ? 'ring-2 ring-teal-500 ring-offset-2 scale-102' : 'hover:shadow-sm'
+                            }`}
+                            style={{ backgroundColor: bgColor }}
+                          >
+                            <div className="relative w-full h-full rounded-xl overflow-hidden flex items-center justify-center bg-white/50">
+                              {cat.image ? (
+                                <Image src={cat.image.startsWith('http') ? cat.image : `${mediaUrl}${cat.image}`} alt={cat.name} fill className="object-cover" />
+                              ) : (
+                                <span className="text-xs font-bold text-zinc-400">{cat.name.substring(0, 2).toUpperCase()}</span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <span className={`mt-2 text-[9px] sm:text-[11px] md:text-xs font-semibold tracking-tight text-center transition-colors ${
+                            isSelected ? 'text-teal-600' : 'text-zinc-600'
+                          }`}>
+                            {cat.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Special Offers Section - Controlled by admin marking products as 'discount' */}
               {(() => {
