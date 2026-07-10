@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -13,6 +14,9 @@ import { useStore } from '../context/StoreContext';
 import { API_BASE } from '../../lib/api';
 
 export default function AccountPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
   const { user, loginUser, registerUser, logoutUser, products } = useStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders'); // 'profile' | 'orders' | 'addresses'
@@ -158,6 +162,8 @@ export default function AccountPage() {
     setAuthLoading(false);
     if (!result.success) {
       setAuthError(result.message);
+    } else if (redirectUrl) {
+      router.push(redirectUrl);
     }
   };
 
@@ -169,6 +175,8 @@ export default function AccountPage() {
     setAuthLoading(false);
     if (!result.success) {
       setAuthError(result.message);
+    } else if (redirectUrl) {
+      router.push(redirectUrl);
     }
   };
 

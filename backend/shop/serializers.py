@@ -108,9 +108,18 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    product_code = serializers.SerializerMethodField()
+
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'selected_color', 'selected_size', 'price']
+        fields = ['id', 'product', 'product_name', 'product_code', 'quantity', 'selected_color', 'selected_size', 'price']
+
+    def get_product_code(self, obj):
+        if obj.product_code:
+            return obj.product_code
+        if obj.product and obj.product.sku:
+            return obj.product.sku
+        return ""
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -155,6 +164,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 OrderItem.objects.create(
                     order=order, product=product,
                     product_name=product.name,
+                    product_code=product.sku,
                     quantity=item['quantity'],
                     selected_color=item.get('selected_color'),
                     selected_size=item.get('selected_size'),
@@ -166,6 +176,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 OrderItem.objects.create(
                     order=order,
                     product_name=f"Unknown Product (ID: {item['product_id']})",
+                    product_code="",
                     quantity=item['quantity'],
                     selected_color=item.get('selected_color'),
                     selected_size=item.get('selected_size'),

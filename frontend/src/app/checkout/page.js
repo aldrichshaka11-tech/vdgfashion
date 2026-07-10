@@ -638,103 +638,19 @@ export default function CheckoutPage() {
                     )}
 
                     {!user && (
-                      <div className="space-y-5 animate-fade-in">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-normal text-zinc-650">Recipient Name *</label>
-                            <input
-                              type="text"
-                              name="name"
-                              required
-                              value={formData.name}
-                              onChange={handleInputChange}
-                              placeholder="John Doe"
-                              className="w-full px-4 py-3 bg-zinc-50/50 border border-zinc-200 rounded-xl text-sm sm:text-base font-normal focus:outline-none focus:ring-2 focus:ring-[#5c51db]/10 focus:border-zinc-300 focus:bg-white transition-all text-zinc-700"
-                            />
-                          </div>
-                          
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-normal text-zinc-650">Phone Number *</label>
-                            <input
-                              type="tel"
-                              name="phone"
-                              required
-                              value={formData.phone}
-                              onChange={handleInputChange}
-                              placeholder="+91 98765 43210"
-                              className="w-full px-4 py-3 bg-zinc-50/50 border border-zinc-200 rounded-xl text-sm sm:text-base font-normal focus:outline-none focus:ring-2 focus:ring-[#5c51db]/10 focus:border-zinc-300 focus:bg-white transition-all text-zinc-700"
-                            />
-                          </div>
+                      <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center space-y-4">
+                        <User className="h-10 w-10 text-zinc-400 mx-auto" />
+                        <div>
+                          <h4 className="text-lg font-bold text-zinc-900">Sign in to Continue</h4>
+                          <p className="text-sm text-zinc-500 mt-1">You need an account to place an order and track its status.</p>
                         </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-sm font-normal text-zinc-650">Street Address *</label>
-                          <input
-                            type="text"
-                            name="street"
-                            required
-                            value={formData.street}
-                            onChange={handleInputChange}
-                            placeholder="Apartment, suite, unit, building, street address"
-                            className="w-full px-4 py-3 bg-zinc-50/50 border border-zinc-200 rounded-xl text-sm sm:text-base font-normal focus:outline-none focus:ring-2 focus:ring-[#5c51db]/10 focus:border-zinc-300 focus:bg-white transition-all text-zinc-700"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-normal text-zinc-650">City *</label>
-                            <input
-                              type="text"
-                              name="city"
-                              required
-                              value={formData.city}
-                              onChange={handleInputChange}
-                              placeholder="Chennai"
-                              className="w-full px-4 py-3 bg-zinc-50/50 border border-zinc-200 rounded-xl text-sm sm:text-base font-normal focus:outline-none focus:ring-2 focus:ring-[#5c51db]/10 focus:border-zinc-300 focus:bg-white transition-all text-zinc-700"
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-normal text-zinc-650">State *</label>
-                            <input
-                              type="text"
-                              name="state"
-                              required
-                              value={formData.state}
-                              onChange={handleInputChange}
-                              placeholder="Tamil Nadu"
-                              className="w-full px-4 py-3 bg-zinc-50/50 border border-zinc-200 rounded-xl text-sm sm:text-base font-normal focus:outline-none focus:ring-2 focus:ring-[#5c51db]/10 focus:border-zinc-300 focus:bg-white transition-all text-zinc-700"
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-normal text-zinc-650">PIN Code *</label>
-                            <input
-                              type="text"
-                              name="pinCode"
-                              required
-                              value={formData.pinCode}
-                              onChange={handleInputChange}
-                              placeholder="600002"
-                              className="w-full px-4 py-3 bg-zinc-50/50 border border-zinc-200 rounded-xl text-sm sm:text-base font-normal focus:outline-none focus:ring-2 focus:ring-[#5c51db]/10 focus:border-zinc-300 focus:bg-white transition-all text-zinc-700"
-                            />
-                          </div>
-                        </div>
-
-                        {user && (
-                          <div className="flex items-center gap-2 pt-2">
-                            <input
-                              type="checkbox"
-                              id="saveAddressForFuture"
-                              checked={saveAddressForFuture}
-                              onChange={(e) => setSaveAddressForFuture(e.target.checked)}
-                              className="h-4.5 w-4.5 rounded border-zinc-300 text-[#5c51db] focus:ring-[#5c51db] cursor-pointer"
-                            />
-                            <label htmlFor="saveAddressForFuture" className="text-xs text-zinc-600 font-semibold select-none cursor-pointer">
-                              Save this address to my account for future orders
-                            </label>
-                          </div>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => router.push('/account?redirect=/checkout')}
+                          className="bg-[#5c51db] hover:bg-[#4b41ca] text-white px-6 py-2.5 rounded-xl font-bold transition-colors cursor-pointer"
+                        >
+                          Log In / Register
+                        </button>
                       </div>
                     )}
                   </div>
@@ -845,10 +761,12 @@ export default function CheckoutPage() {
 
                     <div className="space-y-3 pt-4">
                       <button
-                        type="submit"
-                        className="w-full py-4 bg-[#5c51db] hover:bg-[#4b41ca] !text-white text-sm sm:text-base font-black tracking-wider uppercase rounded-xl transition-all shadow-md active:scale-98 cursor-pointer"
+                        type={user ? "submit" : "button"}
+                        disabled={!user}
+                        onClick={() => { if (!user) router.push('/account?redirect=/checkout'); }}
+                        className={`w-full py-4 ${user ? 'bg-[#5c51db] hover:bg-[#4b41ca]' : 'bg-zinc-300 cursor-not-allowed'} !text-white text-sm sm:text-base font-black tracking-wider uppercase rounded-xl transition-all shadow-md active:scale-98 cursor-pointer`}
                       >
-                        Place Order • {formatINR(finalTotal)}
+                        {user ? `Place Order • ${formatINR(finalTotal)}` : 'Login to Place Order'}
                       </button>
                       <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400 font-normal">
                         <ShieldCheck className="h-4 w-4" />

@@ -197,6 +197,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     product_name = models.CharField(max_length=255)  # Snapshot product name at order time
+    product_code = models.CharField(max_length=100, blank=True, null=True)  # Snapshot product SKU at order time
     quantity = models.IntegerField(default=1)
     selected_color = models.CharField(max_length=100, blank=True, null=True)
     selected_size = models.CharField(max_length=50, blank=True, null=True)

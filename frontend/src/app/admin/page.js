@@ -459,6 +459,7 @@ const getPaginatedRange = (currentPage, totalPages) => {
 
 function DashboardPortal({ onLogout, adminUser }) {
   const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [activePage, setActivePage] = useState('dashboard');
   const [productPage, setProductPage] = useState(1);
 
@@ -4238,77 +4239,127 @@ function DashboardPortal({ onLogout, adminUser }) {
                         const StatusIcon = STATUS_CONFIG[o.status || 'pending']?.icon || Clock;
                         const openUpwards = index >= filteredOrders.length - 2 && filteredOrders.length >= 4;
                         return (
-                          <tr key={o.order_id} className="hover:bg-white/2 transition-colors">
-                            <td className="p-4 font-normal text-indigo-400">{o.order_id}</td>
-                            <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
-                            <td className="p-4 text-zinc-400 font-normal">{o.phone || '---'}</td>
-                            <td className="p-4 uppercase text-zinc-500 font-normal">{o.payment_method}</td>
-                            <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
-                            <td className="p-4 text-center relative">
-                              <div className="inline-block text-left relative">
-                                {/* Custom Dropdown Toggle Button */}
-                                <button
-                                  onClick={() => setActiveDropdownId(activeDropdownId === o.id ? null : o.id)}
-                                  className={`text-xs font-normal px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${STATUS_CONFIG[o.status || 'pending']?.bg || 'bg-zinc-500/10 text-zinc-650 border-zinc-500/20'
-                                    }`}
-                                >
-                                  <StatusIcon size={14} className="shrink-0" />
-                                  <span className="tracking-wider">{STATUS_CONFIG[o.status || 'pending']?.label || 'Pending'}</span>
-                                  <ChevronDown size={12} className="shrink-0" />
-                                </button>
+                          <React.Fragment key={o.order_id}>
+                            <tr onClick={() => setExpandedOrderId(expandedOrderId === o.id ? null : o.id)} className="hover:bg-white/2 transition-colors cursor-pointer">
+                              <td className="p-4 font-normal text-indigo-400">{o.order_id}</td>
+                              <td className={`p-4 font-normal ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>{o.customer_name}</td>
+                              <td className="p-4 text-zinc-400 font-normal">{o.phone || '---'}</td>
+                              <td className="p-4 uppercase text-zinc-500 font-normal">{o.payment_method}</td>
+                              <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{o.total_amount}</td>
+                              <td className="p-4 text-center relative">
+                                <div className="inline-block text-left relative">
+                                  {/* Custom Dropdown Toggle Button */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveDropdownId(activeDropdownId === o.id ? null : o.id);
+                                    }}
+                                    className={`text-xs font-normal px-3.5 py-2 rounded-full flex items-center justify-between gap-2 cursor-pointer transition-all duration-200 active:scale-95 border hover:brightness-95 dark:hover:brightness-110 shadow-3xs ${STATUS_CONFIG[o.status || 'pending']?.bg || 'bg-zinc-500/10 text-zinc-650 border-zinc-500/20'
+                                      }`}
+                                  >
+                                    <StatusIcon size={14} className="shrink-0" />
+                                    <span className="tracking-wider">{STATUS_CONFIG[o.status || 'pending']?.label || 'Pending'}</span>
+                                    <ChevronDown size={12} className="shrink-0" />
+                                  </button>
 
-                                {/* Dropdown Menu Overlay Backdrop & Menu */}
-                                {activeDropdownId === o.id && (
-                                  <>
-                                    <div
-                                      className="fixed inset-0 z-30"
-                                      onClick={() => setActiveDropdownId(null)}
-                                    />
-                                    <div className={`absolute left-1/2 -translate-x-1/2 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-                                      } ${theme === 'dark'
-                                        ? 'bg-[#172033] border-[#1e293b] text-white shadow-black/85'
-                                        : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
-                                      }`}>
-                                      <div className="max-h-[220px] overflow-y-auto no-scrollbar py-0.5 space-y-0.5">
-                                        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
-                                          const ItemIcon = cfg.icon || Clock;
-                                          return (
-                                            <button
-                                              key={key}
-                                              onClick={() => {
-                                                handleOrderStatusChange(o.id, key);
-                                                setActiveDropdownId(null);
-                                              }}
-                                              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-normal transition-all cursor-pointer select-none active:scale-97 ${(o.status || 'pending') === key
-                                                  ? cfg.bg
-                                                  : (theme === 'dark' ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-zinc-50 text-zinc-650 hover:text-zinc-900')
-                                                }`}
-                                            >
-                                              <ItemIcon size={14} className="shrink-0" />
-                                              <span className="tracking-wide">{cfg.label}</span>
-                                            </button>
-                                          );
-                                        })}
+                                  {/* Dropdown Menu Overlay Backdrop & Menu */}
+                                  {activeDropdownId === o.id && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-30"
+                                        onClick={(e) => { e.stopPropagation(); setActiveDropdownId(null); }}
+                                      />
+                                      <div className={`absolute left-1/2 -translate-x-1/2 w-40 rounded-2xl shadow-xl z-45 border p-1.5 animate-fade-in ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                        } ${theme === 'dark'
+                                          ? 'bg-[#172033] border-[#1e293b] text-white shadow-black/85'
+                                          : 'bg-white border-zinc-200 text-zinc-800 shadow-zinc-250/60'
+                                        }`}>
+                                        <div className="max-h-[220px] overflow-y-auto no-scrollbar py-0.5 space-y-0.5">
+                                          {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+                                            const ItemIcon = cfg.icon || Clock;
+                                            return (
+                                              <button
+                                                key={key}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleOrderStatusChange(o.id, key);
+                                                  setActiveDropdownId(null);
+                                                }}
+                                                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs font-normal transition-all cursor-pointer select-none active:scale-97 ${(o.status || 'pending') === key
+                                                    ? cfg.bg
+                                                    : (theme === 'dark' ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-zinc-50 text-zinc-650 hover:text-zinc-900')
+                                                  }`}
+                                              >
+                                                <ItemIcon size={14} className="shrink-0" />
+                                                <span className="tracking-wide">{cfg.label}</span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4 text-center text-zinc-500 font-normal">
+                                {/* eslint-disable-next-line react-hooks/purity */}
+                                {new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td className="p-4 text-center">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteOrder(o.id);
+                                  }}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
+                                  title="Delete Order"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                            {expandedOrderId === o.id && (
+                              <tr>
+                                <td colSpan="8" className="p-0 border-b-0">
+                                  <div className={`p-5 m-2 rounded-xl border ${theme === 'dark' ? 'bg-[#1a233a] border-[#2a344a]' : 'bg-zinc-50 border-zinc-200'}`}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div>
+                                        <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Order Items</h4>
+                                        <div className="space-y-3">
+                                          {(o.items || []).map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-xs">
+                                              <div className="flex flex-col">
+                                                <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                                                  {item.quantity}x {item.product_name}
+                                                  {item.product_code && <span className="ml-2 text-[10px] text-indigo-500 font-mono tracking-wider">({item.product_code})</span>}
+                                                </span>
+                                                <span className={`text-[10px] ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                                                  {item.selected_color && `Color: ${item.selected_color}`} 
+                                                  {item.selected_color && item.selected_size && ' | '}
+                                                  {item.selected_size && `Size: ${item.selected_size}`}
+                                                </span>
+                                              </div>
+                                              <span className={`font-bold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>₹{item.price}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Shipping Details</h4>
+                                        <div className={`text-xs space-y-1 ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                                          <p><span className={`font-medium ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Name:</span> {o.customer_name}</p>
+                                          <p><span className={`font-medium ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Email:</span> {o.email || 'N/A'}</p>
+                                          <p><span className={`font-medium ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Phone:</span> {o.phone || 'N/A'}</p>
+                                          <p><span className={`font-medium ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Address:</span> {o.street_address}</p>
+                                          <p className="pl-14">{o.city}, {o.state} - {o.pin_code}</p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-4 text-center text-zinc-500 font-normal">
-                              {/* eslint-disable-next-line react-hooks/purity */}
-                              {new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </td>
-                            <td className="p-4 text-center">
-                              <button
-                                onClick={() => handleDeleteOrder(o.id)}
-                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
-                                title="Delete Order"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       })
                     )}
