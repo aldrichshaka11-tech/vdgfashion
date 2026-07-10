@@ -13,7 +13,9 @@ import { formatINR } from '../utils/currency';
 import { useStore } from '../context/StoreContext';
 import { API_BASE } from '../../lib/api';
 
-export default function AccountPage() {
+import { Suspense } from 'react';
+
+function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
@@ -29,7 +31,7 @@ export default function AccountPage() {
   const [regFirst, setRegFirst] = useState('');
   const [regLast, setRegLast] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
-  
+
   // Login Form States
   const [loginUserVal, setLoginUserVal] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -303,8 +305,8 @@ export default function AccountPage() {
                     {isRegisterMode ? 'Create Account' : 'Welcome Back'}
                   </h2>
                   <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                    {isRegisterMode 
-                      ? 'Sign up to shop the curated infant & toddler collection' 
+                    {isRegisterMode
+                      ? 'Sign up to shop the curated infant & toddler collection'
                       : 'Sign in to access your vdgfashion account & checkouts'}
                   </p>
                 </div>
@@ -320,14 +322,14 @@ export default function AccountPage() {
                   <form onSubmit={handleRegisterSubmit} className="space-y-4 text-xs font-semibold">
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Username*</label>
-                      <input 
+                      <input
                         type="text" required value={regUsername} onChange={(e) => setRegUsername(e.target.value)}
                         className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Email Address*</label>
-                      <input 
+                      <input
                         type="email" required value={regEmail} onChange={(e) => setRegEmail(e.target.value)}
                         className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
                       />
@@ -335,14 +337,14 @@ export default function AccountPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">First Name</label>
-                        <input 
+                        <input
                           type="text" value={regFirst} onChange={(e) => setRegFirst(e.target.value)}
                           className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
                         />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Last Name</label>
-                        <input 
+                        <input
                           type="text" value={regLast} onChange={(e) => setRegLast(e.target.value)}
                           className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
                         />
@@ -351,7 +353,7 @@ export default function AccountPage() {
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Password*</label>
                       <div className="relative">
-                        <input 
+                        <input
                           type={showRegPassword ? "text" : "password"} required value={regPassword} onChange={(e) => setRegPassword(e.target.value)}
                           className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs pr-10"
                         />
@@ -373,7 +375,7 @@ export default function AccountPage() {
                   <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4 text-xs font-semibold">
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Username / Email*</label>
-                      <input 
+                      <input
                         type="text" required value={loginUserVal} onChange={(e) => setLoginUserVal(e.target.value)}
                         autoComplete="off"
                         className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs"
@@ -385,7 +387,7 @@ export default function AccountPage() {
                         <button type="button" onClick={() => alert('Forgot password functionality coming soon!')} className="text-[10px] uppercase tracking-wider text-pink-500 font-bold hover:text-pink-600 transition-colors cursor-pointer">Forgot Password?</button>
                       </div>
                       <div className="relative">
-                        <input 
+                        <input
                           type={showLoginPassword ? "text" : "password"} required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
                           autoComplete="new-password"
                           className="w-full px-4 py-3 bg-zinc-55 border border-zinc-200 rounded-xl text-xs font-normal focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500/80 transition-all text-black shadow-3xs pr-10"
@@ -406,12 +408,12 @@ export default function AccountPage() {
                 )}
 
                 <div className="pt-4 border-t border-zinc-150 text-center">
-                  <button 
+                  <button
                     onClick={() => { setIsRegisterMode(!isRegisterMode); setAuthError(''); }}
                     className="text-xs font-bold text-[#e11d48] hover:text-[#be123c] transition-colors cursor-pointer"
                   >
-                    {isRegisterMode 
-                      ? 'Already have an account? Sign In' 
+                    {isRegisterMode
+                      ? 'Already have an account? Sign In'
                       : "Don't have an account? Sign Up"}
                   </button>
                 </div>
@@ -427,14 +429,13 @@ export default function AccountPage() {
 
               {/* Main Tabs Container */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-2">
-                
+
                 {/* Left Column Tabs Selector (4 cols span) */}
                 <div className="lg:col-span-3 bg-white border border-zinc-150 rounded-[2rem] p-5 shadow-xs h-fit space-y-2" data-aos="fade-up">
                   <button
                     onClick={() => setActiveTab('orders')}
-                    className={`w-full flex items-center gap-3 px-4.5 py-3 rounded-2xl text-[14px] font-semibold transition-all text-left ${
-                      activeTab === 'orders' ? 'bg-rose-50 text-[#e11d48] font-bold' : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4.5 py-3 rounded-2xl text-[14px] font-semibold transition-all text-left ${activeTab === 'orders' ? 'bg-rose-50 text-[#e11d48] font-bold' : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
+                      }`}
                   >
                     <ShoppingBag className="h-5 w-5" />
                     Order History ({mockOrders.length})
@@ -442,9 +443,8 @@ export default function AccountPage() {
 
                   <button
                     onClick={() => setActiveTab('profile')}
-                    className={`w-full flex items-center gap-3 px-4.5 py-3 rounded-2xl text-[14px] font-semibold transition-all text-left ${
-                      activeTab === 'profile' ? 'bg-rose-50 text-[#e11d48] font-bold' : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4.5 py-3 rounded-2xl text-[14px] font-semibold transition-all text-left ${activeTab === 'profile' ? 'bg-rose-50 text-[#e11d48] font-bold' : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
+                      }`}
                   >
                     <User className="h-5 w-5" />
                     Personal Information
@@ -452,9 +452,8 @@ export default function AccountPage() {
 
                   <button
                     onClick={() => setActiveTab('addresses')}
-                    className={`w-full flex items-center gap-3 px-4.5 py-3 rounded-2xl text-[14px] font-semibold transition-all text-left ${
-                      activeTab === 'addresses' ? 'bg-rose-50 text-[#e11d48] font-bold' : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4.5 py-3 rounded-2xl text-[14px] font-semibold transition-all text-left ${activeTab === 'addresses' ? 'bg-rose-50 text-[#e11d48] font-bold' : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
+                      }`}
                   >
                     <MapPin className="h-5 w-5" />
                     Delivery Addresses
@@ -473,7 +472,7 @@ export default function AccountPage() {
 
                 {/* Right Column: Tab Panels (9 cols span) */}
                 <div className="lg:col-span-9 bg-white border border-zinc-150 rounded-[2rem] p-6 sm:p-8 shadow-xs flex flex-col justify-between h-full min-h-[400px]" data-aos="fade-up" data-aos-delay="100">
-                  
+
                   {/* 1. Order History Panel */}
                   {activeTab === 'orders' && (
                     <div className="space-y-6 animate-fade-in">
@@ -618,15 +617,14 @@ export default function AccountPage() {
                         {savedAddresses.map((addr) => (
                           <div key={addr.id} className="border border-zinc-150 rounded-2xl p-5 shadow-2xs space-y-3 relative hover:border-zinc-300 transition-colors">
                             <div className="flex justify-between items-center">
-                              <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold text-white border shadow-3xs ${
-                                addr.is_default
+                              <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold text-white border shadow-3xs ${addr.is_default
                                   ? 'bg-[#e5484d] border-[#e5484d]'
                                   : 'bg-[#5c51db] border-[#5c51db]'
-                              }`}>
+                                }`}>
                                 {addr.is_default ? `${addr.label || 'Home'} (Default)` : (addr.label || 'Home')}
                               </span>
                               <div className="flex items-center gap-2">
-                                <button 
+                                <button
                                   onClick={() => {
                                     setAddrForm({
                                       label: addr.label || 'Home',
@@ -647,7 +645,7 @@ export default function AccountPage() {
                                   Edit
                                 </button>
                                 <span className="text-zinc-300 select-none">|</span>
-                                <button 
+                                <button
                                   onClick={() => handleAddrDelete(addr.id)}
                                   className="text-xs font-bold text-rose-500 hover:text-rose-650 cursor-pointer"
                                 >
@@ -819,5 +817,13 @@ export default function AccountPage() {
 
       <CartDrawer />
     </div>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-zinc-50">Loading...</div>}>
+      <AccountContent />
+    </Suspense>
   );
 }
