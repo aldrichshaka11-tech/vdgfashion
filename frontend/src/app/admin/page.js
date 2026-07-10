@@ -3395,6 +3395,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   <thead className={`font-normal tracking-normal border-b ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-black'}`}>
                     <tr>
                       <th className="p-4.5">Product Name</th>
+                      <th className="p-4.5">Code</th>
                       <th className="p-4.5">Category</th>
                       <th className="p-4.5 text-right">Price</th>
                       <th className="p-4.5 text-right">Stock</th>
@@ -3407,6 +3408,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <td className="p-4 font-normal flex items-center gap-2.5">
                           {p.image && <img src={getImageUrl(p.image)} alt={p.name} className="w-8 h-8 rounded-lg object-contain border border-[#1e293b] bg-white p-0.5" />}
                           <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{p.name}</span>
+                        </td>
+                        <td className="p-4 font-mono text-xs tracking-wider text-indigo-500">
+                          {p.sku || '-'}
                         </td>
                         <td className="p-4 font-normal text-zinc-400">
                           {p.category_name || 'Unassigned'}
@@ -4331,8 +4335,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                                               <div className="flex flex-col">
                                                 <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
                                                   {item.quantity}x {item.product_name}
-                                                  {item.product_code && <span className="ml-2 text-[10px] text-indigo-500 font-mono tracking-wider">({item.product_code})</span>}
                                                 </span>
+                                                {item.product_code && <span className="text-[10.5px] text-indigo-500 font-mono tracking-wider font-medium mb-0.5">Code: {item.product_code}</span>}
                                                 <span className={`text-[10px] ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
                                                   {item.selected_color && `Color: ${item.selected_color}`} 
                                                   {item.selected_color && item.selected_size && ' | '}
