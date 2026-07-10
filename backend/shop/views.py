@@ -631,8 +631,38 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order = serializer.save(user=request.user)
             else:
                 order = serializer.save()
+            
+            try:
+                from .email_utils import send_order_email
+                send_order_email(order, 'receipt')
+            except Exception as e:
+                print(f"[EMAIL ERROR] {e}")
+                
             return Response({'success': True, 'order_id': order.order_id, 'message': 'Order placed successfully!'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        old_status = instance.status
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        new_status = instance.status
+        if old_status != new_status:
+            try:
+                from .email_utils import send_order_email
+                send_order_email(instance, 'status_update')
+            except Exception as e:
+                print(f"[EMAIL ERROR] {e}")
+                
+        return Response(serializer.data)
+        
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     @action(detail=False, methods=['POST'], url_path='create-razorpay-order')
     def create_razorpay_order(self, request):
