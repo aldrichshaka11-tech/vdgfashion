@@ -10,6 +10,7 @@ export default function ProductFilters() {
     products,
     checkedCategories,
     setCheckedCategories,
+    setSelectedCategory,
     priceRange,
     setPriceRange,
     resetFilters,
@@ -49,10 +50,17 @@ export default function ProductFilters() {
   const subCategories = (allCategories || []).filter(c => c.parent_category && mainCategories.some(m => m.name === c.parent_category));
 
   const handleToggleCategory = (catName) => {
+    let newChecked;
     if (checkedCategories.includes(catName)) {
-      setCheckedCategories(checkedCategories.filter((c) => c !== catName));
+      newChecked = checkedCategories.filter((c) => c !== catName);
     } else {
-      setCheckedCategories([...checkedCategories, catName]);
+      newChecked = [...checkedCategories, catName];
+    }
+    setCheckedCategories(newChecked);
+
+    // Fix the "Uncheck" fallback bug
+    if (newChecked.length === 0) {
+      setSelectedCategory('ALL');
     }
   };
 

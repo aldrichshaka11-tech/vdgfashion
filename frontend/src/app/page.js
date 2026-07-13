@@ -137,24 +137,61 @@ export default function Home() {
       );
     }
 
-    // Category Filter: Check list first, then fallback to top bar
+    // Setup hierarchy sets for smart filtering
+    const rootSet = new Set((allCategories || []).filter(c => !c.parent_category).map(c => c.name.toLowerCase()));
+    const mainSet = new Set((allCategories || []).filter(c => c.parent_category && rootSet.has(c.parent_category.toLowerCase())).map(c => c.name.toLowerCase()));
+
+    // Category Filter: Drill-down AND logic across levels, OR logic within levels
     if (checkedCategories && checkedCategories.length > 0) {
+      const checkedRoots = [];
+      const checkedMains = [];
+      const checkedSubs = [];
+
+      checkedCategories.forEach(cat => {
+        const c = cat.toLowerCase();
+        if (rootSet.has(c)) {
+          checkedRoots.push(c);
+        } else if (mainSet.has(c)) {
+          checkedMains.push(c);
+        } else {
+          checkedSubs.push(c);
+        }
+      });
+
       result = result.filter((p) => {
-        return checkedCategories.some((cat) => {
-          const catName = (p.category_name || '').toLowerCase();
-          const parentCat = (p.parent_category || '').toLowerCase();
-          const subCat = (p.sub_category || '').toLowerCase();
-          const c = cat.toLowerCase();
-          return catName === c || parentCat === c || subCat === c;
+        const pCat = (p.category_name || '').toLowerCase();
+        const pParent = (p.parent_category || '').toLowerCase();
+        const pSub = (p.sub_category || '').toLowerCase();
+        
+        // Build a complete set of all categories this product belongs to (including ancestors)
+        const prodCats = new Set([pCat, pParent, pSub].filter(Boolean));
+        prodCats.forEach(cat => {
+            const catObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === cat);
+            if (catObj && catObj.parent_category) {
+                const pName = catObj.parent_category.toLowerCase();
+                prodCats.add(pName);
+                const pObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === pName);
+                if (pObj && pObj.parent_category) {
+                    prodCats.add(pObj.parent_category.toLowerCase());
+                }
+            }
         });
+
+        // A product must match AT LEAST ONE selected category in a given level,
+        // OR pass if nothing was selected for that specific level.
+        const matchesRoots = checkedRoots.length === 0 || checkedRoots.some(c => prodCats.has(c));
+        const matchesMains = checkedMains.length === 0 || checkedMains.some(c => prodCats.has(c));
+        const matchesSubs = checkedSubs.length === 0 || checkedSubs.some(c => prodCats.has(c));
+
+        return matchesRoots && matchesMains && matchesSubs;
       });
     } else if (selectedCategory !== 'ALL') {
       const sel = selectedCategory.toLowerCase();
       result = result.filter((p) => {
-        const catName = (p.category_name || '').toLowerCase();
-        const parentCat = (p.parent_category || '').toLowerCase();
-        const subCat = (p.sub_category || '').toLowerCase();
-        return catName === sel || parentCat === sel || subCat === sel;
+        const pCat = (p.category_name || '').toLowerCase();
+        const pParent = (p.parent_category || '').toLowerCase();
+        const pSub = (p.sub_category || '').toLowerCase();
+        return pCat === sel || pParent === sel || pSub === sel;
       });
     }
 
@@ -293,22 +330,22 @@ export default function Home() {
                 
                 <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                   {categoryTrack.map((cat, idx) => {
-                    const isSelected = selectedCategory === cat.categoryRef;
+                    const isSelected = checkedCategories.includes(cat.categoryRef) || selectedCategory === cat.categoryRef;
                     return (
                       <div
                         key={idx}
                         onClick={() => {
                           setActiveRootCat(cat.categoryRef);
                           setSelectedCategory(cat.categoryRef);
-                          setCheckedCategories([cat.categoryRef]);
+                          setCheckedCategories((prev) => prev.includes(cat.categoryRef) ? prev.filter(c => c !== cat.categoryRef) : [...prev, cat.categoryRef]);
                         }}
                         data-aos="zoom-in"
                         data-aos-delay={idx * 50}
-                        className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
+                        className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 ${!isSelected && checkedCategories.length > 0 ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
                       >
                         <div
-                          className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-2 sm:p-3 relative overflow-hidden shadow-2xs transition-all duration-300 ${
-                            isSelected ? 'ring-3 ring-[#e11d48] ring-offset-2 scale-102' : 'hover:shadow-sm'
+                          className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-2 sm:p-3 relative overflow-hidden transition-all duration-300 ${
+                            isSelected ? 'ring-4 ring-[#e11d48] ring-offset-2 scale-102 shadow-lg animate-pulse' : 'hover:shadow-sm'
                           }`}
                           style={{ backgroundColor: cat.bg }}
                         >
@@ -343,7 +380,7 @@ export default function Home() {
                   
                   <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                     {mainCategoryList.map((cat, idx) => {
-                      const isSelected = selectedCategory === cat.name;
+                      const isSelected = checkedCategories.includes(cat.name) || selectedCategory === cat.name;
                       const fallbackColors = ['#fdf0d5', '#e2f2ed', '#ffe4e6', '#e0e7ff', '#fef3c7'];
                       const bgColor = fallbackColors[idx % fallbackColors.length];
                       return (
@@ -352,16 +389,16 @@ export default function Home() {
                           onClick={() => {
                             setActiveMainCat(cat.name);
                             setSelectedCategory(cat.name);
-                            setCheckedCategories([cat.name]);
+                            setCheckedCategories((prev) => prev.includes(cat.name) ? prev.filter(c => c !== cat.name) : [...prev, cat.name]);
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
-                          className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
+                          className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 ${!isSelected && checkedCategories.length > 0 ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
                         >
                           {/* Circle photo container */}
                           <div
-                            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-1.5 sm:p-2 relative overflow-hidden shadow-2xs transition-all duration-300 ${
-                              isSelected ? 'ring-3 ring-indigo-500 ring-offset-2 scale-102' : 'hover:shadow-sm'
+                            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-1.5 sm:p-2 relative overflow-hidden transition-all duration-300 ${
+                              isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 scale-102 shadow-lg animate-pulse' : 'hover:shadow-sm'
                             }`}
                             style={{ backgroundColor: bgColor }}
                           >
@@ -398,7 +435,7 @@ export default function Home() {
                   
                   <div className="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                     {subCategoryList.map((cat, idx) => {
-                      const isSelected = selectedCategory === cat.name;
+                      const isSelected = checkedCategories.includes(cat.name) || selectedCategory === cat.name;
                       const fallbackColors = ['#f3e8ff', '#dcfce7', '#ffedd5', '#e0f2fe', '#fce7f3'];
                       const bgColor = fallbackColors[idx % fallbackColors.length];
                       return (
@@ -406,17 +443,17 @@ export default function Home() {
                           key={cat.id || idx}
                           onClick={() => {
                             setSelectedCategory(cat.name);
-                            setCheckedCategories([cat.name]);
+                            setCheckedCategories((prev) => prev.includes(cat.name) ? prev.filter(c => c !== cat.name) : [...prev, cat.name]);
                             handleScrollToShop();
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
-                          className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105"
+                          className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 ${!isSelected && checkedCategories.length > 0 ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
                         >
                           {/* Squircle photo container */}
                           <div
-                            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center p-1 sm:p-1.5 relative overflow-hidden shadow-2xs transition-all duration-300 ${
-                              isSelected ? 'ring-2 ring-teal-500 ring-offset-2 scale-102' : 'hover:shadow-sm'
+                            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center p-1 sm:p-1.5 relative overflow-hidden transition-all duration-300 ${
+                              isSelected ? 'ring-4 ring-teal-500 ring-offset-2 scale-102 shadow-lg animate-pulse' : 'hover:shadow-sm'
                             }`}
                             style={{ backgroundColor: bgColor }}
                           >
