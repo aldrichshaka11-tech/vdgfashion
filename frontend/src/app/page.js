@@ -341,7 +341,7 @@ export default function Home() {
                         }}
                         data-aos="zoom-in"
                         data-aos-delay={idx * 50}
-                        className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 ${!isSelected && checkedCategories.length > 0 ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
+                        className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105`}
                       >
                         <div
                           className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center p-2 sm:p-3 relative overflow-hidden transition-all duration-300 ${
@@ -393,7 +393,7 @@ export default function Home() {
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
-                          className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 ${!isSelected && checkedCategories.length > 0 ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
+                          className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105`}
                         >
                           {/* Circle photo container */}
                           <div
@@ -448,7 +448,7 @@ export default function Home() {
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
-                          className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105 ${!isSelected && checkedCategories.length > 0 ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
+                          className={`flex flex-col items-center flex-shrink-0 cursor-pointer transition-all duration-300 hover:scale-105`}
                         >
                           {/* Squircle photo container */}
                           <div
@@ -477,42 +477,6 @@ export default function Home() {
                   </div>
                 </div>
               )}
-
-              {/* Special Offers Section - Controlled by admin marking products as 'discount' */}
-              {(() => {
-                const offerProducts = products.filter(p => p.tagType === 'discount' || p.tag_type === 'discount');
-                if (offerProducts.length === 0) return null;
-
-                return (
-                  <div className="space-y-6" data-aos="fade-up">
-                    <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200">
-                      <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
-                        <Gift className="h-5 w-5 fill-[#e11d48] text-[#e11d48]" />
-                        Special Offers & Deals
-                      </span>
-                      <button
-                        onClick={() => router.push('/offers')}
-                        className="text-xs font-bold text-[#e11d48] hover:text-[#be123c] transition-colors"
-                      >
-                        View All Offers &rarr;
-                      </button>
-                    </div>
-                    
-                    <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-1">
-                      {offerProducts.map((prod, idx) => (
-                        <div
-                          key={prod.id}
-                          className="w-[220px] sm:w-[260px] flex-shrink-0"
-                          data-aos="fade-up"
-                          data-aos-delay={idx * 50}
-                        >
-                          <ProductCard product={prod} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Grid content header - 🔥 Best Picks For You */}
               <div id="shop-catalog" className="space-y-6 scroll-mt-24 animate-fade-in" data-aos="fade-up">
@@ -624,6 +588,42 @@ export default function Home() {
 
                 </div>
               </div>
+
+              {/* Special Offers Section - Controlled by admin marking products as 'discount' */}
+              {(() => {
+                const offerProducts = products.filter(p => p.tagType === 'discount' || p.tag_type === 'discount');
+                if (offerProducts.length === 0) return null;
+
+                return (
+                  <div className="space-y-6" data-aos="fade-up">
+                    <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200">
+                      <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
+                        <Gift className="h-5 w-5 fill-[#e11d48] text-[#e11d48]" />
+                        Special Offers & Deals
+                      </span>
+                      <button
+                        onClick={() => router.push('/offers')}
+                        className="text-xs font-bold text-[#e11d48] hover:text-[#be123c] transition-colors"
+                      >
+                        View All Offers &rarr;
+                      </button>
+                    </div>
+                    
+                    <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-1">
+                      {offerProducts.map((prod, idx) => (
+                        <div
+                          key={prod.id}
+                          className="w-[220px] sm:w-[260px] flex-shrink-0"
+                          data-aos="fade-up"
+                          data-aos-delay={idx * 50}
+                        >
+                          <ProductCard product={prod} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Promo Banners Section */}
               {marketingBanners && marketingBanners.length > 0 ? (
