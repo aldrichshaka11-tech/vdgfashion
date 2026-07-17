@@ -7,7 +7,7 @@ def clear_categories():
             host='127.0.0.1',
             user='vdguser',
             password='Vdg@12345',
-            database='fashion_db',
+            database='vdg',
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor
         )
