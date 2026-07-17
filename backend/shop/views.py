@@ -53,7 +53,44 @@ class MainCategoryViewSet(viewsets.ModelViewSet):
         if request.FILES.get('image'):
             instance.image = _save_file(request.FILES['image'], 'categories')
             instance.save()
+        else:
+            img_val = request.data.get('image', '')
+            if img_val and isinstance(img_val, str):
+                if '/media/' in img_val:
+                    img_val = img_val.split('/media/')[-1]
+                if img_val and not img_val.startswith('http'):
+                    instance.image = img_val
+                    instance.save()
         return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = {k: v for k, v in request.data.items() if k != 'image'}
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save()
+        except Exception as e:
+            if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
+                return Response({'name': ['Exists.']}, status=status.HTTP_400_BAD_REQUEST)
+            raise
+
+        if request.FILES.get('image'):
+            instance.image = _save_file(request.FILES['image'], 'categories')
+            instance.save()
+        else:
+            img_val = request.data.get('image', '')
+            if img_val and isinstance(img_val, str):
+                if '/media/' in img_val:
+                    img_val = img_val.split('/media/')[-1]
+                if img_val and not img_val.startswith('http'):
+                    instance.image = img_val
+                    instance.save()
+        return Response(self.get_serializer(instance).data)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -85,6 +122,14 @@ class SubCategoryViewSet(viewsets.ModelViewSet):
         if request.FILES.get('image'):
             instance.image = _save_file(request.FILES['image'], 'categories')
             instance.save()
+        else:
+            img_val = request.data.get('image', '')
+            if img_val and isinstance(img_val, str):
+                if '/media/' in img_val:
+                    img_val = img_val.split('/media/')[-1]
+                if img_val and not img_val.startswith('http'):
+                    instance.image = img_val
+                    instance.save()
         return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
