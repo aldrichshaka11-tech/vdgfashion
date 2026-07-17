@@ -323,11 +323,20 @@ export default function Home() {
               <div className="px-4 sm:px-8 py-6 sm:py-8 space-y-8 max-w-[1600px] w-full mx-auto flex-1">
                 {/* Horizontal Categories track layout */}
               <div className="space-y-6" data-aos="fade-up">
-                <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
+                <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200">
                   <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
                     <LayoutGrid className="h-5 w-5 fill-[#e11d48] text-[#e11d48]" />
                     Categories
                   </span>
+                  <button 
+                    onClick={() => {
+                      setCheckedCategories(prev => prev.filter(c => !rootCategoryNames.includes(c)));
+                      if (rootCategoryNames.includes(selectedCategory)) setSelectedCategory('ALL');
+                    }}
+                    className="text-[10px] font-bold text-zinc-500 hover:text-[#e11d48] uppercase tracking-wider px-2.5 py-1.5 bg-zinc-100 hover:bg-rose-50 rounded-lg transition-colors"
+                  >
+                    Clear
+                  </button>
                 </div>
                 
                 <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
@@ -373,11 +382,21 @@ export default function Home() {
               {/* Main Categories Horizontal track */}
               {mainCategoryList.length > 0 && (
                 <div className="space-y-6 pt-4" data-aos="fade-up">
-                  <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
+                  <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200">
                     <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
                       <Grid className="h-5 w-5 fill-indigo-500 text-indigo-500" />
                       Explore Collections
                     </span>
+                    <button 
+                      onClick={() => {
+                        const mainCatNames = mainCategoryList.map(c => c.name);
+                        setCheckedCategories(prev => prev.filter(c => !mainCatNames.includes(c)));
+                        if (mainCatNames.includes(selectedCategory)) setSelectedCategory('ALL');
+                      }}
+                      className="text-[10px] font-bold text-zinc-500 hover:text-indigo-600 uppercase tracking-wider px-2.5 py-1.5 bg-zinc-100 hover:bg-indigo-50 rounded-lg transition-colors"
+                    >
+                      Clear
+                    </button>
                   </div>
                   
                   <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
@@ -428,11 +447,21 @@ export default function Home() {
               {/* Subcategories Horizontal track */}
               {subCategoryList.length > 0 && (
                 <div className="space-y-6 pt-4" data-aos="fade-up">
-                  <div className="flex items-center gap-2 pb-3.5 border-b border-zinc-200">
+                  <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200">
                     <span className="text-xl sm:text-2xl font-black text-zinc-950 flex items-center gap-2 tracking-tight">
                       <Sparkles className="h-5 w-5 fill-teal-500 text-teal-500" />
                       Discover More
                     </span>
+                    <button 
+                      onClick={() => {
+                        const subCatNames = subCategoryList.map(c => c.name);
+                        setCheckedCategories(prev => prev.filter(c => !subCatNames.includes(c)));
+                        if (subCatNames.includes(selectedCategory)) setSelectedCategory('ALL');
+                      }}
+                      className="text-[10px] font-bold text-zinc-500 hover:text-teal-600 uppercase tracking-wider px-2.5 py-1.5 bg-zinc-100 hover:bg-teal-50 rounded-lg transition-colors"
+                    >
+                      Clear
+                    </button>
                   </div>
                   
                   <div className="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
