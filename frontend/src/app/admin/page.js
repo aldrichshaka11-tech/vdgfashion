@@ -3976,6 +3976,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <tr>
                           <th className="p-4 w-12 text-center">#</th>
                           <th className="p-4">Category Name</th>
+                          <th className="p-4">Parent Category</th>
                           <th className="p-4 text-center">Image</th>
                           <th className="p-4 text-center">Subcategories</th>
                           <th className="p-4 text-center">Products</th>
@@ -3984,12 +3985,12 @@ function DashboardPortal({ onLogout, adminUser }) {
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
-                        {rootCategories
+                        {mainCategories
                           .filter(c => c.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
                           .map((c, index) => {
                             const isSelected = selectedAdminCategory === c.name;
-                            const subsCount = subCategories.filter(sub => sub.parent_category === c.name).length;
-                            const prodsCount = products.filter(p => p.main_category === c.name || p.category === c.id).length;
+                            const subsCount = subCategories.filter(sub => sub.category === c.name).length;
+                            const prodsCount = products.filter(p => p.category === c.name || p.category === c.id).length;
 
                             return (
                               <tr
@@ -4003,6 +4004,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
                                 <td className="p-4 font-normal">
                                   <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{c.name}</span>
+                                </td>
+                                <td className="p-4 font-normal text-indigo-500">
+                                  <span>{c.main_category || '-'}</span>
                                 </td>
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
@@ -4060,7 +4064,6 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <tr>
                           <th className="p-4 w-12 text-center">#</th>
                           <th className="p-4">Main Category Name</th>
-                          <th className="p-4">Parent Category</th>
                           <th className="p-4 text-center">Image</th>
                           <th className="p-4 text-center">Subcategories</th>
                           <th className="p-4 text-center">Status</th>
@@ -4068,7 +4071,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${theme === 'dark' ? 'divide-[#1e293b]' : 'divide-zinc-200'}`}>
-                        {mainCategories
+                        {rootCategories
                           .filter(main => main.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
                           .map((main, index) => {
                             const subsCount = subCategories.filter(sub => sub.parent_category === main.name).length;
@@ -4078,9 +4081,6 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 <td className="p-4 font-normal text-center text-zinc-400">{index + 1}</td>
                                 <td className="p-4 font-normal">
                                   <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{main.name}</span>
-                                </td>
-                                <td className="p-4 font-normal text-indigo-500">
-                                  <span>{main.parent_category}</span>
                                 </td>
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
@@ -4157,7 +4157,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   <span className={theme === 'dark' ? 'text-white' : 'text-zinc-800'}>{sub.name}</span>
                                 </td>
                                 <td className="p-4 font-normal text-indigo-500">
-                                  <span>{sub.parent_category}</span>
+                                  <span>{sub.category || '-'}</span>
                                 </td>
                                 <td className="p-4 text-center">
                                   <div className="flex justify-center">
