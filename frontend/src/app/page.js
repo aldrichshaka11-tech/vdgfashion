@@ -138,8 +138,8 @@ export default function Home() {
     }
 
     // Setup hierarchy sets for smart filtering
-    const rootSet = new Set((allCategories || []).filter(c => !c.parent_category).map(c => c.name.toLowerCase()));
-    const mainSet = new Set((allCategories || []).filter(c => c.parent_category && rootSet.has(c.parent_category.toLowerCase())).map(c => c.name.toLowerCase()));
+    const rootSet = new Set((allCategories || []).filter(c => c.type === 'main_category').map(c => c.name.toLowerCase()));
+    const mainSet = new Set((allCategories || []).filter(c => c.type === 'category' && rootSet.has((c.main_category || '').toLowerCase())).map(c => c.name.toLowerCase()));
 
     // Category Filter: Drill-down AND logic across levels, OR logic within levels
     if (checkedCategories && checkedCategories.length > 0) {
@@ -159,20 +159,21 @@ export default function Home() {
       });
 
       result = result.filter((p) => {
-        const pCat = (p.category_name || '').toLowerCase();
-        const pParent = (p.parent_category || '').toLowerCase();
+        const pMain = (p.main_category || '').toLowerCase();
+        const pCat = (p.category || '').toLowerCase();
         const pSub = (p.sub_category || '').toLowerCase();
         
         // Build a complete set of all categories this product belongs to (including ancestors)
-        const prodCats = new Set([pCat, pParent, pSub].filter(Boolean));
+        const prodCats = new Set([pMain, pCat, pSub].filter(Boolean));
         prodCats.forEach(cat => {
             const catObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === cat);
-            if (catObj && catObj.parent_category) {
-                const pName = catObj.parent_category.toLowerCase();
-                prodCats.add(pName);
-                const pObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === pName);
-                if (pObj && pObj.parent_category) {
-                    prodCats.add(pObj.parent_category.toLowerCase());
+            if (catObj && catObj.main_category && catObj.type === 'category') {
+                prodCats.add(catObj.main_category.toLowerCase());
+            } else if (catObj && catObj.category && catObj.type === 'sub_category') {
+                prodCats.add(catObj.category.toLowerCase());
+                const pObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === catObj.category.toLowerCase());
+                if (pObj && pObj.main_category) {
+                    prodCats.add(pObj.main_category.toLowerCase());
                 }
             }
         });
@@ -188,10 +189,10 @@ export default function Home() {
     } else if (selectedCategory !== 'ALL') {
       const sel = selectedCategory.toLowerCase();
       result = result.filter((p) => {
-        const pCat = (p.category_name || '').toLowerCase();
-        const pParent = (p.parent_category || '').toLowerCase();
+        const pMain = (p.main_category || '').toLowerCase();
+        const pCat = (p.category || '').toLowerCase();
         const pSub = (p.sub_category || '').toLowerCase();
-        return pCat === sel || pParent === sel || pSub === sel;
+        return pMain === sel || pCat === sel || pSub === sel;
       });
     }
 
@@ -239,12 +240,12 @@ export default function Home() {
 
   // Actually, to correctly identify main categories, we check if their parent has NO parent.
   // Root categories have NO parent.
-  const rootCategoryNames = useMemo(() => (allCategories || []).filter(c => !c.parent_category).map(c => c.name), [allCategories]);
+  const rootCategoryNames = useMemo(() => (allCategories || []).filter(c => c.type === 'main_category').map(c => c.name), [allCategories]);
   
   const mainCategoryList = useMemo(() => {
-    const mains = (allCategories || []).filter(c => c.parent_category && rootCategoryNames.includes(c.parent_category));
+    const mains = (allCategories || []).filter(c => c.type === 'category' && rootCategoryNames.includes(c.main_category));
     if (!activeRootCat) return mains;
-    return mains.filter(c => c.parent_category === activeRootCat);
+    return mains.filter(c => c.main_category === activeRootCat);
   }, [allCategories, rootCategoryNames, activeRootCat]);
 
   // Update activeMainCat when activeRootCat changes
@@ -259,10 +260,10 @@ export default function Home() {
   }, [mainCategoryList, activeMainCat]);
 
   const subCategoryList = useMemo(() => {
-    const subs = (allCategories || []).filter(c => c.parent_category && !rootCategoryNames.includes(c.parent_category));
+    const subs = (allCategories || []).filter(c => c.type === 'sub_category');
     if (!activeMainCat) return subs;
-    return subs.filter(c => c.parent_category === activeMainCat);
-  }, [allCategories, rootCategoryNames, activeMainCat]);
+    return subs.filter(c => c.category === activeMainCat);
+  }, [allCategories, activeMainCat]);
 
   const handleScrollToShop = () => {
     const catalogElement = document.getElementById('shop-catalog');
@@ -633,7 +634,7 @@ export default function Home() {
                     let matchedProduct = null;
                     if (products && products.length > 0) {
                       if (catRef) {
-                        matchedProduct = products.find(p => p.category_name === catRef || p.parent_category === catRef || p.category === catRef);
+                        matchedProduct = products.find(p => p.category === catRef || p.main_category === catRef || p.sub_category === catRef);
                       }
                       if (!matchedProduct) {
                         matchedProduct = products[idx % products.length];

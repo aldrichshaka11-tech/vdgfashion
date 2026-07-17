@@ -1,13 +1,15 @@
 from rest_framework import serializers
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
+from .models import MainCategory, Category, SubCategory, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class MainCategorySerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+    unique_id = serializers.SerializerMethodField()
 
     class Meta:
-        model = Category
-        fields = ['id', 'name', 'parent_category', 'image', 'image_url', 'order', 'is_active']
+        model = MainCategory
+        fields = ['id', 'unique_id', 'name', 'type', 'image', 'image_url', 'order', 'is_active']
         extra_kwargs = {'image': {'required': False, 'allow_null': True}}
 
     def get_image_url(self, obj):
@@ -19,6 +21,74 @@ class CategorySerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+    def get_type(self, obj):
+        return 'main_category'
+
+    def get_unique_id(self, obj):
+        return f"main_{obj.id}"
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    main_category = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+    unique_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'unique_id', 'name', 'main_category', 'type', 'image', 'image_url', 'order', 'is_active']
+        extra_kwargs = {'image': {'required': False, 'allow_null': True}}
+
+    def get_image_url(self, obj):
+        if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+    def get_main_category(self, obj):
+        return obj.main_category.name if obj.main_category else None
+
+    def get_type(self, obj):
+        return 'category'
+
+    def get_unique_id(self, obj):
+        return f"cat_{obj.id}"
+
+
+class SubCategorySerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+    unique_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubCategory
+        fields = ['id', 'unique_id', 'name', 'category', 'type', 'image', 'image_url', 'order', 'is_active']
+        extra_kwargs = {'image': {'required': False, 'allow_null': True}}
+
+    def get_image_url(self, obj):
+        if obj.image:
+            if str(obj.image).startswith('http'):
+                return str(obj.image)
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+    def get_category(self, obj):
+        return obj.category.name if obj.category else None
+
+    def get_type(self, obj):
+        return 'sub_category'
+
+    def get_unique_id(self, obj):
+        return f"sub_{obj.id}"
 
 
 class ProductColorSerializer(serializers.ModelSerializer):
@@ -32,7 +102,14 @@ class ProductSerializer(serializers.ModelSerializer):
     sizes = serializers.SerializerMethodField()
     features = serializers.SerializerMethodField()
     details = serializers.SerializerMethodField()
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    main_category_id = serializers.PrimaryKeyRelatedField(queryset=MainCategory.objects.all(), source='main_category', write_only=True, required=False, allow_null=True)
+    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category', write_only=True, required=False, allow_null=True)
+    sub_category_id = serializers.PrimaryKeyRelatedField(queryset=SubCategory.objects.all(), source='sub_category', write_only=True, required=False, allow_null=True)
+    
+    main_category = serializers.CharField(source='main_category.name', read_only=True)
+    category = serializers.CharField(source='category.name', read_only=True)
+    sub_category = serializers.CharField(source='sub_category.name', read_only=True)
     image = serializers.SerializerMethodField()
     image_2 = serializers.SerializerMethodField()
     image_3 = serializers.SerializerMethodField()
@@ -41,7 +118,8 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'slug', 'unit', 'sku', 'category', 'category_name', 'parent_category', 'sub_category',
+            'id', 'name', 'slug', 'unit', 'sku', 'main_category', 'category', 'sub_category',
+            'main_category_id', 'category_id', 'sub_category_id',
             'price', 'original_price', 'discount', 'tag_type',
             'rating', 'reviews_count', 'is_new', 'description',
             'image', 'image_2', 'image_3', 'thumbnails', 'color_hex', 'cart_btn_color', 'stock',

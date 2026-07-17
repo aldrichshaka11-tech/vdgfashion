@@ -741,16 +741,16 @@ function DashboardPortal({ onLogout, adminUser }) {
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
 
   const rootCategories = useMemo(() => {
-    return categories.filter(c => !c.parent_category);
+    return categories.filter(c => c.type === 'main_category');
   }, [categories]);
 
   const mainCategories = useMemo(() => {
-    return categories.filter(c => c.parent_category && rootCategories.some(root => root.name === c.parent_category));
-  }, [categories, rootCategories]);
+    return categories.filter(c => c.type === 'category');
+  }, [categories]);
 
   const subCategories = useMemo(() => {
-    return categories.filter(c => c.parent_category && mainCategories.some(main => main.name === c.parent_category));
-  }, [categories, mainCategories]);
+    return categories.filter(c => c.type === 'sub_category');
+  }, [categories]);
 
   // Dynamic Dashboard Metrics calculated directly from the real database lists
   const totalSalesVal = useMemo(() => {
@@ -782,7 +782,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         const pid = item.product_id || item.product;
         const product = products.find(p => p.id === pid);
         if (product) {
-          const cat = product.category_name || 'Uncategorized';
+          const cat = product.category || 'Uncategorized';
           const price = parseFloat(item.price || product.price || 0);
           const qty = parseInt(item.quantity || 1);
           const rev = price * qty;
@@ -846,7 +846,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       .map(p => ({
         id: p.id,
         name: p.name,
-        category: p.category_name || 'Uncategorized',
+        category: p.main_category || 'Uncategorized',
         sold: soldMap[p.id] || 0,
         rev: `₹${((soldMap[p.id] || 0) * parseFloat(p.price || 0)).toLocaleString('en-IN')}`,
         image: p.image
@@ -1065,7 +1065,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (catRes.ok) {
         const catData = await catRes.json();
         setCategories(catData);
-        const rootCats = catData.filter(c => !c.parent_category);
+        const rootCats = catData.filter(c => !c.main_category);
         if (rootCats.length > 0) {
           setSelectedAdminCategory(prev => prev || rootCats[0].name);
         }
@@ -1216,8 +1216,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         }
       }
 
-      let finalCatId = parseInt(productForm.category) || null;
-      let finalParentCat = productForm.parent_category || '';
+      let finalCatId = parseInt(productForm.main_category) || null;
+      let finalParentCat = productForm.category || '';
       let finalSubCat = productForm.sub_category || '';
 
       const payload = {
@@ -1456,7 +1456,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const payload = {
         name: categoryForm.name,
         is_active: categoryForm.is_active,
-        parent_category: categoryForm.parent_category || null,
+        parent_category: categoryForm.category || null,
         image: categoryForm.image || null
       };
 
@@ -1650,7 +1650,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const item = {};
       if (nameIdx !== -1 && cols[nameIdx]) item.name = cols[nameIdx].trim().replace(/^"|"$/g, '');
       if (skuIdx !== -1 && cols[skuIdx]) item.sku = cols[skuIdx].trim().replace(/^"|"$/g, '');
-      if (catIdx !== -1 && cols[catIdx]) item.category_name = cols[catIdx].trim().replace(/^"|"$/g, '');
+      if (catIdx !== -1 && cols[catIdx]) item.category = cols[catIdx].trim().replace(/^"|"$/g, '');
       if (priceIdx !== -1 && cols[priceIdx]) item.price = parseFloat(cols[priceIdx].trim().replace(/[^0-9.]/g, '')) || 0;
       if (origPriceIdx !== -1 && cols[origPriceIdx]) item.original_price = parseFloat(cols[origPriceIdx].trim().replace(/[^0-9.]/g, '')) || 0;
       if (stockIdx !== -1 && cols[stockIdx]) item.stock = parseInt(cols[stockIdx].trim().replace(/[^0-9]/g, '')) || 0;
@@ -1662,10 +1662,10 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (ageGroupIdx !== -1 && cols[ageGroupIdx]) {
         const val = cols[ageGroupIdx].trim().replace(/^"|"$/g, '');
         item.age_group = val;
-        item.parent_category = val;
+        item.category = val;
       }
       if (sizeIdx !== -1 && cols[sizeIdx]) item.size = cols[sizeIdx].trim().replace(/^"|"$/g, '');
-      if (mainCatIdx !== -1 && cols[mainCatIdx] && !item.parent_category) item.parent_category = cols[mainCatIdx].trim().replace(/^"|"$/g, '');
+      if (mainCatIdx !== -1 && cols[mainCatIdx] && !item.main_category) item.main_category = cols[mainCatIdx].trim().replace(/^"|"$/g, '');
       if (subCatIdx !== -1 && cols[subCatIdx]) item.sub_category = cols[subCatIdx].trim().replace(/^"|"$/g, '');
 
       // Fill defaults
@@ -1673,7 +1673,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (item.original_price === undefined || isNaN(item.original_price)) item.original_price = 0;
       if (item.price === undefined || isNaN(item.price) || item.price === 0) item.price = item.original_price;
       if (item.original_price === 0) item.original_price = item.price;
-      if (!item.category_name) item.category_name = 'General';
+      if (!item.main_category) item.main_category = 'General';
       if (item.stock === undefined || isNaN(item.stock)) item.stock = 50;
 
       parsed.push(item);
@@ -1742,39 +1742,37 @@ function DashboardPortal({ onLogout, adminUser }) {
       let errors = [];
 
       setUploadProgress(0);
-      setUploadProgressInfo(`0 / ${total}`);
+      setUploadProgressInfo(`Uploading ${total} products...`);
 
-      for (let i = 0; i < total; i++) {
-        if (uploadCancelledRef.current) {
-          break;
-        }
-        const product = parsedData[i];
-        setUploadProgressInfo(`${i + 1} / ${total}`);
-
+      if (!uploadCancelledRef.current) {
         try {
+          const token = sessionStorage.getItem('access_token');
           const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify([product])
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify(parsedData)
           });
           const result = await res.json();
           if (res.ok && result.success) {
-            createdCount += result.created_count;
-            failedCount += result.failed_count;
+            createdCount = result.created_count;
+            failedCount = result.failed_count;
             if (result.errors && result.errors.length > 0) {
               errors.push(...result.errors);
             }
           } else {
-            failedCount += 1;
-            errors.push({ name: product.name, error: result.error || 'Import failed' });
+            failedCount = total;
+            errors.push({ error: result.error || 'Import failed' });
           }
         } catch (err) {
-          failedCount += 1;
-          errors.push({ name: product.name, error: err.message });
+          failedCount = total;
+          errors.push({ error: err.message });
         }
-
-        setUploadProgress(Math.round(((i + 1) / total) * 100));
       }
+
+      setUploadProgress(100);
 
       if (uploadCancelledRef.current) {
         showToast(`Bulk Upload Cancelled. Created ${createdCount} products.`, 'warning');
@@ -2210,7 +2208,7 @@ function DashboardPortal({ onLogout, adminUser }) {
         if (catObj.parent_category) {
           // This is a subcategory
           formSubCatName = catObj.name;
-          const parentCatObj = categories.find(c => c.name === catObj.parent_category && !c.parent_category);
+          const parentCatObj = categories.find(c => c.name === catObj.parent_category && !c.main_category);
           formCatId = parentCatObj ? parentCatObj.id : '';
         } else {
           // This is a root category
@@ -2220,7 +2218,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       } else {
         // Fallback
         formCatId = item.category || '';
-        formSubCatName = item.parent_category || '';
+        formSubCatName = item.category || '';
       }
 
       setProductForm({
@@ -2267,7 +2265,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (mode === 'edit' && item) {
       setCategoryForm({
         name: item.name || '',
-        parent_category: item.parent_category || '',
+        parent_category: item.category || '',
         image: item.image || '',
         imagePreview: item.image_url || '',
         is_active: item.is_active !== undefined ? item.is_active : true
@@ -2284,7 +2282,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (mode === 'edit' && item) {
       setCategoryForm({
         name: item.name || '',
-        parent_category: item.parent_category || '',
+        parent_category: item.category || '',
         image: item.image || '',
         imagePreview: item.image_url || '',
         is_active: item.is_active !== undefined ? item.is_active : true
@@ -2302,7 +2300,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (mode === 'edit' && item) {
       setCategoryForm({
         name: item.name || '',
-        parent_category: item.parent_category || '',
+        parent_category: item.category || '',
         image: item.image || '',
         imagePreview: item.image_url || '',
         is_active: item.is_active !== undefined ? item.is_active : true
@@ -2321,8 +2319,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       p.name.toLowerCase().includes(q) ||
       (p.description || '').toLowerCase().includes(q) ||
       (p.sku || '').toLowerCase().includes(q) ||
-      (p.category_name || '').toLowerCase().includes(q) ||
-      (p.parent_category || '').toLowerCase().includes(q) ||
+      (p.main_category || '').toLowerCase().includes(q) ||
+      (p.category || '').toLowerCase().includes(q) ||
       String(p.price).includes(q) ||
       String(p.id).includes(q)
     );
@@ -2339,7 +2337,7 @@ function DashboardPortal({ onLogout, adminUser }) {
   const filteredAnalyticsProducts = useMemo(() => {
     return products.filter((p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.category_name && p.category_name.toLowerCase().includes(searchQuery.toLowerCase()))
+      (p.main_category && p.main_category.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [products, searchQuery]);
 
@@ -2374,7 +2372,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       const matchesSearch =
         p.name.toLowerCase().includes(inventorySearchQuery.toLowerCase()) ||
         (p.sku || '').toLowerCase().includes(inventorySearchQuery.toLowerCase()) ||
-        (p.category_name || '').toLowerCase().includes(inventorySearchQuery.toLowerCase());
+        (p.main_category || '').toLowerCase().includes(inventorySearchQuery.toLowerCase());
 
       // 2. Status filter
       let matchesStatus = true;
@@ -2389,7 +2387,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       // 3. Category filter
       let matchesCategory = true;
       if (inventoryCategoryFilter !== 'all') {
-        matchesCategory = p.category_name === inventoryCategoryFilter;
+        matchesCategory = p.main_category === inventoryCategoryFilter;
       }
 
       return matchesSearch && matchesStatus && matchesCategory;
@@ -3413,8 +3411,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                           {p.sku || '-'}
                         </td>
                         <td className="p-4 font-normal text-zinc-400">
-                          {p.category_name || 'Unassigned'}
-                          {p.parent_category ? ` > ${p.parent_category}` : ''}
+                          {p.main_category || 'Unassigned'}
+                          {p.category ? ` > ${p.category}` : ''}
                           {p.sub_category ? ` > ${p.sub_category}` : ''}
                         </td>
                         <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
@@ -3648,8 +3646,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                               </div>
                             </td>
                             <td className="p-4 font-normal text-zinc-400">
-                              {p.category_name || 'Unassigned'}
-                              {p.parent_category ? ` > ${p.parent_category}` : ''}
+                              {p.main_category || 'Unassigned'}
+                              {p.category ? ` > ${p.category}` : ''}
                               {p.sub_category ? ` > ${p.sub_category}` : ''}
                             </td>
                             <td className={`p-4 font-normal text-right ${theme === 'dark' ? 'text-white' : 'text-zinc-800'}`}>₹{p.price}</td>
@@ -3973,7 +3971,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                           .map((c, index) => {
                             const isSelected = selectedAdminCategory === c.name;
                             const subsCount = subCategories.filter(sub => sub.parent_category === c.name).length;
-                            const prodsCount = products.filter(p => p.category_name === c.name || p.category === c.id).length;
+                            const prodsCount = products.filter(p => p.main_category === c.name || p.category === c.id).length;
 
                             return (
                               <tr
@@ -4132,7 +4130,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         {subCategories
                           .filter(sub => sub.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
                           .map((sub, index) => {
-                            const prodsCount = products.filter(p => p.parent_category === sub.name || p.category_name === sub.name).length;
+                            const prodsCount = products.filter(p => p.category === sub.name || p.main_category === sub.name).length;
 
                             return (
                               <tr key={sub.id} className={`transition-all duration-150 ${theme === 'dark' ? 'hover:bg-white/2' : 'hover:bg-zinc-50/50'}`}>
@@ -4705,8 +4703,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                             </div>
                           </td>
                           <td className="p-4 font-normal text-zinc-400">
-                            {p.category_name || 'Unassigned'}
-                            {p.parent_category ? ` > ${p.parent_category}` : ''}
+                            {p.main_category || 'Unassigned'}
+                            {p.category ? ` > ${p.category}` : ''}
                             {p.sub_category ? ` > ${p.sub_category}` : ''}
                           </td>
                           <td className="p-4 text-right">
@@ -5639,7 +5637,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   )}
                                   <div className="min-w-0">
                                     <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[150px]" title={p.name}>{p.name}</p>
-                                    <p className="text-[10px] text-zinc-450 dark:text-zinc-400">{p.category_name || 'General'}</p>
+                                    <p className="text-[10px] text-zinc-450 dark:text-zinc-400">{p.main_category || 'General'}</p>
                                   </div>
                                 </td>
                                 <td className="py-3 px-2 text-zinc-400 font-normal">₹{original}</td>
@@ -5707,7 +5705,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       const nonOfferProducts = products.filter(p => p.tag_type !== 'discount');
                       const filtered = nonOfferProducts.filter(p =>
                         p.name.toLowerCase().includes(offersSearchQuery.toLowerCase()) ||
-                        (p.category_name && p.category_name.toLowerCase().includes(offersSearchQuery.toLowerCase()))
+                        (p.main_category && p.main_category.toLowerCase().includes(offersSearchQuery.toLowerCase()))
                       );
 
                       if (filtered.length === 0) {
@@ -6113,7 +6111,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                         <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
                         <select
                           required
-                          value={productForm.category}
+                          value={productForm.main_category}
                           onChange={(e) => {
                             const selectedCat = rootCategories.find(c => String(c.id) === String(e.target.value));
                             setProductForm(prev => ({
@@ -6136,23 +6134,23 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <div className="space-y-1.5">
                         <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Main Category</label>
                         <select
-                          value={productForm.parent_category}
+                          value={productForm.category}
                           onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value, sub_category: '' }))}
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                            } ${!productForm.category ? 'opacity-50' : ''}`}
-                          disabled={!productForm.category}
+                            } ${!productForm.main_category ? 'opacity-50' : ''}`}
+                          disabled={!productForm.main_category}
                         >
                           <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
                           {(() => {
-                            const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.category))?.name;
+                            const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.main_category))?.name;
                             return mainCategories
-                              .filter(mc => mc.parent_category === selectedCatName)
+                              .filter(mc => mc.main_category === selectedCatName)
                               .map(mc => (
                                 <option key={mc.id} value={mc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{mc.name}</option>
                               ));
                           })()}
                         </select>
-                        {productForm.category && mainCategories.filter(mc => mc.parent_category === rootCategories.find(c => String(c.id) === String(productForm.category))?.name).length === 0 && (
+                        {productForm.main_category && mainCategories.filter(mc => mc.main_category === rootCategories.find(c => String(c.id) === String(productForm.main_category))?.name).length === 0 && (
                           <p className="text-[10px] text-zinc-400 font-normal mt-1">No main categories for this category</p>
                         )}
                       </div>
@@ -6164,19 +6162,19 @@ function DashboardPortal({ onLogout, adminUser }) {
                           value={productForm.sub_category}
                           onChange={(e) => setProductForm(prev => ({ ...prev, sub_category: e.target.value }))}
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
-                            } ${!productForm.parent_category ? 'opacity-50' : ''}`}
-                          disabled={!productForm.parent_category}
+                            } ${!productForm.category ? 'opacity-50' : ''}`}
+                          disabled={!productForm.category}
                         >
                           <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
                           {(() => {
                             return subCategories
-                              .filter(sc => sc.parent_category === productForm.parent_category)
+                              .filter(sc => sc.main_category === productForm.category)
                               .map(sc => (
                                 <option key={sc.id} value={sc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
                               ));
                           })()}
                         </select>
-                        {productForm.parent_category && subCategories.filter(sc => sc.parent_category === productForm.parent_category).length === 0 && (
+                        {productForm.category && subCategories.filter(sc => sc.main_category === productForm.category).length === 0 && (
                           <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this main category</p>
                         )}
                       </div>
@@ -6515,7 +6513,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </label>
                     <select
                       required
-                      value={categoryForm.parent_category}
+                      value={categoryForm.category}
                       onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
                       className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                     >
@@ -6609,7 +6607,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </label>
                     <select
                       required
-                      value={categoryForm.parent_category}
+                      value={categoryForm.category}
                       onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
                       className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                     >
@@ -6766,7 +6764,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 </td>
                                 <td className="p-2 font-semibold truncate max-w-[120px]">{item.name}</td>
                                 <td className="p-2 font-mono">{item.sku || 'N/A'}</td>
-                                <td className="p-2">{item.category_name}</td>
+                                <td className="p-2">{item.main_category}</td>
                                 <td className="p-2 text-right">₹{item.price}</td>
                                 <td className="p-2 text-right">{item.stock}</td>
                                 <td className="p-2 truncate max-w-[150px] font-mono text-[9px] text-zinc-450">{item.image || 'N/A'}</td>

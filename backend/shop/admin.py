@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Category, Brand, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
+from .models import MainCategory, Category, SubCategory, Brand, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 
 class ProductColorInline(admin.TabularInline):
     model = ProductColor
@@ -18,17 +18,81 @@ class ProductDetailInline(admin.StackedInline):
     model = ProductDetail
     extra = 1
 
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'parent_category', 'image_preview', 'order', 'is_active', 'created_at')
+@admin.register(MainCategory)
+class MainCategoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'image_preview', 'order', 'is_active', 'created_at')
     list_editable = ('order', 'is_active')
-    search_fields = ('name', 'parent_category')
-    list_filter = ('parent_category', 'is_active')
+    search_fields = ('name',)
+    list_filter = ('is_active',)
     readonly_fields = ('image_preview_detail',)
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'parent_category')
+            'fields': ('name',)
+        }),
+        ('Image Upload', {
+            'fields': ('image', 'image_preview_detail')
+        }),
+        ('Display Settings', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" />', obj.image.url)
+        return format_html('<span style="color: #a0aec0; font-size: 11px;">❌ No Image</span>')
+    image_preview.short_description = 'Preview'
+
+    def image_preview_detail(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="max-width: 200px; max-height: 200px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; padding: 4px; background: #fff;" />', obj.image.url)
+        return format_html('<span style="color: #a0aec0;">No image uploaded yet. Select an image above and click save.</span>')
+    image_preview_detail.short_description = 'Current Image Preview'
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'main_category', 'image_preview', 'order', 'is_active', 'created_at')
+    list_editable = ('order', 'is_active')
+    search_fields = ('name', 'main_category__name')
+    list_filter = ('main_category', 'is_active')
+    readonly_fields = ('image_preview_detail',)
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'main_category')
+        }),
+        ('Image Upload', {
+            'fields': ('image', 'image_preview_detail')
+        }),
+        ('Display Settings', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" />', obj.image.url)
+        return format_html('<span style="color: #a0aec0; font-size: 11px;">❌ No Image</span>')
+    image_preview.short_description = 'Preview'
+
+    def image_preview_detail(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="max-width: 200px; max-height: 200px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; padding: 4px; background: #fff;" />', obj.image.url)
+        return format_html('<span style="color: #a0aec0;">No image uploaded yet. Select an image above and click save.</span>')
+    image_preview_detail.short_description = 'Current Image Preview'
+
+@admin.register(SubCategory)
+class SubCategoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'category', 'image_preview', 'order', 'is_active', 'created_at')
+    list_editable = ('order', 'is_active')
+    search_fields = ('name', 'category__name')
+    list_filter = ('category', 'is_active')
+    readonly_fields = ('image_preview_detail',)
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'category')
         }),
         ('Image Upload', {
             'fields': ('image', 'image_preview_detail')
@@ -52,16 +116,16 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'category', 'parent_category', 'price', 'original_price', 'discount', 'stock', 'image_preview', 'rating', 'is_new', 'is_active')
+    list_display = ('id', 'name', 'main_category', 'category', 'sub_category', 'price', 'original_price', 'discount', 'stock', 'image_preview', 'rating', 'is_new', 'is_active')
     list_editable = ('price', 'original_price', 'discount', 'stock', 'is_new', 'is_active')
-    search_fields = ('name', 'category__name', 'description', 'parent_category')
-    list_filter = ('category', 'parent_category', 'is_new', 'tag_type', 'is_active')
+    search_fields = ('name', 'category__name', 'main_category__name', 'sub_category__name', 'description')
+    list_filter = ('main_category', 'category', 'is_new', 'tag_type', 'is_active')
     inlines = [ProductColorInline, ProductSizeInline, ProductFeatureInline, ProductDetailInline]
     readonly_fields = ('image_preview_detail',)
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'category', 'parent_category', 'description')
+            'fields': ('name', 'main_category', 'category', 'sub_category', 'description')
         }),
         ('Pricing', {
             'fields': ('price', 'original_price', 'discount')

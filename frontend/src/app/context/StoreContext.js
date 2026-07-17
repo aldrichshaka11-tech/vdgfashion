@@ -10,7 +10,7 @@ const getCategoryIcon = (name, dbImage) => {
   return null;
 };
 
-const getProductPlaceholder = (name, categoryName, dbImage) => {
+const getProductPlaceholder = (name, category, dbImage) => {
   if (dbImage) return mediaUrl(dbImage) || dbImage;
   return null;
 };
@@ -166,7 +166,7 @@ export function StoreProvider({ children }) {
         if (!Array.isArray(data)) return;
         setProducts(data.map(p => ({
           ...p,
-          image: getProductPlaceholder(p.name, p.category_name, p.image),
+          image: getProductPlaceholder(p.name, p.category, p.image),
           thumbnails: (p.thumbnails || []).map(t => mediaUrl(t) || t),
           colorHex: p.color_hex || p.colorHex,
           cartBtnColor: p.cart_btn_color || p.cartBtnColor || 'bg-rose-600 hover:bg-rose-700',
@@ -214,8 +214,8 @@ export function StoreProvider({ children }) {
         if (!data?.length) return;
         setAllCategories(data);
         setCategoryItems(
-          data.filter(c => !c.parent_category).map((c, i) => ({
-            id: c.id,
+          data.filter(c => c.type === 'main_category').map((c, i) => ({
+            id: c.unique_id || c.id,
             name: c.name,
             bg: categoryColors[i % categoryColors.length],
             img: getCategoryIcon(c.name, c.image),

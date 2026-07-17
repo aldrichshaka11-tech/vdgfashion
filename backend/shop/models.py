@@ -1,9 +1,34 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class MainCategory(models.Model):
+    name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='main_categories/', max_length=500, blank=True, null=True)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    featured = models.BooleanField(default=False)
+    icon = models.CharField(max_length=100, blank=True, null=True)
+    meta_description = models.TextField(blank=True, null=True)
+    meta_keywords = models.CharField(max_length=500, blank=True, null=True)
+    meta_title = models.CharField(max_length=255, blank=True, null=True)
+    slug = models.SlugField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = "Main Categories"
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        self.is_active = False
+        self.save()
+
+
 class Category(models.Model):
     name = models.CharField(max_length=255)
-    parent_category = models.CharField(max_length=255, blank=True, null=True)
+    main_category = models.ForeignKey(MainCategory, on_delete=models.CASCADE, related_name='categories', blank=True, null=True)
     image = models.ImageField(upload_to='categories/', max_length=500, blank=True, null=True)
     order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -28,6 +53,32 @@ class Category(models.Model):
         self.save()
 
 
+class SubCategory(models.Model):
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories', blank=True, null=True)
+    image = models.ImageField(upload_to='sub_categories/', max_length=500, blank=True, null=True)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    featured = models.BooleanField(default=False)
+    icon = models.CharField(max_length=100, blank=True, null=True)
+    meta_description = models.TextField(blank=True, null=True)
+    meta_keywords = models.CharField(max_length=500, blank=True, null=True)
+    meta_title = models.CharField(max_length=255, blank=True, null=True)
+    slug = models.SlugField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = "Sub Categories"
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        self.is_active = False
+        self.save()
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, blank=True, null=True)
@@ -47,9 +98,9 @@ class Brand(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
-    parent_category = models.CharField(max_length=255, blank=True, null=True)
-    sub_category = models.CharField(max_length=255, blank=True, null=True)
+    main_category = models.ForeignKey(MainCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
+    sub_category = models.ForeignKey(SubCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     original_price = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.CharField(max_length=50, blank=True, null=True)

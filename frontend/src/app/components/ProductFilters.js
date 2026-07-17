@@ -37,17 +37,17 @@ export default function ProductFilters() {
   // Helper for category product counts
   const getProductCount = (catName) => {
     return products.filter((p) => {
-      const pCat = (p.category_name || '').toLowerCase();
-      const pParent = (p.parent_category || '').toLowerCase();
+      const pCat = (p.category || '').toLowerCase();
+      const pMain = (p.main_category || '').toLowerCase();
       const pSub = (p.sub_category || '').toLowerCase();
       const c = catName.toLowerCase();
-      return pCat === c || pParent === c || pSub === c;
+      return pCat === c || pMain === c || pSub === c;
     }).length;
   };
 
-  const rootCategories = (allCategories || []).filter(c => !c.parent_category);
-  const mainCategories = (allCategories || []).filter(c => c.parent_category && rootCategories.some(r => r.name === c.parent_category));
-  const subCategories = (allCategories || []).filter(c => c.parent_category && mainCategories.some(m => m.name === c.parent_category));
+  const rootCategories = (allCategories || []).filter(c => c.type === 'main_category');
+  const mainCategories = (allCategories || []).filter(c => c.type === 'category' && rootCategories.some(r => r.name === c.main_category));
+  const subCategories = (allCategories || []).filter(c => c.type === 'sub_category' && mainCategories.some(m => m.name === c.category));
 
   const handleToggleCategory = (catName) => {
     let newChecked;
@@ -105,7 +105,7 @@ export default function ProductFilters() {
           <div className={`space-y-2.5 pt-1 overflow-hidden transition-all duration-300 ease-in-out ${isCategoryOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
             {visibleCategories.map((rootCat) => {
               const isRootChecked = checkedCategories.includes(rootCat.name);
-              const rootMains = mainCategories.filter(m => m.parent_category === rootCat.name);
+              const rootMains = mainCategories.filter(m => m.main_category === rootCat.name);
               const isExpanded = expandedCategories[rootCat.name];
 
               return (
@@ -138,7 +138,7 @@ export default function ProductFilters() {
                   {/* Main Categories */}
                   {isExpanded && rootMains.map((mainCat) => {
                     const isMainChecked = checkedCategories.includes(mainCat.name);
-                    const mainSubs = subCategories.filter(s => s.parent_category === mainCat.name);
+                    const mainSubs = subCategories.filter(s => s.category === mainCat.name);
                     const isMainExpanded = expandedCategories[mainCat.name];
 
                     return (

@@ -10,9 +10,9 @@ import re
 import os
 import time
 import csv
-from .models import Category, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
+from .models import MainCategory, Category, SubCategory, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
 from .serializers import (
-    CategorySerializer, ProductSerializer, OrderCreateSerializer,
+    MainCategorySerializer, CategorySerializer, SubCategorySerializer, ProductSerializer, OrderCreateSerializer,
     HeroBannerSerializer, MobileBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
     PaymentSerializer, ReviewSerializer, SiteSettingsSerializer, UserAddressSerializer
 )
@@ -24,14 +24,33 @@ def _save_file(file_obj, folder):
     return path
 
 
+class IsAdminUserOrReadOnly(permissions.IsAdminUser):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return super().has_permission(request, view)
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.filter(is_active=True).order_by('order', 'name')
     serializer_class = CategorySerializer
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    def list(self, request, *args, **kwargs):
+        main_qs = MainCategory.objects.filter(is_active=True).order_by('order', 'name')
+        cat_qs = Category.objects.filter(is_active=True).order_by('order', 'name')
+        sub_qs = SubCategory.objects.filter(is_active=True).order_by('order', 'name')
+        
+        main_data = MainCategorySerializer(main_qs, many=True, context={'request': request}).data
+        cat_data = CategorySerializer(cat_qs, many=True, context={'request': request}).data
+        sub_data = SubCategorySerializer(sub_qs, many=True, context={'request': request}).data
+        
+        return Response(main_data + cat_data + sub_data)
 
     def create(self, request, *args, **kwargs):
         name = request.data.get('name', '').strip()
@@ -130,6 +149,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
     def create(self, request, *args, **kwargs):
         # Prevent duplicate products by checking SKU or Name, updating existing instead
@@ -265,10 +289,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             
             local_path = os.path.normpath(local_path)
             
+            safe_base_dir = os.path.join(settings.BASE_DIR, 'bulk_upload_images')
             possible_paths = [
-                local_path,
-                os.path.join(settings.BASE_DIR, 'bulk_upload_images', local_path),
-                os.path.join(settings.BASE_DIR, 'bulk_upload_images', os.path.basename(local_path))
+                os.path.join(safe_base_dir, os.path.basename(local_path))
             ]
             
             resolved_path = None
@@ -363,31 +386,32 @@ class ProductViewSet(viewsets.ModelViewSet):
         for idx, item in enumerate(products_data):
             level1 = None
             try:
-                raw_cat_name = item.get('category_name', item.get('category', 'General'))
-                category_name = " ".join(raw_cat_name.split()) if raw_cat_name else 'General'
+                raw_main_cat = item.get('maincategory', item.get('main_category', item.get('parent_category', 'General')))
+                main_category_name = " ".join(raw_main_cat.split()) if raw_main_cat else 'General'
                 
-                raw_parent_cat = item.get('parent_category', item.get('main_category', item.get('main', '')))
-                parent_category = " ".join(raw_parent_cat.split()) if raw_parent_cat else ''
+                raw_cat_name = item.get('category', item.get('category_name', ''))
+                category_name = " ".join(raw_cat_name.split()) if raw_cat_name else ''
                 
-                raw_sub_cat = item.get('sub_category', item.get('subcat', ''))
-                sub_category = " ".join(raw_sub_cat.split()) if raw_sub_cat else ''
+                raw_sub_cat = item.get('subcategory', item.get('sub_category', item.get('subcat', '')))
+                sub_category_name = " ".join(raw_sub_cat.split()) if raw_sub_cat else ''
                 
-                if sub_category and parent_category:
-                    # Level 1
-                    level1, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
-                    # Level 2
-                    level2, _ = Category.objects.get_or_create(name=parent_category, parent_category=level1.name)
-                    # Level 3
-                    category, _ = Category.objects.get_or_create(name=sub_category, parent_category=level2.name)
-                elif parent_category:
-                    level1, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
-                    category, _ = Category.objects.get_or_create(name=parent_category, parent_category=level1.name)
+                main_cat = None
+                mid_cat = None
+                sub_cat = None
+                
+                if sub_category_name and category_name:
+                    main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
+                    mid_cat, _ = Category.objects.get_or_create(name=category_name, main_category=main_cat)
+                    sub_cat, _ = SubCategory.objects.get_or_create(name=sub_category_name, category=mid_cat)
+                elif category_name:
+                    main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
+                    mid_cat, _ = Category.objects.get_or_create(name=category_name, main_category=main_cat)
                 else:
-                    category, _ = Category.objects.get_or_create(name=category_name, parent_category=None)
+                    main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
 
                 # Check for category image if specified in data
                 cat_image_url = item.get('category_image', '')
-                if cat_image_url and not category.image:
+                if cat_image_url and main_cat and not main_cat.image:
                     cat_image_url = cat_image_url.strip()
                     cat_local_path = cat_image_url
                     if cat_local_path.startswith('file:///'):
@@ -397,10 +421,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                     
                     cat_local_path = os.path.normpath(cat_local_path)
                     
+                    safe_cat_base_dir = os.path.join(settings.BASE_DIR, 'bulk_upload_images')
                     possible_cat_paths = [
-                        cat_local_path,
-                        os.path.join(settings.BASE_DIR, 'bulk_upload_images', cat_local_path),
-                        os.path.join(settings.BASE_DIR, 'bulk_upload_images', os.path.basename(cat_local_path))
+                        os.path.join(safe_cat_base_dir, os.path.basename(cat_local_path))
                     ]
                     
                     resolved_cat_path = None
@@ -415,10 +438,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                             with open(resolved_cat_path, 'rb') as f:
                                 file_content = f.read()
                             
-                            cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                            cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
                             path = default_storage.save(cat_filename, ContentFile(file_content))
-                            category.image = path
-                            category.save()
+                            main_cat.image = path
+                            main_cat.save()
                         except Exception as e:
                             print(f"[CATEGORY IMAGE UPLOADER] Error reading local file {resolved_cat_path}: {e}")
                     elif cat_image_url.startswith('http'):
@@ -447,10 +470,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                                     if 'png' in content_type: ext = 'png'
                                     elif 'webp' in content_type: ext = 'webp'
                                     elif 'jpeg' in content_type: ext = 'jpeg'
-                                    cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                    cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
                                     path = default_storage.save(cat_filename, ContentFile(r.content))
-                                    category.image = path
-                                    category.save()
+                                    main_cat.image = path
+                                    main_cat.save()
                             except Exception:
                                 pass
                         else:
@@ -465,31 +488,34 @@ class ProductViewSet(viewsets.ModelViewSet):
                                     if 'png' in content_type: ext = 'png'
                                     elif 'webp' in content_type: ext = 'webp'
                                     elif 'jpeg' in content_type: ext = 'jpeg'
-                                    cat_filename = f"categories/{category.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                    cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
                                     path = default_storage.save(cat_filename, ContentFile(r.content))
-                                    category.image = path
-                                    category.save()
+                                    main_cat.image = path
+                                    main_cat.save()
                             except Exception:
                                 pass
 
                 # Check if product already exists by SKU to prevent duplicates. 
                 # (Product name can be identical across different products, so we only check SKU)
-                sku = item.get('sku')
-                name = item.get('name')
+                sku = str(item.get('code', item.get('sku', ''))).strip() or None
+                name = item.get('product name', item.get('name'))
                 existing_product = None
                 if sku:
                     existing_product = Product.objects.filter(sku=sku, is_active=True).first()
+                
+                price = item.get('sale_price', item.get('price'))
+                original_price = item.get('budget', item.get('original_price', price))
 
                 serializer_data = {
                     'name': name.strip() if name else '',
                     'slug': item.get('slug'),
                     'unit': item.get('unit', 'pc'),
                     'sku': sku,
-                    'category': level1.id if level1 else category.id,
-                    'parent_category': parent_category if parent_category else '',
-                    'sub_category': sub_category if sub_category else '',
-                    'price': item.get('price'),
-                    'original_price': item.get('original_price', item.get('price')),
+                    'main_category_id': main_cat.id if main_cat else None,
+                    'category_id': mid_cat.id if mid_cat else None,
+                    'sub_category_id': sub_cat.id if sub_cat else None,
+                    'price': price,
+                    'original_price': original_price,
                     'discount': item.get('discount'),
                     'tag_type': item.get('tag_type', 'new'),
                     'description': item.get('description', 'Bulk imported product'),
@@ -546,12 +572,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                     
                     # Handle product image downloads
                     safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
-                    if item.get('image'):
-                        download_and_save_image(item.get('image'), safe_name, 'image', product_instance.pk)
-                    if item.get('image_2'):
-                        download_and_save_image(item.get('image_2'), safe_name, 'image_2', product_instance.pk)
-                    if item.get('image_3'):
-                        download_and_save_image(item.get('image_3'), safe_name, 'image_3', product_instance.pk)
+                    img1 = item.get('Image 1url', item.get('image'))
+                    img2 = item.get('Image_2url', item.get('image_2'))
+                    img3 = item.get('image_3')
+                    
+                    if img1:
+                        download_and_save_image(img1, safe_name, 'image', product_instance.pk)
+                    if img2:
+                        download_and_save_image(img2, safe_name, 'image_2', product_instance.pk)
+                    if img3:
+                        download_and_save_image(img3, safe_name, 'image_3', product_instance.pk)
                 else:
                     errors.append({'index': idx, 'errors': serializer.errors})
             except Exception as e:
@@ -572,8 +602,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Send via Resend API
         try:
             resend_url = "https://api.resend.com/emails"
+            api_key = os.getenv("RESEND_API_KEY", "")
             headers = {
-                "Authorization": "Bearer re_YqCgppGB_5Aiqrga3wR3kdte5FkFgZoAm",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
             payload = {
@@ -603,7 +634,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         cache.delete('db_wipe_otp')
         try:
             Product.objects.all().delete()
+            SubCategory.objects.all().delete()
             Category.objects.all().delete()
+            MainCategory.objects.all().delete()
             Order.objects.all().delete()
             HeroBanner.objects.all().delete()
             MobileBanner.objects.all().delete()
@@ -615,6 +648,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.filter(is_active=True).order_by('-created_at')
     serializer_class = OrderCreateSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'create_razorpay_order', 'verify_razorpay_payment']:
+            return [permissions.AllowAny()]
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAdminUser()]
 
     def get_queryset(self):
         user = self.request.user
@@ -721,6 +761,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 class HeroBannerViewSet(viewsets.ModelViewSet):
     queryset = HeroBanner.objects.filter(is_active=True).order_by('order')
     serializer_class = HeroBannerSerializer
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -743,6 +784,7 @@ class HeroBannerViewSet(viewsets.ModelViewSet):
 class MobileBannerViewSet(viewsets.ModelViewSet):
     queryset = MobileBanner.objects.filter(is_active=True).order_by('order')
     serializer_class = MobileBannerSerializer
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -765,6 +807,7 @@ class MobileBannerViewSet(viewsets.ModelViewSet):
 class CategoryItemViewSet(viewsets.ModelViewSet):
     queryset = CategoryItem.objects.filter(is_active=True).order_by('order')
     serializer_class = CategoryItemSerializer
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -775,6 +818,7 @@ class CategoryItemViewSet(viewsets.ModelViewSet):
 class MarketingBannerViewSet(viewsets.ModelViewSet):
     queryset = MarketingBanner.objects.filter(is_active=True).order_by('order')
     serializer_class = MarketingBannerSerializer
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -806,6 +850,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 
 class SiteSettingsViewSet(viewsets.ViewSet):
+    permission_classes = [IsAdminUserOrReadOnly]
     def list(self, request):
         settings_obj, _ = SiteSettings.objects.get_or_create(id=1)
         serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
