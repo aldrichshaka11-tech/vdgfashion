@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from './context/StoreContext';
+import { mediaUrl } from '../lib/api';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import CartDrawer from './components/CartDrawer';
@@ -405,7 +406,7 @@ export default function Home() {
                           >
                             <div className="relative w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white/50">
                               {cat.image ? (
-                                <Image src={cat.image.startsWith('http') ? cat.image : `${mediaUrl}${cat.image}`} alt={cat.name} fill className="object-cover" />
+                                <Image src={cat.image.startsWith('http') ? cat.image : mediaUrl(cat.image)} alt={cat.name} fill className="object-cover" />
                               ) : (
                                 <span className="text-sm font-bold text-zinc-400">{cat.name.substring(0, 2).toUpperCase()}</span>
                               )}
@@ -460,7 +461,7 @@ export default function Home() {
                           >
                             <div className="relative w-full h-full rounded-xl overflow-hidden flex items-center justify-center bg-white/50">
                               {cat.image ? (
-                                <Image src={cat.image.startsWith('http') ? cat.image : `${mediaUrl}${cat.image}`} alt={cat.name} fill className="object-cover" />
+                                <Image src={cat.image.startsWith('http') ? cat.image : mediaUrl(cat.image)} alt={cat.name} fill className="object-cover" />
                               ) : (
                                 <span className="text-xs font-bold text-zinc-400">{cat.name.substring(0, 2).toUpperCase()}</span>
                               )}

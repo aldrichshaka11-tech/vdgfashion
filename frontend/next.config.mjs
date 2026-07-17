@@ -17,6 +17,21 @@ const nextConfig = {
         port: '8000',
         pathname: '/media/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'vdgfashion.in',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'vdgfashion.in',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.vdgfashion.in',
+        pathname: '/**',
+      },
     ],
   },
 };
