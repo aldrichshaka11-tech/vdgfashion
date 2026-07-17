@@ -4040,7 +4040,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                       <Edit size={13} />
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteCategory(c.id)}
+                                      onClick={() => handleDeleteCategory(c)}
                                       className="p-2 rounded-xl bg-zinc-50 border border-zinc-200/60 text-zinc-650 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-150/60 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/30 transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs hover:shadow-2xs"
                                       title="Delete Category"
                                     >
@@ -4113,7 +4113,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                       <Edit size={13} />
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteCategory(main.id)}
+                                      onClick={() => handleDeleteCategory(main)}
                                       className="p-2 rounded-xl bg-zinc-50 border border-zinc-200/60 text-zinc-650 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-150/60 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/30 transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs hover:shadow-2xs"
                                       title="Delete Main Category"
                                     >
@@ -4190,7 +4190,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                       <Edit size={13} />
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteCategory(sub.id)}
+                                      onClick={() => handleDeleteCategory(sub)}
                                       className="p-2 rounded-xl bg-zinc-50 border border-zinc-200/60 text-zinc-650 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-150/60 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/30 transition-all duration-200 active:scale-95 cursor-pointer shadow-3xs hover:shadow-2xs"
                                       title="Delete Subcategory"
                                     >
