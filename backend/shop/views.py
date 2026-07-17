@@ -42,13 +42,10 @@ class MainCategoryViewSet(viewsets.ModelViewSet):
         if not name: return Response({'name': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
         MainCategory.objects.filter(name=name, is_active=False).delete()
         data = {k: v for k, v in request.data.items() if k != 'image'}
-        parent_name = request.data.get('parent_category')
-        parent_main = MainCategory.objects.filter(name=parent_name).first() if parent_name else None
-        
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         try:
-            instance = serializer.save(main_category=parent_main)
+            instance = serializer.save()
         except Exception as e:
             if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
                 return Response({'name': ['Exists.']}, status=status.HTTP_400_BAD_REQUEST)
