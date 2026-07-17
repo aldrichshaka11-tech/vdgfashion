@@ -6427,7 +6427,25 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
                   </div>
 
-                  {/* 2. Category Name */}
+                  {/* 2. Parent Category Select */}
+                  <div className="space-y-2">
+                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      Main Category select <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      required
+                      value={categoryForm.parent_category || ''}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
+                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
+                    >
+                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
+                      {rootCategories.map((c) => (
+                        <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Category Name */}
                   <div className="space-y-2">
                     <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                       Category name <span className="text-red-500 ml-1">*</span>
@@ -6506,28 +6524,10 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </div>
                   </div>
 
-                  {/* 2. Parent Category Select */}
+                  {/* 2. Main Category Name */}
                   <div className="space-y-2">
                     <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                      Root Category name select <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      required
-                      value={categoryForm.category}
-                      onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
-                      className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
-                    >
-                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Root Category...</option>
-                      {rootCategories.map((c) => (
-                        <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 3. Main Category Name */}
-                  <div className="space-y-2">
-                    <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                      Main Category name type <span className="text-red-500 ml-1">*</span>
+                      Main Category name <span className="text-red-500 ml-1">*</span>
                     </label>
                     <input
                       type="text"
