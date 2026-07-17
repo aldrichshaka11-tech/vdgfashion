@@ -1248,7 +1248,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
         body: JSON.stringify(payload)
       });
 
@@ -1463,7 +1463,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
         body: JSON.stringify(payload)
       });
 
@@ -2156,7 +2156,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
         body: JSON.stringify(payload)
       });
 
@@ -4776,7 +4776,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   try {
                                     const res = await fetch(`${API_BASE}/api/products/${p.id}/`, {
                                       method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
+                                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
                                       body: JSON.stringify({ status: newStatus })
                                     });
                                     if (res.ok) {
@@ -4806,7 +4806,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                 try {
                                   const res = await fetch(`${API_BASE}/api/products/${p.id}/`, {
                                     method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
                                     body: JSON.stringify({ stock: 100 })
                                   });
                                   if (res.ok) {
