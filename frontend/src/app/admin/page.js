@@ -993,7 +993,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     formData.append('file', file);
     try {
       const res = await fetch(`${API_BASE}/api/products/upload-image/`, {
-        method: 'POST', body: formData
+        method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -1427,7 +1427,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/products/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       if (res.ok) {
         showToast('Product deleted successfully', 'success');
@@ -1496,7 +1497,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (!confirm('Are you sure you want to delete this category?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/categories/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       if (res.ok) {
         showToast('Category deleted successfully', 'success');
@@ -1514,7 +1516,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (!confirm('Are you sure you want to delete this review?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/reviews/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       if (res.ok) {
         showToast('Review deleted successfully', 'success');
@@ -1810,7 +1813,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(`${API_BASE}/api/products/${productId}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
         body: JSON.stringify({ stock: parseInt(newStock) })
       });
       if (res.ok) {
@@ -1880,7 +1883,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(`${API_BASE}/api/products/upload-image/`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -1906,7 +1910,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (!confirm('Are you sure you want to revert this banner to default?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/hero-banners/${bannerId}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       if (res.ok) {
         showToast('Banner reverted to default.', 'success');
@@ -1928,7 +1933,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(`${API_BASE}/api/hero-banners/upload-image/`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -1973,7 +1979,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (!confirm('Are you sure you want to revert this mobile banner to default?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/mobile-banners/${bannerId}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       if (res.ok) {
         showToast('Mobile banner reverted to default.', 'success');
@@ -1995,7 +2002,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(`${API_BASE}/api/mobile-banners/upload-image/`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -2045,7 +2053,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(`${API_BASE}/api/categories/upload-image/`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -2070,7 +2079,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     try {
       const res = await fetch(`${API_BASE}/api/marketing-banners/upload-image/`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -2180,7 +2190,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (!confirm('Are you sure you want to delete this marketing banner?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/marketing-banners/${id}/`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       if (res.ok) {
         showToast('Marketing banner deleted successfully', 'success');
@@ -4721,7 +4732,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   try {
                                     const res = await fetch(`${API_BASE}/api/products/${p.id}/`, {
                                       method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
+                                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` },
                                       body: JSON.stringify({ stock: val })
                                     });
                                     if (res.ok) {
