@@ -31,6 +31,70 @@ class IsAdminUserOrReadOnly(permissions.IsAdminUser):
         return super().has_permission(request, view)
 
 
+
+class MainCategoryViewSet(viewsets.ModelViewSet):
+    queryset = MainCategory.objects.filter(is_active=True).order_by('order', 'name')
+    serializer_class = MainCategorySerializer
+    permission_classes = [IsAdminUserOrReadOnly]
+
+    def create(self, request, *args, **kwargs):
+        name = request.data.get('name', '').strip()
+        if not name: return Response({'name': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+        MainCategory.objects.filter(name=name, is_active=False).delete()
+        data = {k: v for k, v in request.data.items() if k != 'image'}
+        parent_name = request.data.get('parent_category')
+        parent_main = MainCategory.objects.filter(name=parent_name).first() if parent_name else None
+        
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            instance = serializer.save(main_category=parent_main)
+        except Exception as e:
+            if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
+                return Response({'name': ['Exists.']}, status=status.HTTP_400_BAD_REQUEST)
+            raise
+        if request.FILES.get('image'):
+            instance.image = _save_file(request.FILES['image'], 'categories')
+            instance.save()
+        return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        MainCategory.objects.filter(pk=instance.pk).update(is_active=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SubCategoryViewSet(viewsets.ModelViewSet):
+    queryset = SubCategory.objects.filter(is_active=True).order_by('order', 'name')
+    serializer_class = SubCategorySerializer
+    permission_classes = [IsAdminUserOrReadOnly]
+
+    def create(self, request, *args, **kwargs):
+        name = request.data.get('name', '').strip()
+        parent_name = request.data.get('parent_category')
+        if not name: return Response({'name': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+        SubCategory.objects.filter(name=name, is_active=False).delete()
+        
+        parent_cat = Category.objects.filter(name=parent_name).first() if parent_name else None
+        data = {k: v for k, v in request.data.items() if k != 'image'}
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            instance = serializer.save(category=parent_cat)
+        except Exception as e:
+            if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
+                return Response({'name': ['Exists.']}, status=status.HTTP_400_BAD_REQUEST)
+            raise
+        if request.FILES.get('image'):
+            instance.image = _save_file(request.FILES['image'], 'categories')
+            instance.save()
+        return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        SubCategory.objects.filter(pk=instance.pk).update(is_active=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.filter(is_active=True).order_by('order', 'name')
     serializer_class = CategorySerializer
@@ -62,10 +126,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
         # Build data dict without image
         data = {k: v for k, v in request.data.items() if k != 'image'}
+        parent_name = request.data.get('parent_category')
+        parent_main = MainCategory.objects.filter(name=parent_name).first() if parent_name else None
+        
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         try:
-            instance = serializer.save()
+            instance = serializer.save(main_category=parent_main)
         except Exception as e:
             if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
                 return Response({'name': ['A category with this name already exists.']}, status=status.HTTP_400_BAD_REQUEST)

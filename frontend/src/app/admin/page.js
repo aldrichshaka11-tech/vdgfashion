@@ -1448,16 +1448,20 @@ function DashboardPortal({ onLogout, adminUser }) {
       showToast('Please upload a category image first!', 'warning');
       return;
     }
+    let endpoint = 'categories';
+    if (modalType === 'maincategory') endpoint = 'main-categories';
+    if (modalType === 'subcategory') endpoint = 'sub-categories';
+
     const url = modalMode === 'edit'
-      ? `${API_BASE}/api/categories/${selectedItem.id}/`
-      : `${API_BASE}/api/categories/`;
+      ? `${API_BASE}/api/${endpoint}/${selectedItem.id}/`
+      : `${API_BASE}/api/${endpoint}/`;
     const method = modalMode === 'edit' ? 'PATCH' : 'POST';
 
     try {
       const payload = {
         name: categoryForm.name,
         is_active: categoryForm.is_active,
-        parent_category: categoryForm.category || null,
+        parent_category: categoryForm.parent_category || null,
         image: categoryForm.image || null
       };
 
@@ -1493,10 +1497,13 @@ function DashboardPortal({ onLogout, adminUser }) {
     }
   };
 
-  const handleDeleteCategory = async (id) => {
+  const handleDeleteCategory = async (item) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/categories/${id}/`, {
+      let endpoint = 'categories';
+      if (item.type === 'main_category') endpoint = 'main-categories';
+      if (item.type === 'sub_category') endpoint = 'sub-categories';
+      const res = await fetch(`${API_BASE}/api/${endpoint}/${item.id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
       });
@@ -6151,7 +6158,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             } ${!productForm.main_category ? 'opacity-50' : ''}`}
                           disabled={!productForm.main_category}
                         >
-                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                           {(() => {
                             const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.main_category))?.name;
                             return mainCategories
@@ -6449,7 +6456,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
                       className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                     >
-                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
+                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                       {rootCategories.map((c) => (
                         <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                       ))}
@@ -6614,7 +6621,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                   {/* 2. Parent Category Select */}
                   <div className="space-y-2">
                     <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                      Main Category name select <span className="text-red-500 ml-1">*</span>
+                      Category select <span className="text-red-500 ml-1">*</span>
                     </label>
                     <select
                       required
@@ -6622,7 +6629,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
                       className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                     >
-                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Main Category...</option>
+                      <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                       {mainCategories.map((c) => (
                         <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                       ))}
