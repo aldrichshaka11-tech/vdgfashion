@@ -3784,16 +3784,16 @@ function DashboardPortal({ onLogout, adminUser }) {
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button
-                    onClick={() => handleOpenCategoryModal('add')}
-                    className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
-                  >
-                    <Plus size={14} /> Add Category
-                  </button>
-                  <button
                     onClick={() => handleOpenMainCategoryModal('add')}
                     className="py-2.5 px-4 bg-pink-600 hover:bg-pink-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     <Plus size={14} /> Add Main Category
+                  </button>
+                  <button
+                    onClick={() => handleOpenCategoryModal('add')}
+                    className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-normal rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add Category
                   </button>
                   <button
                     onClick={() => handleOpenSubcategoryModal('add')}
@@ -3879,20 +3879,6 @@ function DashboardPortal({ onLogout, adminUser }) {
                   {/* Category / Subcategory Tabs */}
                   <div className="flex gap-6 border-b border-transparent">
                     <button
-                      onClick={() => setCategoriesActiveTab('categories')}
-                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'categories'
-                          ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
-                          : theme === 'dark'
-                            ? 'text-zinc-450 hover:text-white'
-                            : 'text-zinc-550 hover:text-zinc-850'
-                        }`}
-                    >
-                      Categories
-                      {categoriesActiveTab === 'categories' && (
-                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-fade-in" />
-                      )}
-                    </button>
-                    <button
                       onClick={() => setCategoriesActiveTab('maincategories')}
                       className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'maincategories'
                           ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
@@ -3903,6 +3889,20 @@ function DashboardPortal({ onLogout, adminUser }) {
                     >
                       Main Categories
                       {categoriesActiveTab === 'maincategories' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-fade-in" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setCategoriesActiveTab('categories')}
+                      className={`pb-2.5 text-sm font-medium relative transition-all cursor-pointer ${categoriesActiveTab === 'categories'
+                          ? 'text-indigo-650 dark:text-indigo-400 font-semibold'
+                          : theme === 'dark'
+                            ? 'text-zinc-450 hover:text-white'
+                            : 'text-zinc-550 hover:text-zinc-850'
+                        }`}
+                    >
+                      Categories
+                      {categoriesActiveTab === 'categories' && (
                         <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-fade-in" />
                       )}
                     </button>
