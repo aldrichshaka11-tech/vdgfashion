@@ -6625,7 +6625,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     </label>
                     <select
                       required
-                      value={categoryForm.category}
+                      value={categoryForm.parent_category || ''}
                       onChange={(e) => setCategoryForm({ ...categoryForm, parent_category: e.target.value })}
                       className={`w-full p-4 rounded-xl border focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 text-sm cursor-pointer transition-all shadow-3xs font-normal ${theme === "dark" ? "bg-[#172033] border-[#1e293b] text-white" : "bg-white border-zinc-200 text-zinc-800"}`}
                     >
