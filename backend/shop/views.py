@@ -87,6 +87,36 @@ class SubCategoryViewSet(viewsets.ModelViewSet):
             instance.save()
         return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if 'parent_category' in request.data:
+            parent_name = request.data.get('parent_category')
+            parent_cat = Category.objects.filter(name=parent_name).first() if parent_name else None
+            instance.category = parent_cat
+
+        data = {k: v for k, v in request.data.items() if k != 'image'}
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save()
+        except Exception as e:
+            if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
+                return Response({'name': ['Exists.']}, status=status.HTTP_400_BAD_REQUEST)
+            raise
+
+        if request.FILES.get('image'):
+            instance.image = _save_file(request.FILES['image'], 'categories')
+            instance.save()
+        else:
+            img_val = request.data.get('image', '')
+            if img_val and isinstance(img_val, str):
+                if '/media/' in img_val:
+                    img_val = img_val.split('/media/')[-1]
+                if img_val and not img_val.startswith('http'):
+                    instance.image = img_val
+                    instance.save()
+        return Response(self.get_serializer(instance).data)
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         SubCategory.objects.filter(pk=instance.pk).update(is_active=False)
@@ -153,34 +183,34 @@ class CategoryViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)
         instance = self.get_object()
+        if 'parent_category' in request.data:
+            parent_name = request.data.get('parent_category')
+            parent_main = MainCategory.objects.filter(name=parent_name).first() if parent_name else None
+            instance.main_category = parent_main
 
         data = {k: v for k, v in request.data.items() if k != 'image'}
-        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         try:
-            instance = serializer.save()
+            serializer.save()
         except Exception as e:
             if 'UNIQUE' in str(e) or 'Duplicate' in str(e):
                 return Response({'name': ['A category with this name already exists.']}, status=status.HTTP_400_BAD_REQUEST)
             raise
 
-        # Save image if new file uploaded
         if request.FILES.get('image'):
             path = _save_file(request.FILES['image'], 'categories')
-            Category.objects.filter(pk=instance.pk).update(image=path)
-            instance.refresh_from_db()
+            instance.image = path
+            instance.save()
         else:
-            # Handle existing image path string from FormData
             img_val = request.data.get('image', '')
             if img_val and isinstance(img_val, str):
                 if '/media/' in img_val:
                     img_val = img_val.split('/media/')[-1]
                 if img_val and not img_val.startswith('http'):
-                    Category.objects.filter(pk=instance.pk).update(image=img_val)
-                    instance.refresh_from_db()
-
+                    instance.image = img_val
+                    instance.save()
         return Response(self.get_serializer(instance).data)
 
     def partial_update(self, request, *args, **kwargs):

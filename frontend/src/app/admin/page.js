@@ -1216,18 +1216,18 @@ function DashboardPortal({ onLogout, adminUser }) {
         }
       }
 
-      let finalCatId = parseInt(productForm.main_category) || null;
-      let finalParentCat = productForm.category || '';
-      let finalSubCat = productForm.sub_category || '';
+      let finalMainCatId = parseInt(productForm.main_category) || null;
+      let finalCatId = parseInt(productForm.category) || null;
+      let finalSubCatId = parseInt(productForm.sub_category) || null;
 
       const payload = {
         name: productForm.name,
         slug: productForm.slug || null,
         unit: productForm.unit || 'pc',
         sku: productForm.sku || null,
-        category: finalCatId,
-        parent_category: finalParentCat,
-        sub_category: finalSubCat,
+        main_category_id: finalMainCatId,
+        category_id: finalCatId,
+        sub_category_id: finalSubCatId,
         price: parseFloat(productForm.price),
         original_price: parseFloat(productForm.original_price || productForm.price),
         discount: productForm.discount || null,
@@ -2217,36 +2217,14 @@ function DashboardPortal({ onLogout, adminUser }) {
     setModalMode(mode);
     setSelectedItem(item);
     if (mode === 'edit' && item) {
-      // Find category ID from category field (could be id or name)
-      let formCatId = '';
-      let formSubCatName = '';
-
-      const catObj = categories.find(c => String(c.id) === String(item.category));
-      if (catObj) {
-        if (catObj.parent_category) {
-          // This is a subcategory
-          formSubCatName = catObj.name;
-          const parentCatObj = categories.find(c => c.name === catObj.parent_category && !c.main_category);
-          formCatId = parentCatObj ? parentCatObj.id : '';
-        } else {
-          // This is a root category
-          formCatId = catObj.id;
-          formSubCatName = '';
-        }
-      } else {
-        // Fallback
-        formCatId = item.category || '';
-        formSubCatName = item.category || '';
-      }
-
       setProductForm({
         name: item.name || '',
         slug: item.slug || '',
         unit: item.unit || 'pc',
         sku: item.sku || '',
-        category: formCatId,
-        parent_category: formSubCatName,
-        sub_category: item.sub_category || '',
+        main_category: item.main_category_id || '',
+        category: item.category_id || '',
+        sub_category: item.sub_category_id || '',
         price: item.price || '',
         original_price: item.original_price || '',
         discount: item.discount || '',
@@ -2266,7 +2244,7 @@ function DashboardPortal({ onLogout, adminUser }) {
       });
     } else {
       setProductForm({
-        name: '', slug: '', unit: 'pc', sku: '', category: rootCategories[0]?.id || '', parent_category: '', sub_category: '',
+        name: '', slug: '', unit: 'pc', sku: '', main_category: rootCategories[0]?.id || '', category: '', sub_category: '',
         price: '', original_price: '', discount: '', tag_type: 'new', description: '', color_hex: '#e6fcf5',
         cart_btn_color: 'bg-teal-500 hover:bg-teal-600', stock: 50,
         width: '', height: '', length: '', product_type: 'simple', status: 'published', image: '',
@@ -2283,7 +2261,7 @@ function DashboardPortal({ onLogout, adminUser }) {
     if (mode === 'edit' && item) {
       setCategoryForm({
         name: item.name || '',
-        parent_category: item.category || '',
+        parent_category: item.main_category || '',
         image: item.image || '',
         imagePreview: item.image_url || '',
         is_active: item.is_active !== undefined ? item.is_active : true
@@ -6152,19 +6130,19 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <div className="space-y-1.5">
                         <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Main Category</label>
                         <select
-                          value={productForm.category}
-                          onChange={(e) => setProductForm(prev => ({ ...prev, parent_category: e.target.value, sub_category: '' }))}
+                          value={productForm.category || ''}
+                          onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value, sub_category: '' }))}
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                             } ${!productForm.main_category ? 'opacity-50' : ''}`}
                           disabled={!productForm.main_category}
                         >
                           <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                           {(() => {
-                            const selectedCatName = rootCategories.find(c => String(c.id) === String(productForm.main_category))?.name;
+                            const selectedMainCatName = rootCategories.find(c => String(c.id) === String(productForm.main_category))?.name;
                             return mainCategories
-                              .filter(mc => mc.main_category === selectedCatName)
+                              .filter(mc => mc.main_category === selectedMainCatName)
                               .map(mc => (
-                                <option key={mc.id} value={mc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{mc.name}</option>
+                                <option key={mc.id} value={mc.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{mc.name}</option>
                               ));
                           })()}
                         </select>
@@ -6177,7 +6155,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <div className="space-y-1.5">
                         <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Subcategory</label>
                         <select
-                          value={productForm.sub_category}
+                          value={productForm.sub_category || ''}
                           onChange={(e) => setProductForm(prev => ({ ...prev, sub_category: e.target.value }))}
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                             } ${!productForm.category ? 'opacity-50' : ''}`}
@@ -6185,14 +6163,18 @@ function DashboardPortal({ onLogout, adminUser }) {
                         >
                           <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Subcategory...</option>
                           {(() => {
+                            const selectedCatName = mainCategories.find(mc => String(mc.id) === String(productForm.category))?.name;
                             return subCategories
-                              .filter(sc => sc.main_category === productForm.category)
+                              .filter(sc => sc.category === selectedCatName)
                               .map(sc => (
-                                <option key={sc.id} value={sc.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
+                                <option key={sc.id} value={sc.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
                               ));
                           })()}
                         </select>
-                        {productForm.category && subCategories.filter(sc => sc.main_category === productForm.category).length === 0 && (
+                        {productForm.category && (() => {
+                          const selectedCatName = mainCategories.find(mc => String(mc.id) === String(productForm.category))?.name;
+                          return subCategories.filter(sc => sc.category === selectedCatName).length === 0;
+                        })() && (
                           <p className="text-[10px] text-zinc-400 font-normal mt-1">No subcategories for this main category</p>
                         )}
                       </div>
