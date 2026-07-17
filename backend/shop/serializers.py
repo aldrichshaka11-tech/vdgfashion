@@ -103,9 +103,9 @@ class ProductSerializer(serializers.ModelSerializer):
     features = serializers.SerializerMethodField()
     details = serializers.SerializerMethodField()
     
-    main_category_id = serializers.PrimaryKeyRelatedField(queryset=MainCategory.objects.all(), source='main_category', write_only=True, required=False, allow_null=True)
-    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category', write_only=True, required=False, allow_null=True)
-    sub_category_id = serializers.PrimaryKeyRelatedField(queryset=SubCategory.objects.all(), source='sub_category', write_only=True, required=False, allow_null=True)
+    main_category_id = serializers.PrimaryKeyRelatedField(queryset=MainCategory.objects.all(), source='main_category', required=False, allow_null=True)
+    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category', required=False, allow_null=True)
+    sub_category_id = serializers.PrimaryKeyRelatedField(queryset=SubCategory.objects.all(), source='sub_category', required=False, allow_null=True)
     
     main_category = serializers.CharField(source='main_category.name', read_only=True)
     category = serializers.CharField(source='category.name', read_only=True)
