@@ -51,7 +51,15 @@ export default function AdminRoute() {
       });
       if (res.ok) {
         const data = await res.json();
+        if (!data.is_staff && !data.is_superuser) {
+          showToast('Access denied. Your account is not an Admin on this server.', 'error');
+          handleLogout();
+          return;
+        }
         setAdminUser(data);
+      } else {
+        showToast('Your session has expired or token is invalid. Please log in again.', 'error');
+        handleLogout();
       }
     } catch (e) {
       console.error('Failed to fetch admin profile', e);
