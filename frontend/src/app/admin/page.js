@@ -1794,14 +1794,36 @@ function DashboardPortal({ onLogout, adminUser }) {
         setModalType(null);
         setBulkInput('');
         syncData();
-      } else if (createdCount > 0) {
-        showToast(`Import completed. Created: ${createdCount}, Failed: ${failedCount}`, 'warning');
-        setModalType(null);
-        setBulkInput('');
-        syncData();
       } else {
-        const errorDetail = errors.length > 0 ? JSON.stringify(errors[0].errors || errors[0].error) : 'Unknown error';
-        showToast(`All imports failed. Reason: ${errorDetail}`, 'warning');
+        // Format the first error for display
+        let errorDetail = 'Unknown error';
+        if (errors.length > 0) {
+          const firstErr = errors[0];
+          const rowStr = firstErr.index !== undefined ? `Row ${firstErr.index + 1}: ` : '';
+          if (firstErr.errors && typeof firstErr.errors === 'object') {
+            const keys = Object.keys(firstErr.errors);
+            if (keys.length > 0) {
+              const field = keys[0];
+              const msg = Array.isArray(firstErr.errors[field]) ? firstErr.errors[field][0] : firstErr.errors[field];
+              errorDetail = `${rowStr}${field} - ${msg}`;
+            } else {
+              errorDetail = `${rowStr}${JSON.stringify(firstErr.errors)}`;
+            }
+          } else if (firstErr.error) {
+            errorDetail = `${rowStr}${firstErr.error}`;
+          } else {
+            errorDetail = `${rowStr}${JSON.stringify(firstErr)}`;
+          }
+        }
+
+        if (createdCount > 0) {
+          showToast(`Import completed. Created: ${createdCount}, Failed: ${failedCount}. Error: ${errorDetail}`, 'warning');
+          setModalType(null);
+          setBulkInput('');
+          syncData();
+        } else {
+          showToast(`All imports failed. Reason: ${errorDetail}`, 'warning');
+        }
       }
     } catch (err) {
       showToast(err.message || 'Invalid structure. Please check input formatting.', 'warning');
@@ -6101,19 +6123,19 @@ function DashboardPortal({ onLogout, adminUser }) {
                       <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">2</span>
                       Group & Classification
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Category Dropdown - root categories only */}
                       <div className="space-y-1.5">
-                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category <span className="text-red-400">*</span></label>
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Main Category <span className="text-red-400">*</span></label>
                         <select
                           required
                           value={productForm.main_category}
                           onChange={(e) => {
-                            const selectedCat = rootCategories.find(c => String(c.id) === String(e.target.value));
                             setProductForm(prev => ({
                               ...prev,
-                              category: e.target.value,
-                              parent_category: '' // reset subcategory when category changes
+                              main_category: e.target.value,
+                              category: '', // reset category when main_category changes
+                              sub_category: '' // reset subcategory as well
                             }));
                           }}
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
@@ -6128,7 +6150,7 @@ function DashboardPortal({ onLogout, adminUser }) {
 
                       {/* Main Category Dropdown - filtered by selected category */}
                       <div className="space-y-1.5">
-                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Main Category</label>
+                        <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Category</label>
                         <select
                           value={productForm.category || ''}
                           onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value, sub_category: '' }))}
