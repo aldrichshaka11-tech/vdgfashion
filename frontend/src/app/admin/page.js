@@ -1774,7 +1774,8 @@ function DashboardPortal({ onLogout, adminUser }) {
             }
           } else {
             failedCount = total;
-            errors.push({ error: result.error || 'Import failed' });
+            const fallbackErr = result.error || result.detail || (Object.keys(result).length > 0 ? JSON.stringify(result) : `HTTP Error ${res.status}`);
+            errors.push({ error: fallbackErr });
           }
         } catch (err) {
           failedCount = total;
