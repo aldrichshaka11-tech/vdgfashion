@@ -1762,7 +1762,19 @@ function DashboardPortal({ onLogout, adminUser }) {
       setUploadProgress(0);
       setUploadProgressInfo(`Uploading ${total} products...`);
 
-      if (!uploadCancelledRef.current) {
+      const BATCH_SIZE = 10;
+      const numBatches = Math.ceil(total / BATCH_SIZE);
+
+      for (let b = 0; b < numBatches; b++) {
+        if (uploadCancelledRef.current) break;
+
+        const start = b * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, total);
+        const batchData = parsedData.slice(start, end);
+
+        setUploadProgress(Math.round((start / total) * 100));
+        setUploadProgressInfo(`Uploading batch ${b + 1} of ${numBatches} (Items ${start + 1}-${end} of ${total})...`);
+
         try {
           const token = sessionStorage.getItem('access_token');
           const res = await fetch(`${API_BASE}/api/products/bulk-upload/`, {
@@ -1771,23 +1783,36 @@ function DashboardPortal({ onLogout, adminUser }) {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
-            body: JSON.stringify(parsedData)
+            body: JSON.stringify(batchData)
           });
-          const result = await res.json();
+
+          let result;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            result = await res.json();
+          } else {
+            const rawText = await res.text();
+            result = { error: `Server error (${res.status}): non-JSON response returned.` };
+          }
+
           if (res.ok && result.success) {
-            createdCount = result.created_count;
-            failedCount = result.failed_count;
+            createdCount += result.created_count || 0;
+            failedCount += result.failed_count || 0;
             if (result.errors && result.errors.length > 0) {
-              errors.push(...result.errors);
+              const adjustedErrors = result.errors.map(err => ({
+                ...err,
+                index: err.index !== undefined ? start + err.index : undefined
+              }));
+              errors.push(...adjustedErrors);
             }
           } else {
-            failedCount = total;
-            const fallbackErr = result.error || result.detail || (Object.keys(result).length > 0 ? JSON.stringify(result) : `HTTP Error ${res.status}`);
-            errors.push({ error: fallbackErr });
+            failedCount += batchData.length;
+            const fallbackErr = result.error || result.detail || `HTTP Error ${res.status}`;
+            errors.push({ batch: b + 1, error: fallbackErr });
           }
         } catch (err) {
-          failedCount = total;
-          errors.push({ error: err.message });
+          failedCount += batchData.length;
+          errors.push({ batch: b + 1, error: err.message });
         }
       }
 

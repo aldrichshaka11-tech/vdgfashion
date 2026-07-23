@@ -410,323 +410,326 @@ class ProductViewSet(viewsets.ModelViewSet):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         from django.core.files.base import ContentFile
 
-        products_data = request.data
-        if not isinstance(products_data, list):
-            return Response({'error': 'Payload must be a JSON array'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            products_data = request.data
+            if not isinstance(products_data, list):
+                return Response({'error': 'Payload must be a JSON array'}, status=status.HTTP_400_BAD_REQUEST)
 
-        def download_and_save_image(img_url, safe_name, field_name, prod_id):
-            if not img_url:
-                return None
-            img_url = img_url.strip()
-            
-            # Try to resolve as local system file path
-            local_path = img_url
-            if local_path.startswith('file:///'):
-                local_path = local_path.replace('file:///', '')
-            elif local_path.startswith('file://'):
-                local_path = local_path.replace('file://', '')
-            
-            local_path = os.path.normpath(local_path)
-            
-            safe_base_dir = os.path.join(settings.BASE_DIR, 'bulk_upload_images')
-            possible_paths = [
-                os.path.join(safe_base_dir, os.path.basename(local_path))
-            ]
-            
-            resolved_path = None
-            for p in possible_paths:
-                if os.path.exists(p) and os.path.isfile(p):
-                    resolved_path = p
-                    break
-            
-            if resolved_path:
-                try:
-                    ext = os.path.splitext(resolved_path)[1].lstrip('.').lower() or 'jpg'
-                    with open(resolved_path, 'rb') as f:
-                        file_content = f.read()
-                    filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
-                    path = default_storage.save(filename, ContentFile(file_content))
-                    Product.objects.filter(pk=prod_id).update(**{field_name: path})
-                    return path
-                except Exception as e:
-                    print(f"[IMAGE UPLOADER] Error reading local file {resolved_path}: {e}")
-                return None
-
-            if not img_url.startswith('http'):
-                return None
-            
-            # Google Drive URL helper
-            drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', img_url)
-            if not drive_match:
-                drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', img_url)
-            
-            if drive_match:
-                file_id = drive_match.group(1)
-                try:
-                    session = requests.Session()
-                    url = "https://docs.google.com/uc?export=download"
-                    r = session.get(url, params={'id': file_id}, verify=False)
-                    
-                    token = None
-                    for key, value in r.cookies.items():
-                        if key.startswith('download_warning'):
-                            token = value
-                            break
-                    if token:
-                        r = session.get(url, params={'id': file_id, 'confirm': token}, verify=False)
-                    
-                    content_type = r.headers.get('content-type', '').lower()
-                    if r.status_code == 200 and 'image' in content_type:
-                        ext = 'jpg'
-                        if 'png' in content_type: ext = 'png'
-                        elif 'webp' in content_type: ext = 'webp'
-                        elif 'jpeg' in content_type: ext = 'jpeg'
-                        
+            def download_and_save_image(img_url, safe_name, field_name, prod_id):
+                if not img_url:
+                    return None
+                img_url = img_url.strip()
+                
+                # Try to resolve as local system file path
+                local_path = img_url
+                if local_path.startswith('file:///'):
+                    local_path = local_path.replace('file:///', '')
+                elif local_path.startswith('file://'):
+                    local_path = local_path.replace('file://', '')
+                
+                local_path = os.path.normpath(local_path)
+                
+                safe_base_dir = os.path.join(settings.BASE_DIR, 'bulk_upload_images')
+                possible_paths = [
+                    os.path.join(safe_base_dir, os.path.basename(local_path))
+                ]
+                
+                resolved_path = None
+                for p in possible_paths:
+                    if os.path.exists(p) and os.path.isfile(p):
+                        resolved_path = p
+                        break
+                
+                if resolved_path:
+                    try:
+                        ext = os.path.splitext(resolved_path)[1].lstrip('.').lower() or 'jpg'
+                        with open(resolved_path, 'rb') as f:
+                            file_content = f.read()
                         filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
-                        path = default_storage.save(filename, ContentFile(r.content))
+                        path = default_storage.save(filename, ContentFile(file_content))
                         Product.objects.filter(pk=prod_id).update(**{field_name: path})
                         return path
+                    except Exception as e:
+                        print(f"[IMAGE UPLOADER] Error reading local file {resolved_path}: {e}")
+                    return None
+
+                if not img_url.startswith('http'):
+                    return None
+                
+                # Google Drive URL helper
+                drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', img_url)
+                if not drive_match:
+                    drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', img_url)
+                
+                if drive_match:
+                    file_id = drive_match.group(1)
+                    try:
+                        session = requests.Session()
+                        url = "https://docs.google.com/uc?export=download"
+                        r = session.get(url, params={'id': file_id}, verify=False, timeout=5)
+                        
+                        token = None
+                        for key, value in r.cookies.items():
+                            if key.startswith('download_warning'):
+                                token = value
+                                break
+                        if token:
+                            r = session.get(url, params={'id': file_id, 'confirm': token}, verify=False, timeout=5)
+                        
+                        content_type = r.headers.get('content-type', '').lower()
+                        if r.status_code == 200 and 'image' in content_type:
+                            ext = 'jpg'
+                            if 'png' in content_type: ext = 'png'
+                            elif 'webp' in content_type: ext = 'webp'
+                            elif 'jpeg' in content_type: ext = 'jpeg'
+                            
+                            filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
+                            path = default_storage.save(filename, ContentFile(r.content))
+                            Product.objects.filter(pk=prod_id).update(**{field_name: path})
+                            return path
+                        else:
+                            print(f"[IMAGE UPLOADER] Failed to download Drive image {file_id}: status={r.status_code}, type={content_type}")
+                    except Exception as e:
+                        print(f"[IMAGE UPLOADER] Error downloading Drive image {file_id}: {e}")
+                    return None
+                
+                # Dropbox URL helper
+                elif 'dropbox.com' in img_url:
+                    if 'dl=0' in img_url:
+                        img_url = img_url.replace('dl=0', 'dl=1')
+                    elif 'dl=1' not in img_url and 'raw=1' not in img_url:
+                        img_url = img_url + ('&' if '?' in img_url else '?') + 'dl=1'
+                
+                try:
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    }
+                    r = requests.get(img_url, headers=headers, timeout=5, verify=False)
+                    if r.status_code == 200:
+                        content_type = r.headers.get('content-type', '').lower()
+                        if 'image' in content_type:
+                            ext = 'jpg'
+                            if 'png' in content_type: ext = 'png'
+                            elif 'webp' in content_type: ext = 'webp'
+                            elif 'jpeg' in content_type: ext = 'jpeg'
+                            
+                            filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
+                            path = default_storage.save(filename, ContentFile(r.content))
+                            Product.objects.filter(pk=prod_id).update(**{field_name: path})
+                            return path
+                except Exception as e:
+                    print(f"[IMAGE UPLOADER] Error downloading {img_url}: {e}")
+                return None
+
+            created_count = 0
+            errors = []
+            for idx, item in enumerate(products_data):
+                level1 = None
+                try:
+                    raw_main_cat = item.get('maincategory', item.get('main_category', item.get('parent_category', 'General')))
+                    main_category_name = " ".join(raw_main_cat.split()) if raw_main_cat else 'General'
+                    
+                    raw_cat_name = item.get('category', item.get('category_name', ''))
+                    category_name = " ".join(raw_cat_name.split()) if raw_cat_name else ''
+                    
+                    raw_sub_cat = item.get('subcategory', item.get('sub_category', item.get('subcat', '')))
+                    sub_category_name = " ".join(raw_sub_cat.split()) if raw_sub_cat else ''
+                    
+                    main_cat = None
+                    mid_cat = None
+                    sub_cat = None
+                    
+                    if sub_category_name and category_name:
+                        main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
+                        mid_cat, _ = Category.objects.get_or_create(name=category_name, main_category=main_cat)
+                        sub_cat, _ = SubCategory.objects.get_or_create(name=sub_category_name, category=mid_cat)
+                    elif category_name:
+                        main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
+                        mid_cat, _ = Category.objects.get_or_create(name=category_name, main_category=main_cat)
                     else:
-                        print(f"[IMAGE UPLOADER] Failed to download Drive image {file_id}: status={r.status_code}, type={content_type}")
+                        main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
+
+                    # Check for category image if specified in data
+                    cat_image_url = item.get('category_image', '')
+                    if cat_image_url and main_cat and not main_cat.image:
+                        cat_image_url = cat_image_url.strip()
+                        cat_local_path = cat_image_url
+                        if cat_local_path.startswith('file:///'):
+                            cat_local_path = cat_local_path.replace('file:///', '')
+                        elif cat_local_path.startswith('file://'):
+                            cat_local_path = cat_local_path.replace('file://', '')
+                        
+                        cat_local_path = os.path.normpath(cat_local_path)
+                        
+                        safe_cat_base_dir = os.path.join(settings.BASE_DIR, 'bulk_upload_images')
+                        possible_cat_paths = [
+                            os.path.join(safe_cat_base_dir, os.path.basename(cat_local_path))
+                        ]
+                        
+                        resolved_cat_path = None
+                        for p in possible_cat_paths:
+                            if os.path.exists(p) and os.path.isfile(p):
+                                resolved_cat_path = p
+                                break
+                                
+                        if resolved_cat_path:
+                            try:
+                                ext = os.path.splitext(resolved_cat_path)[1].lstrip('.').lower() or 'jpg'
+                                with open(resolved_cat_path, 'rb') as f:
+                                    file_content = f.read()
+                                
+                                cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                path = default_storage.save(cat_filename, ContentFile(file_content))
+                                main_cat.image = path
+                                main_cat.save()
+                            except Exception as e:
+                                print(f"[CATEGORY IMAGE UPLOADER] Error reading local file {resolved_cat_path}: {e}")
+                        elif cat_image_url.startswith('http'):
+                            drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', cat_image_url)
+                            if not drive_match:
+                                drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', cat_image_url)
+                                
+                            if drive_match:
+                                file_id = drive_match.group(1)
+                                try:
+                                    session = requests.Session()
+                                    url = "https://docs.google.com/uc?export=download"
+                                    r = session.get(url, params={'id': file_id}, verify=False, timeout=5)
+                                    
+                                    token = None
+                                    for key, value in r.cookies.items():
+                                        if key.startswith('download_warning'):
+                                            token = value
+                                            break
+                                    if token:
+                                        r = session.get(url, params={'id': file_id, 'confirm': token}, verify=False, timeout=5)
+                                    
+                                    content_type = r.headers.get('content-type', '').lower()
+                                    if r.status_code == 200 and 'image' in content_type:
+                                        ext = 'jpg'
+                                        if 'png' in content_type: ext = 'png'
+                                        elif 'webp' in content_type: ext = 'webp'
+                                        elif 'jpeg' in content_type: ext = 'jpeg'
+                                        cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                        path = default_storage.save(cat_filename, ContentFile(r.content))
+                                        main_cat.image = path
+                                        main_cat.save()
+                                except Exception:
+                                    pass
+                            else:
+                                try:
+                                    headers = {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                                    }
+                                    r = requests.get(cat_image_url, headers=headers, timeout=5, verify=False)
+                                    content_type = r.headers.get('content-type', '').lower()
+                                    if r.status_code == 200 and 'image' in content_type:
+                                        ext = 'jpg'
+                                        if 'png' in content_type: ext = 'png'
+                                        elif 'webp' in content_type: ext = 'webp'
+                                        elif 'jpeg' in content_type: ext = 'jpeg'
+                                        cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
+                                        path = default_storage.save(cat_filename, ContentFile(r.content))
+                                        main_cat.image = path
+                                        main_cat.save()
+                                except Exception:
+                                    pass
+
+                    # Check if product already exists by SKU to prevent duplicates. 
+                    # (Product name can be identical across different products, so we only check SKU)
+                    sku = str(item.get('code', item.get('sku', ''))).strip() or None
+                    name = item.get('product name', item.get('name'))
+                    existing_product = None
+                    if sku:
+                        existing_product = Product.objects.filter(sku=sku, is_active=True).first()
+                    
+                    price = item.get('sale_price', item.get('price'))
+                    original_price = item.get('budget', item.get('original_price', price))
+
+                    serializer_data = {
+                        'name': name.strip() if name else '',
+                        'slug': item.get('slug'),
+                        'unit': item.get('unit', 'pc'),
+                        'sku': sku,
+                        'main_category_id': main_cat.id if main_cat else None,
+                        'category_id': mid_cat.id if mid_cat else None,
+                        'sub_category_id': sub_cat.id if sub_cat else None,
+                        'price': price,
+                        'original_price': original_price,
+                        'discount': item.get('discount'),
+                        'tag_type': item.get('tag_type', 'new'),
+                        'description': item.get('description', 'Bulk imported product'),
+                        'color_hex': item.get('color_hex', '#e6fcf5'),
+                        'cart_btn_color': item.get('cart_btn_color', 'bg-teal-500 hover:bg-teal-600'),
+                        'stock': item.get('stock', 50),
+                        'product_type': item.get('product_type', 'simple'),
+                        'status': item.get('status', 'published'),
+                        'razorpay_buy_now_link': item.get('razorpay_buy_now_link') or item.get('razorpay'),
+                    }
+
+                    if existing_product:
+                        serializer = self.get_serializer(existing_product, data=serializer_data, partial=True)
+                    else:
+                        serializer = self.get_serializer(data=serializer_data)
+
+                    if serializer.is_valid():
+                        product_instance = serializer.save()
+                        created_count += 1
+                        
+                        # Create default ProductColor and ProductSize (get_or_create to prevent duplicate relation entries)
+                        color_hex = item.get('color_hex', '#e6fcf5')
+                        ProductColor.objects.get_or_create(product=product_instance, hex=color_hex, defaults={'name': 'Default'})
+                        
+                        # Determine sizes to update/seed
+                        sizes_input = item.get('sizes') or item.get('size') or item.get('age_group')
+                        if sizes_input:
+                            sizes_to_create = []
+                            if isinstance(sizes_input, list):
+                                for s in sizes_input:
+                                    if isinstance(s, str):
+                                        sizes_to_create.extend([x.strip() for x in s.split(',') if x.strip()])
+                                    else:
+                                        sizes_to_create.append(str(s))
+                            elif isinstance(sizes_input, str):
+                                sizes_to_create = [s.strip() for s in sizes_input.split(',') if s.strip()]
+                            else:
+                                sizes_to_create = [str(sizes_input).strip()]
+
+                            if existing_product:
+                                product_instance.sizes.all().delete()
+
+                            for s in sizes_to_create:
+                                ProductSize.objects.get_or_create(product=product_instance, size=s)
+                        elif not existing_product:
+                            # New product, no sizes specified - seed defaults
+                            sizes_to_create = ['S', 'M', 'L', 'XL']
+                            for s in sizes_to_create:
+                                ProductSize.objects.get_or_create(product=product_instance, size=s)
+                            
+                        # Create default feature and detail (get_or_create to prevent duplicates)
+                        ProductFeature.objects.get_or_create(product=product_instance, feature_text='Material: Muslin / Cotton')
+                        ProductDetail.objects.get_or_create(product=product_instance, title='Elegant Design', defaults={'content': item.get('description', 'Elegant apparel for everyday style.')})
+                        
+                        # Handle product image downloads
+                        safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
+                        img1 = item.get('Image 1url', item.get('image'))
+                        img2 = item.get('Image_2url', item.get('image_2'))
+                        img3 = item.get('image_3')
+                        
+                        if img1:
+                            download_and_save_image(img1, safe_name, 'image', product_instance.pk)
+                        if img2:
+                            download_and_save_image(img2, safe_name, 'image_2', product_instance.pk)
+                        if img3:
+                            download_and_save_image(img3, safe_name, 'image_3', product_instance.pk)
+                    else:
+                        errors.append({'index': idx, 'errors': serializer.errors})
                 except Exception as e:
-                    print(f"[IMAGE UPLOADER] Error downloading Drive image {file_id}: {e}")
-                return None
-            
-            # Dropbox URL helper
-            elif 'dropbox.com' in img_url:
-                if 'dl=0' in img_url:
-                    img_url = img_url.replace('dl=0', 'dl=1')
-                elif 'dl=1' not in img_url and 'raw=1' not in img_url:
-                    img_url = img_url + ('&' if '?' in img_url else '?') + 'dl=1'
-            
-            try:
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                }
-                r = requests.get(img_url, headers=headers, timeout=15, verify=False)
-                if r.status_code == 200:
-                    content_type = r.headers.get('content-type', '').lower()
-                    if 'image' in content_type:
-                        ext = 'jpg'
-                        if 'png' in content_type: ext = 'png'
-                        elif 'webp' in content_type: ext = 'webp'
-                        elif 'jpeg' in content_type: ext = 'jpeg'
-                        
-                        filename = f"products/{safe_name}_{field_name}_{int(time.time())}.{ext}"
-                        path = default_storage.save(filename, ContentFile(r.content))
-                        Product.objects.filter(pk=prod_id).update(**{field_name: path})
-                        return path
-            except Exception as e:
-                print(f"[IMAGE UPLOADER] Error downloading {img_url}: {e}")
-            return None
+                    errors.append({'index': idx, 'error': str(e)})
 
-        created_count = 0
-        errors = []
-        for idx, item in enumerate(products_data):
-            level1 = None
-            try:
-                raw_main_cat = item.get('maincategory', item.get('main_category', item.get('parent_category', 'General')))
-                main_category_name = " ".join(raw_main_cat.split()) if raw_main_cat else 'General'
-                
-                raw_cat_name = item.get('category', item.get('category_name', ''))
-                category_name = " ".join(raw_cat_name.split()) if raw_cat_name else ''
-                
-                raw_sub_cat = item.get('subcategory', item.get('sub_category', item.get('subcat', '')))
-                sub_category_name = " ".join(raw_sub_cat.split()) if raw_sub_cat else ''
-                
-                main_cat = None
-                mid_cat = None
-                sub_cat = None
-                
-                if sub_category_name and category_name:
-                    main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
-                    mid_cat, _ = Category.objects.get_or_create(name=category_name, main_category=main_cat)
-                    sub_cat, _ = SubCategory.objects.get_or_create(name=sub_category_name, category=mid_cat)
-                elif category_name:
-                    main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
-                    mid_cat, _ = Category.objects.get_or_create(name=category_name, main_category=main_cat)
-                else:
-                    main_cat, _ = MainCategory.objects.get_or_create(name=main_category_name)
-
-                # Check for category image if specified in data
-                cat_image_url = item.get('category_image', '')
-                if cat_image_url and main_cat and not main_cat.image:
-                    cat_image_url = cat_image_url.strip()
-                    cat_local_path = cat_image_url
-                    if cat_local_path.startswith('file:///'):
-                        cat_local_path = cat_local_path.replace('file:///', '')
-                    elif cat_local_path.startswith('file://'):
-                        cat_local_path = cat_local_path.replace('file://', '')
-                    
-                    cat_local_path = os.path.normpath(cat_local_path)
-                    
-                    safe_cat_base_dir = os.path.join(settings.BASE_DIR, 'bulk_upload_images')
-                    possible_cat_paths = [
-                        os.path.join(safe_cat_base_dir, os.path.basename(cat_local_path))
-                    ]
-                    
-                    resolved_cat_path = None
-                    for p in possible_cat_paths:
-                        if os.path.exists(p) and os.path.isfile(p):
-                            resolved_cat_path = p
-                            break
-                            
-                    if resolved_cat_path:
-                        try:
-                            ext = os.path.splitext(resolved_cat_path)[1].lstrip('.').lower() or 'jpg'
-                            with open(resolved_cat_path, 'rb') as f:
-                                file_content = f.read()
-                            
-                            cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
-                            path = default_storage.save(cat_filename, ContentFile(file_content))
-                            main_cat.image = path
-                            main_cat.save()
-                        except Exception as e:
-                            print(f"[CATEGORY IMAGE UPLOADER] Error reading local file {resolved_cat_path}: {e}")
-                    elif cat_image_url.startswith('http'):
-                        drive_match = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', cat_image_url)
-                        if not drive_match:
-                            drive_match = re.search(r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', cat_image_url)
-                            
-                        if drive_match:
-                            file_id = drive_match.group(1)
-                            try:
-                                session = requests.Session()
-                                url = "https://docs.google.com/uc?export=download"
-                                r = session.get(url, params={'id': file_id}, verify=False)
-                                
-                                token = None
-                                for key, value in r.cookies.items():
-                                    if key.startswith('download_warning'):
-                                        token = value
-                                        break
-                                if token:
-                                    r = session.get(url, params={'id': file_id, 'confirm': token}, verify=False)
-                                
-                                content_type = r.headers.get('content-type', '').lower()
-                                if r.status_code == 200 and 'image' in content_type:
-                                    ext = 'jpg'
-                                    if 'png' in content_type: ext = 'png'
-                                    elif 'webp' in content_type: ext = 'webp'
-                                    elif 'jpeg' in content_type: ext = 'jpeg'
-                                    cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
-                                    path = default_storage.save(cat_filename, ContentFile(r.content))
-                                    main_cat.image = path
-                                    main_cat.save()
-                            except Exception:
-                                pass
-                        else:
-                            try:
-                                headers = {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                                }
-                                r = requests.get(cat_image_url, headers=headers, timeout=10, verify=False)
-                                content_type = r.headers.get('content-type', '').lower()
-                                if r.status_code == 200 and 'image' in content_type:
-                                    ext = 'jpg'
-                                    if 'png' in content_type: ext = 'png'
-                                    elif 'webp' in content_type: ext = 'webp'
-                                    elif 'jpeg' in content_type: ext = 'jpeg'
-                                    cat_filename = f"categories/{main_cat.name.replace(' ', '_')}_{int(time.time())}.{ext}"
-                                    path = default_storage.save(cat_filename, ContentFile(r.content))
-                                    main_cat.image = path
-                                    main_cat.save()
-                            except Exception:
-                                pass
-
-                # Check if product already exists by SKU to prevent duplicates. 
-                # (Product name can be identical across different products, so we only check SKU)
-                sku = str(item.get('code', item.get('sku', ''))).strip() or None
-                name = item.get('product name', item.get('name'))
-                existing_product = None
-                if sku:
-                    existing_product = Product.objects.filter(sku=sku, is_active=True).first()
-                
-                price = item.get('sale_price', item.get('price'))
-                original_price = item.get('budget', item.get('original_price', price))
-
-                serializer_data = {
-                    'name': name.strip() if name else '',
-                    'slug': item.get('slug'),
-                    'unit': item.get('unit', 'pc'),
-                    'sku': sku,
-                    'main_category_id': main_cat.id if main_cat else None,
-                    'category_id': mid_cat.id if mid_cat else None,
-                    'sub_category_id': sub_cat.id if sub_cat else None,
-                    'price': price,
-                    'original_price': original_price,
-                    'discount': item.get('discount'),
-                    'tag_type': item.get('tag_type', 'new'),
-                    'description': item.get('description', 'Bulk imported product'),
-                    'color_hex': item.get('color_hex', '#e6fcf5'),
-                    'cart_btn_color': item.get('cart_btn_color', 'bg-teal-500 hover:bg-teal-600'),
-                    'stock': item.get('stock', 50),
-                    'product_type': item.get('product_type', 'simple'),
-                    'status': item.get('status', 'published'),
-                    'razorpay_buy_now_link': item.get('razorpay_buy_now_link') or item.get('razorpay'),
-                }
-
-                if existing_product:
-                    serializer = self.get_serializer(existing_product, data=serializer_data, partial=True)
-                else:
-                    serializer = self.get_serializer(data=serializer_data)
-
-                if serializer.is_valid():
-                    product_instance = serializer.save()
-                    created_count += 1
-                    
-                    # Create default ProductColor and ProductSize (get_or_create to prevent duplicate relation entries)
-                    color_hex = item.get('color_hex', '#e6fcf5')
-                    ProductColor.objects.get_or_create(product=product_instance, hex=color_hex, defaults={'name': 'Default'})
-                    
-                    # Determine sizes to update/seed
-                    sizes_input = item.get('sizes') or item.get('size') or item.get('age_group')
-                    if sizes_input:
-                        sizes_to_create = []
-                        if isinstance(sizes_input, list):
-                            for s in sizes_input:
-                                if isinstance(s, str):
-                                    sizes_to_create.extend([x.strip() for x in s.split(',') if x.strip()])
-                                else:
-                                    sizes_to_create.append(str(s))
-                        elif isinstance(sizes_input, str):
-                            sizes_to_create = [s.strip() for s in sizes_input.split(',') if s.strip()]
-                        else:
-                            sizes_to_create = [str(sizes_input).strip()]
-
-                        if existing_product:
-                            product_instance.sizes.all().delete()
-
-                        for s in sizes_to_create:
-                            ProductSize.objects.get_or_create(product=product_instance, size=s)
-                    elif not existing_product:
-                        # New product, no sizes specified - seed defaults
-                        sizes_to_create = ['S', 'M', 'L', 'XL']
-                        for s in sizes_to_create:
-                            ProductSize.objects.get_or_create(product=product_instance, size=s)
-                        
-                    # Create default feature and detail (get_or_create to prevent duplicates)
-                    ProductFeature.objects.get_or_create(product=product_instance, feature_text='Material: Muslin / Cotton')
-                    ProductDetail.objects.get_or_create(product=product_instance, title='Elegant Design', defaults={'content': item.get('description', 'Elegant apparel for everyday style.')})
-                    
-                    # Handle product image downloads
-                    safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
-                    img1 = item.get('Image 1url', item.get('image'))
-                    img2 = item.get('Image_2url', item.get('image_2'))
-                    img3 = item.get('image_3')
-                    
-                    if img1:
-                        download_and_save_image(img1, safe_name, 'image', product_instance.pk)
-                    if img2:
-                        download_and_save_image(img2, safe_name, 'image_2', product_instance.pk)
-                    if img3:
-                        download_and_save_image(img3, safe_name, 'image_3', product_instance.pk)
-                else:
-                    errors.append({'index': idx, 'errors': serializer.errors})
-            except Exception as e:
-                errors.append({'index': idx, 'error': str(e)})
-
-        return Response({'success': True, 'created_count': created_count, 'failed_count': len(errors), 'errors': errors}, status=status.HTTP_201_CREATED)
+            return Response({'success': True, 'created_count': created_count, 'failed_count': len(errors), 'errors': errors}, status=status.HTTP_201_CREATED)
+        except Exception as outer_e:
+            return Response({'success': False, 'error': f'Bulk upload error: {str(outer_e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['POST'], url_path='request-clear-otp', permission_classes=[permissions.IsAdminUser])
     def request_clear_otp(self, request):
