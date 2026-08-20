@@ -31,3 +31,9 @@ env/
 .env.*
 **/.env
 **/.env.*
+
+# Archives & Database Dumps
+*.zip
+**/*.zip
+*.sql
+**/*.sql

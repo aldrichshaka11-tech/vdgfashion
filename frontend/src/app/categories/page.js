@@ -243,20 +243,50 @@ export default function CategoriesPage() {
 
     // Category Filter: Check list first, then fallback to top bar
     if (checkedCategories.length > 0) {
+      const checkedLower = checkedCategories.map(c => c.toLowerCase());
       result = result.filter((p) => {
-        return checkedCategories.some((cat) => {
-          const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
-          const parentCat = p.parent_category || p.parentCategory || '';
-          return (catName && catName.toLowerCase() === cat.toLowerCase()) || 
-                 (parentCat && parentCat.toLowerCase() === cat.toLowerCase());
+        const pMain = (p.main_category || p.parent_category || p.parentCategory || '').toLowerCase();
+        const pCat = (p.category_name || (typeof p.category === 'string' ? p.category : '')).toLowerCase();
+        const pSub = (p.sub_category || '').toLowerCase();
+
+        const prodCats = new Set([pMain, pCat, pSub].filter(Boolean));
+        prodCats.forEach(c => {
+          const catObj = (allCategories || []).find(cat => (cat.name || '').toLowerCase() === c);
+          if (catObj && catObj.main_category && catObj.type === 'category') {
+            prodCats.add(catObj.main_category.toLowerCase());
+          } else if (catObj && catObj.category && catObj.type === 'sub_category') {
+            prodCats.add(catObj.category.toLowerCase());
+            const pObj = (allCategories || []).find(cat => (cat.name || '').toLowerCase() === catObj.category.toLowerCase());
+            if (pObj && pObj.main_category) {
+              prodCats.add(pObj.main_category.toLowerCase());
+            }
+          }
         });
+
+        return checkedLower.some(c => prodCats.has(c));
       });
     } else if (selectedCategory !== 'ALL') {
+      const sel = selectedCategory.toLowerCase();
       result = result.filter((p) => {
-        const catName = p.category_name || (typeof p.category === 'string' ? p.category : '');
-        const parentCat = p.parent_category || p.parentCategory || '';
-        return (catName && catName.toLowerCase() === selectedCategory.toLowerCase()) || 
-               (parentCat && parentCat.toLowerCase() === selectedCategory.toLowerCase());
+        const pMain = (p.main_category || p.parent_category || p.parentCategory || '').toLowerCase();
+        const pCat = (p.category_name || (typeof p.category === 'string' ? p.category : '')).toLowerCase();
+        const pSub = (p.sub_category || '').toLowerCase();
+
+        const prodCats = new Set([pMain, pCat, pSub].filter(Boolean));
+        prodCats.forEach(c => {
+          const catObj = (allCategories || []).find(cat => (cat.name || '').toLowerCase() === c);
+          if (catObj && catObj.main_category && catObj.type === 'category') {
+            prodCats.add(catObj.main_category.toLowerCase());
+          } else if (catObj && catObj.category && catObj.type === 'sub_category') {
+            prodCats.add(catObj.category.toLowerCase());
+            const pObj = (allCategories || []).find(cat => (cat.name || '').toLowerCase() === catObj.category.toLowerCase());
+            if (pObj && pObj.main_category) {
+              prodCats.add(pObj.main_category.toLowerCase());
+            }
+          }
+        });
+
+        return prodCats.has(sel);
       });
     }
 
@@ -319,9 +349,17 @@ export default function CategoriesPage() {
   };
 
   const handleHorizontalCategoryClick = (catName) => {
-    // If clicked, select that category, clear the checkboxes and set the category
-    setSelectedCategory(catName);
-    setCheckedCategories([catName]);
+    const isAlreadySelected = selectedCategory.toLowerCase() === catName.toLowerCase() || checkedCategories.includes(catName);
+    if (isAlreadySelected) {
+      const nextChecked = checkedCategories.filter(c => c.toLowerCase() !== catName.toLowerCase());
+      setCheckedCategories(nextChecked);
+      if (selectedCategory.toLowerCase() === catName.toLowerCase()) {
+        setSelectedCategory(nextChecked.length > 0 ? nextChecked[0] : 'ALL');
+      }
+    } else {
+      setSelectedCategory(catName);
+      setCheckedCategories([catName]);
+    }
     setSelectedProduct(null);
   };
 
@@ -386,7 +424,9 @@ export default function CategoriesPage() {
                 
                 <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                   {horizontalCategories.map((cat, idx) => {
-                    const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase() || checkedCategories.includes(cat.name);
+                    const isSelected = checkedCategories.length > 0
+                      ? checkedCategories.includes(cat.name)
+                      : selectedCategory.toLowerCase() === cat.name.toLowerCase();
                     return (
                       <button
                         key={idx}

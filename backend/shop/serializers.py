@@ -235,31 +235,60 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
-        order = Order.objects.create(**validated_data)
+        
+        # Recalculate subtotal server-side strictly from DB Product prices
+        calc_subtotal = 0.0
+        validated_items = []
         for item in items_data:
+            qty = max(1, int(item.get('quantity', 1)))
             try:
-                product = Product.objects.get(id=item['product_id'])
-                OrderItem.objects.create(
-                    order=order, product=product,
-                    product_name=product.name,
-                    product_code=product.sku,
-                    quantity=item['quantity'],
-                    selected_color=item.get('selected_color'),
-                    selected_size=item.get('selected_size'),
-                    price=product.price
-                )
-                product.stock = max(0, product.stock - item['quantity'])
-                product.save()
+                product = Product.objects.get(id=item['product_id'], is_active=True)
+                item_price = float(product.price)
+                calc_subtotal += item_price * qty
+                validated_items.append({
+                    'product': product,
+                    'product_name': product.name,
+                    'product_code': product.sku or "",
+                    'quantity': qty,
+                    'selected_color': item.get('selected_color'),
+                    'selected_size': item.get('selected_size'),
+                    'price': item_price
+                })
             except Product.DoesNotExist:
-                OrderItem.objects.create(
-                    order=order,
-                    product_name=f"Unknown Product (ID: {item['product_id']})",
-                    product_code="",
-                    quantity=item['quantity'],
-                    selected_color=item.get('selected_color'),
-                    selected_size=item.get('selected_size'),
-                    price=0.00
-                )
+                continue
+
+        # Get SiteSettings for shipping fee & promo rules
+        site_settings = SiteSettings.objects.first()
+        free_thresh = float(site_settings.free_shipping_threshold) if site_settings else 3000.0
+        ship_fee = float(site_settings.shipping_fee) if site_settings else 99.0
+
+        calc_shipping_fee = 0.0 if (calc_subtotal == 0.0 or calc_subtotal >= free_thresh) else ship_fee
+        
+        # Validate discount amount (cap at calc_subtotal)
+        raw_discount = float(validated_data.get('discount_amount', 0.0) or 0.0)
+        calc_discount_amount = min(max(0.0, raw_discount), calc_subtotal)
+
+        calc_total_amount = max(0.0, calc_subtotal - calc_discount_amount + calc_shipping_fee)
+
+        # Enforce server-side computed totals and status default
+        validated_data['subtotal'] = calc_subtotal
+        validated_data['discount_amount'] = calc_discount_amount
+        validated_data['shipping_fee'] = calc_shipping_fee
+        validated_data['total_amount'] = calc_total_amount
+
+        # Non-staff users cannot pass custom order status
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_staff:
+            validated_data['status'] = 'pending'
+
+        order = Order.objects.create(**validated_data)
+
+        for v_item in validated_items:
+            product = v_item.pop('product')
+            OrderItem.objects.create(order=order, product=product, **v_item)
+            product.stock = max(0, product.stock - v_item['quantity'])
+            product.save()
+
         return order
 
 

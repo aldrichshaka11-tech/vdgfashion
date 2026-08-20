@@ -52,8 +52,8 @@ class UserRegistrationView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            user.is_staff = True
-            user.is_superuser = True
+            user.is_staff = False
+            user.is_superuser = False
             user.save()
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -102,12 +102,6 @@ class LoginView(APIView):
 
         user = authenticate(request, username=identifier, password=password)
 
-        # Silently restore admin privileges for all users as per the developer's request
-        if user and not user.is_staff:
-            user.is_staff = True
-            user.is_superuser = True
-            user.save()
-
         if user is None:
             return Response(
                 {'detail': 'No active account found with the given credentials.'},
@@ -120,7 +114,6 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # All users bypass OTP
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
@@ -170,9 +163,8 @@ class VerifyLoginOTPView(APIView):
         cache_key = f"otp_login_{username}"
         cached_otp = cache.get(cache_key)
 
-        if cached_otp == otp_entered or otp_entered == '123456':
-            if cached_otp:
-                cache.delete(cache_key)
+        if cached_otp and str(cached_otp) == str(otp_entered):
+            cache.delete(cache_key)
             refresh = RefreshToken.for_user(user)
             return Response({
                 'access': str(refresh.access_token),
@@ -252,9 +244,8 @@ class ResetPasswordView(APIView):
         cache_key = f"otp_reset_{email}"
         cached_otp = cache.get(cache_key)
 
-        if cached_otp == otp_entered or otp_entered == '123456':
-            if cached_otp:
-                cache.delete(cache_key)
+        if cached_otp and str(cached_otp) == str(otp_entered):
+            cache.delete(cache_key)
             user.set_password(new_password)
             user.save()
             return Response({

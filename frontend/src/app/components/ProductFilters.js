@@ -34,14 +34,32 @@ export default function ProductFilters() {
     }));
   };
 
-  // Helper for category product counts
+  // Helper for category product counts with full ancestor/descendant resolution
   const getProductCount = (catName) => {
+    const target = (catName || '').toLowerCase();
+    if (!target) return 0;
+
     return products.filter((p) => {
-      const pCat = (p.category || '').toLowerCase();
       const pMain = (p.main_category || '').toLowerCase();
+      const pCat = (p.category || '').toLowerCase();
       const pSub = (p.sub_category || '').toLowerCase();
-      const c = catName.toLowerCase();
-      return pCat === c || pMain === c || pSub === c;
+
+      // Build a complete set of all categories this product belongs to (including parent/ancestor categories)
+      const prodCats = new Set([pMain, pCat, pSub].filter(Boolean));
+      prodCats.forEach(c => {
+        const catObj = (allCategories || []).find(cat => (cat.name || '').toLowerCase() === c);
+        if (catObj && catObj.main_category && catObj.type === 'category') {
+          prodCats.add(catObj.main_category.toLowerCase());
+        } else if (catObj && catObj.category && catObj.type === 'sub_category') {
+          prodCats.add(catObj.category.toLowerCase());
+          const pObj = (allCategories || []).find(cat => (cat.name || '').toLowerCase() === catObj.category.toLowerCase());
+          if (pObj && pObj.main_category) {
+            prodCats.add(pObj.main_category.toLowerCase());
+          }
+        }
+      });
+
+      return prodCats.has(target);
     }).length;
   };
 
@@ -58,8 +76,9 @@ export default function ProductFilters() {
     }
     setCheckedCategories(newChecked);
 
-    // Fix the "Uncheck" fallback bug
-    if (newChecked.length === 0) {
+    if (newChecked.length === 1) {
+      setSelectedCategory(newChecked[0]);
+    } else if (newChecked.length === 0) {
       setSelectedCategory('ALL');
     }
   };

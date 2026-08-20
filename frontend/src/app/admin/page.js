@@ -1691,7 +1691,6 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (item.original_price === undefined || isNaN(item.original_price)) item.original_price = 0;
       if (item.price === undefined || isNaN(item.price) || item.price === 0) item.price = item.original_price;
       if (item.original_price === 0) item.original_price = item.price;
-      if (!item.main_category) item.main_category = 'General';
       if (item.stock === undefined || isNaN(item.stock)) item.stock = 50;
 
       parsed.push(item);
@@ -5689,7 +5688,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                                   )}
                                   <div className="min-w-0">
                                     <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[150px]" title={p.name}>{p.name}</p>
-                                    <p className="text-[10px] text-zinc-450 dark:text-zinc-400">{p.main_category || 'General'}</p>
+                                    <p className="text-[10px] text-zinc-450 dark:text-zinc-400">{p.main_category || 'Uncategorized'}</p>
                                   </div>
                                 </td>
                                 <td className="py-3 px-2 text-zinc-400 font-normal">₹{original}</td>

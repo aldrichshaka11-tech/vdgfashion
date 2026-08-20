@@ -127,6 +127,30 @@ export default function Home() {
     AOS.refresh();
   }, [selectedCategory, searchQuery, selectedProduct]);
 
+  const categoryMap = useMemo(() => {
+    const map = new Map();
+    (allCategories || []).forEach(c => {
+      if (c.name) map.set(c.name.toLowerCase(), c);
+    });
+    return map;
+  }, [allCategories]);
+
+  const handleToggleCategoryCircle = (catName, extraAction = null) => {
+    const isChecked = checkedCategories.includes(catName);
+    if (isChecked) {
+      const nextChecked = checkedCategories.filter(c => c !== catName);
+      setCheckedCategories(nextChecked);
+      if (selectedCategory === catName) {
+        setSelectedCategory(nextChecked.length > 0 ? nextChecked[0] : 'ALL');
+      }
+    } else {
+      const nextChecked = [...checkedCategories, catName];
+      setCheckedCategories(nextChecked);
+      setSelectedCategory(catName);
+    }
+    if (extraAction) extraAction();
+  };
+
   // Filtering logic
   const filteredProducts = useMemo(() => {
     let result = [...products];
@@ -167,12 +191,12 @@ export default function Home() {
         // Build a complete set of all categories this product belongs to (including ancestors)
         const prodCats = new Set([pMain, pCat, pSub].filter(Boolean));
         prodCats.forEach(cat => {
-            const catObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === cat);
+            const catObj = categoryMap.get(cat);
             if (catObj && catObj.main_category && catObj.type === 'category') {
                 prodCats.add(catObj.main_category.toLowerCase());
             } else if (catObj && catObj.category && catObj.type === 'sub_category') {
                 prodCats.add(catObj.category.toLowerCase());
-                const pObj = (allCategories || []).find(c => (c.name || '').toLowerCase() === catObj.category.toLowerCase());
+                const pObj = categoryMap.get(catObj.category.toLowerCase());
                 if (pObj && pObj.main_category) {
                     prodCats.add(pObj.main_category.toLowerCase());
                 }
@@ -220,7 +244,7 @@ export default function Home() {
     }
 
     return result;
-  }, [products, searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy, showOnlyOffers]);
+  }, [products, searchQuery, selectedCategory, checkedCategories, priceRange, selectedColor, selectedSize, sortBy, showOnlyOffers, categoryMap]);
 
   const PRODUCTS_PER_PAGE = 8;
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE) || 1;
@@ -341,14 +365,15 @@ export default function Home() {
                 
                 <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                   {categoryTrack.map((cat, idx) => {
-                    const isSelected = checkedCategories.includes(cat.categoryRef) || selectedCategory === cat.categoryRef;
+                    const isSelected = checkedCategories.length > 0
+                      ? checkedCategories.includes(cat.categoryRef)
+                      : selectedCategory === cat.categoryRef;
                     return (
                       <div
                         key={idx}
                         onClick={() => {
                           setActiveRootCat(cat.categoryRef);
-                          setSelectedCategory(cat.categoryRef);
-                          setCheckedCategories((prev) => prev.includes(cat.categoryRef) ? prev.filter(c => c !== cat.categoryRef) : [...prev, cat.categoryRef]);
+                          handleToggleCategoryCircle(cat.categoryRef);
                         }}
                         data-aos="zoom-in"
                         data-aos-delay={idx * 50}
@@ -401,7 +426,9 @@ export default function Home() {
                   
                   <div className="flex gap-5 sm:gap-6 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                     {mainCategoryList.map((cat, idx) => {
-                      const isSelected = checkedCategories.includes(cat.name) || selectedCategory === cat.name;
+                      const isSelected = checkedCategories.length > 0
+                        ? checkedCategories.includes(cat.name)
+                        : selectedCategory === cat.name;
                       const fallbackColors = ['#fdf0d5', '#e2f2ed', '#ffe4e6', '#e0e7ff', '#fef3c7'];
                       const bgColor = fallbackColors[idx % fallbackColors.length];
                       return (
@@ -409,8 +436,7 @@ export default function Home() {
                           key={cat.id || idx}
                           onClick={() => {
                             setActiveMainCat(cat.name);
-                            setSelectedCategory(cat.name);
-                            setCheckedCategories((prev) => prev.includes(cat.name) ? prev.filter(c => c !== cat.name) : [...prev, cat.name]);
+                            handleToggleCategoryCircle(cat.name);
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
@@ -466,16 +492,16 @@ export default function Home() {
                   
                   <div className="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar pb-3 pt-1.5 px-2.5">
                     {subCategoryList.map((cat, idx) => {
-                      const isSelected = checkedCategories.includes(cat.name) || selectedCategory === cat.name;
+                      const isSelected = checkedCategories.length > 0
+                        ? checkedCategories.includes(cat.name)
+                        : selectedCategory === cat.name;
                       const fallbackColors = ['#f3e8ff', '#dcfce7', '#ffedd5', '#e0f2fe', '#fce7f3'];
                       const bgColor = fallbackColors[idx % fallbackColors.length];
                       return (
                         <div
                           key={cat.id || idx}
                           onClick={() => {
-                            setSelectedCategory(cat.name);
-                            setCheckedCategories((prev) => prev.includes(cat.name) ? prev.filter(c => c !== cat.name) : [...prev, cat.name]);
-                            handleScrollToShop();
+                            handleToggleCategoryCircle(cat.name, handleScrollToShop);
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}

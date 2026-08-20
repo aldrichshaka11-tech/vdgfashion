@@ -526,8 +526,12 @@ class ProductViewSet(viewsets.ModelViewSet):
             for idx, item in enumerate(products_data):
                 level1 = None
                 try:
-                    raw_main_cat = item.get('maincategory', item.get('main_category', item.get('parent_category', 'General')))
-                    main_category_name = " ".join(raw_main_cat.split()) if raw_main_cat else 'General'
+                    raw_main_cat = str(item.get('maincategory') or item.get('main_category') or item.get('parent_category') or '').strip()
+                    main_category_name = " ".join(raw_main_cat.split()) if raw_main_cat else ''
+                    
+                    if not main_category_name:
+                        errors.append({'index': idx, 'error': f'Row {idx + 1}: Main category is required'})
+                        continue
                     
                     raw_cat_name = item.get('category', item.get('category_name', ''))
                     category_name = " ".join(raw_cat_name.split()) if raw_cat_name else ''
@@ -658,12 +662,12 @@ class ProductViewSet(viewsets.ModelViewSet):
                         'original_price': original_price,
                         'discount': item.get('discount'),
                         'tag_type': item.get('tag_type', 'new'),
-                        'description': item.get('description', 'Bulk imported product'),
-                        'color_hex': item.get('color_hex', '#e6fcf5'),
-                        'cart_btn_color': item.get('cart_btn_color', 'bg-teal-500 hover:bg-teal-600'),
-                        'stock': item.get('stock', 50),
-                        'product_type': item.get('product_type', 'simple'),
-                        'status': item.get('status', 'published'),
+                        'description': item.get('description') or 'Bulk imported product',
+                        'color_hex': item.get('color_hex') or '#e6fcf5',
+                        'cart_btn_color': item.get('cart_btn_color') or 'bg-teal-500 hover:bg-teal-600',
+                        'stock': item.get('stock') if item.get('stock') is not None else 50,
+                        'product_type': item.get('product_type') or 'simple',
+                        'status': item.get('status') or 'published',
                         'razorpay_buy_now_link': item.get('razorpay_buy_now_link') or item.get('razorpay'),
                     }
 
@@ -677,7 +681,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                         created_count += 1
                         
                         # Create default ProductColor and ProductSize (get_or_create to prevent duplicate relation entries)
-                        color_hex = item.get('color_hex', '#e6fcf5')
+                        color_hex = item.get('color_hex') or '#e6fcf5'
                         ProductColor.objects.get_or_create(product=product_instance, hex=color_hex, defaults={'name': 'Default'})
                         
                         # Determine sizes to update/seed
@@ -710,11 +714,11 @@ class ProductViewSet(viewsets.ModelViewSet):
                         ProductFeature.objects.get_or_create(product=product_instance, feature_text='Material: Muslin / Cotton')
                         ProductDetail.objects.get_or_create(product=product_instance, title='Elegant Design', defaults={'content': item.get('description', 'Elegant apparel for everyday style.')})
                         
-                        # Handle product image downloads
+                        # Handle product image downloads with expanded header aliases
                         safe_name = "".join(x for x in product_instance.name if x.isalnum() or x in ('-', '_')).strip()
-                        img1 = item.get('Image 1url', item.get('image'))
-                        img2 = item.get('Image_2url', item.get('image_2'))
-                        img3 = item.get('image_3')
+                        img1 = item.get('image') or item.get('Image 1url') or item.get('Image_1url') or item.get('image_1') or item.get('image1') or item.get('url')
+                        img2 = item.get('image_2') or item.get('Image_2url') or item.get('Image 2url') or item.get('image2') or item.get('url2')
+                        img3 = item.get('image_3') or item.get('Image_3url') or item.get('Image 3url') or item.get('image3') or item.get('url3')
                         
                         if img1:
                             download_and_save_image(img1, safe_name, 'image', product_instance.pk)
@@ -848,7 +852,31 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='create-razorpay-order')
     def create_razorpay_order(self, request):
+        items = request.data.get('items', [])
         amount = request.data.get('amount')
+        
+        # If cart items are provided, calculate total amount server-side strictly from DB prices
+        if items and isinstance(items, list):
+            calc_subtotal = 0.0
+            for item in items:
+                p_id = item.get('product_id') or item.get('id')
+                qty = max(1, int(item.get('quantity', 1)))
+                if p_id:
+                    try:
+                        product = Product.objects.get(id=p_id, is_active=True)
+                        calc_subtotal += float(product.price) * qty
+                    except Product.DoesNotExist:
+                        pass
+            
+            if calc_subtotal > 0:
+                site_settings = SiteSettings.objects.first()
+                free_thresh = float(site_settings.free_shipping_threshold) if site_settings else 3000.0
+                ship_fee = float(site_settings.shipping_fee) if site_settings else 99.0
+                calc_shipping = 0.0 if calc_subtotal >= free_thresh else ship_fee
+                raw_discount = float(request.data.get('discount_amount', 0.0) or 0.0)
+                calc_discount = min(max(0.0, raw_discount), calc_subtotal)
+                amount = max(1.0, calc_subtotal - calc_discount + calc_shipping)
+
         if not amount:
             return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -856,7 +884,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             # Create order (amount must be in paise)
             payment = client.order.create({
-                "amount": int(float(amount) * 100),
+                "amount": int(round(float(amount) * 100)),
                 "currency": "INR",
                 "payment_capture": "1"
             })
@@ -989,6 +1017,31 @@ class ReviewViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def check_review_owner_or_admin(self, request, instance):
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+        user_email = (getattr(request.user, 'email', '') or '').strip().lower()
+        instance_email = (getattr(instance, 'user_email', '') or '').strip().lower()
+        if user_email and instance_email and user_email == instance_email:
+            return True
+        return False
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not self.check_review_owner_or_admin(request, instance):
+            return Response({'detail': 'You do not have permission to edit this review.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not self.check_review_owner_or_admin(request, instance):
+            return Response({'detail': 'You do not have permission to delete this review.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 
 class SiteSettingsViewSet(viewsets.ViewSet):

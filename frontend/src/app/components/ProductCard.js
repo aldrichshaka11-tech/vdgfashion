@@ -124,7 +124,14 @@ export default function ProductCard({ product }) {
         <div className="mt-4 space-y-1 pr-2">
           {/* Category/Subcategory & SKU */}
           <div className="flex justify-between items-center text-[10px] font-bold text-zinc-450 uppercase tracking-wider">
-            <span>{product.parent_category ? `${product.parent_category} > ${product.category_name}` : (product.category_name || 'General')}</span>
+            {(() => {
+              const displayMainCat = product.main_category || product.parent_category || '';
+              const displaySubCat = product.category || product.category_name || product.sub_category || '';
+              const categoryLabel = displayMainCat && displaySubCat
+                ? `${displayMainCat} > ${displaySubCat}`
+                : (displayMainCat || displaySubCat || 'Uncategorized');
+              return <span>{categoryLabel}</span>;
+            })()}
             {product.sku && <span className="font-mono text-zinc-500 bg-zinc-50 px-1 py-0.5 rounded border border-zinc-100">{product.sku}</span>}
           </div>
 

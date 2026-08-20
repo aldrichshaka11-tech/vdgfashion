@@ -186,23 +186,30 @@ export default function ProductDetailView() {
                   Product Code: {selectedProduct.sku}
                 </span>
               )}
-              {selectedProduct.parent_category ? (
-                <>
-                  <span className="bg-zinc-50 text-zinc-650 px-2.5 py-1 rounded-md border border-zinc-150">
-                    {selectedProduct.parent_category}
-                  </span>
-                  <ChevronRight className="h-3 w-3 text-zinc-350" />
-                  <span className="bg-rose-50/50 text-[#e5484d] border border-rose-100/50 px-2.5 py-1 rounded-md font-bold">
-                    {selectedProduct.category_name}
-                  </span>
-                </>
-              ) : (
-                selectedProduct.category_name && (
-                  <span className="bg-zinc-50 text-zinc-650 px-2.5 py-1 rounded-md border border-zinc-150">
-                    {selectedProduct.category_name}
-                  </span>
-                )
-              )}
+              {(() => {
+                const displayMainCat = selectedProduct.main_category || selectedProduct.parent_category || '';
+                const displaySubCat = selectedProduct.category || selectedProduct.category_name || selectedProduct.sub_category || '';
+                if (displayMainCat && displaySubCat) {
+                  return (
+                    <>
+                      <span className="bg-zinc-50 text-zinc-650 px-2.5 py-1 rounded-md border border-zinc-150">
+                        {displayMainCat}
+                      </span>
+                      <ChevronRight className="h-3 w-3 text-zinc-350" />
+                      <span className="bg-rose-50/50 text-[#e5484d] border border-rose-100/50 px-2.5 py-1 rounded-md font-bold">
+                        {displaySubCat}
+                      </span>
+                    </>
+                  );
+                } else if (displayMainCat || displaySubCat) {
+                  return (
+                    <span className="bg-zinc-50 text-zinc-650 px-2.5 py-1 rounded-md border border-zinc-150">
+                      {displayMainCat || displaySubCat}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             {/* Rating */}

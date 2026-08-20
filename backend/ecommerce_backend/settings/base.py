@@ -10,9 +10,9 @@ env = environ.Env()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = env.str('SECRET_KEY', 'django-insecure-t5u8-#3q%cj^u+w*qu@v9-^&203ln06=umd!%l!z!u@7h)jrae')
+SECRET_KEY = env.str('SECRET_KEY', default=os.getenv('SECRET_KEY', 'django-insecure-t5u8-#3q%cj^u+w*qu@v9-^&203ln06=umd!%l!z!u@7h)jrae'))
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '*'])
 
 # Application definition
 INSTALLED_APPS = [
@@ -99,7 +99,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://vdgfashion.com',
+    'https://www.vdgfashion.com',
+])
+CORS_ALLOW_CREDENTIALS = True
 
 # REST Framework configurations
 REST_FRAMEWORK = {
