@@ -64,21 +64,43 @@ export default function ProductFilters() {
   };
 
   const rootCategories = (allCategories || []).filter(c => c.type === 'main_category');
-  const mainCategories = (allCategories || []).filter(c => c.type === 'category' && rootCategories.some(r => r.name === c.main_category));
-  const subCategories = (allCategories || []).filter(c => c.type === 'sub_category' && mainCategories.some(m => m.name === c.category));
+  const mainCategories = (allCategories || []).filter(c => c.type === 'category');
+  const subCategories = (allCategories || []).filter(c => c.type === 'sub_category');
+
+  const rootCatNames = rootCategories.map(c => c.name);
+  const mainCatNames = mainCategories.map(c => c.name);
+  const subCatNames = subCategories.map(c => c.name);
 
   const handleToggleCategory = (catName) => {
+    const isChecked = checkedCategories.includes(catName);
     let newChecked;
-    if (checkedCategories.includes(catName)) {
-      newChecked = checkedCategories.filter((c) => c !== catName);
+    
+    if (isChecked) {
+      newChecked = checkedCategories.filter(c => c !== catName);
     } else {
-      newChecked = [...checkedCategories, catName];
+      if (rootCatNames.includes(catName)) {
+        // Replace previous root, main, and sub categories
+        const remaining = checkedCategories.filter(c => 
+          !rootCatNames.includes(c) && !mainCatNames.includes(c) && !subCatNames.includes(c)
+        );
+        newChecked = [...remaining, catName];
+      } else if (mainCatNames.includes(catName)) {
+        // Replace previous main and sub categories
+        const remaining = checkedCategories.filter(c => 
+          !mainCatNames.includes(c) && !subCatNames.includes(c)
+        );
+        newChecked = [...remaining, catName];
+      } else {
+        // Replace previous sub category
+        const remaining = checkedCategories.filter(c => !subCatNames.includes(c));
+        newChecked = [...remaining, catName];
+      }
     }
     setCheckedCategories(newChecked);
 
-    if (newChecked.length === 1) {
-      setSelectedCategory(newChecked[0]);
-    } else if (newChecked.length === 0) {
+    if (newChecked.length > 0) {
+      setSelectedCategory(newChecked[newChecked.length - 1]);
+    } else {
       setSelectedCategory('ALL');
     }
   };

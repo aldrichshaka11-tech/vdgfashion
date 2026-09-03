@@ -135,16 +135,63 @@ export default function Home() {
     return map;
   }, [allCategories]);
 
-  const handleToggleCategoryCircle = (catName, extraAction = null) => {
+  const rootCategoryNames = useMemo(() => (allCategories || []).filter(c => c.type === 'main_category').map(c => c.name), [allCategories]);
+  const allMainCategoryNames = useMemo(() => (allCategories || []).filter(c => c.type === 'category').map(c => c.name), [allCategories]);
+  const allSubCategoryNames = useMemo(() => (allCategories || []).filter(c => c.type === 'sub_category').map(c => c.name), [allCategories]);
+
+  // Level 1: Categories (Root Category) selection handler
+  const handleSelectRootCategory = (catName) => {
     const isChecked = checkedCategories.includes(catName);
     if (isChecked) {
+      // Toggle off Level 1: reset all level selections
+      setCheckedCategories([]);
+      setSelectedCategory('ALL');
+      setActiveRootCat(null);
+      setActiveMainCat(null);
+    } else {
+      // Select exclusively for Level 1: replace all level selections with this root category
+      setCheckedCategories([catName]);
+      setSelectedCategory(catName);
+      setActiveRootCat(catName);
+      setActiveMainCat(null);
+    }
+  };
+
+  // Level 2: Explore Collections (Main Category / Collection) selection handler
+  const handleSelectMainCategory = (catName) => {
+    const isChecked = checkedCategories.includes(catName);
+    if (isChecked) {
+      // Toggle off Level 2: remove this collection and any Level 3 subcategories
+      const nextChecked = checkedCategories.filter(c => c !== catName && !allSubCategoryNames.includes(c));
+      setCheckedCategories(nextChecked);
+      if (selectedCategory === catName) {
+        setSelectedCategory(activeRootCat || (nextChecked.length > 0 ? nextChecked[0] : 'ALL'));
+      }
+      setActiveMainCat(null);
+    } else {
+      // Select exclusively for Level 2: keep Level 1 root if present, replace any previous Level 2 and Level 3 items
+      const remainingRoots = checkedCategories.filter(c => rootCategoryNames.includes(c));
+      const nextChecked = [...remainingRoots, catName];
+      setCheckedCategories(nextChecked);
+      setSelectedCategory(catName);
+      setActiveMainCat(catName);
+    }
+  };
+
+  // Level 3: Discover More (SubCategory) selection handler
+  const handleSelectSubCategory = (catName, extraAction = null) => {
+    const isChecked = checkedCategories.includes(catName);
+    if (isChecked) {
+      // Toggle off Level 3
       const nextChecked = checkedCategories.filter(c => c !== catName);
       setCheckedCategories(nextChecked);
       if (selectedCategory === catName) {
-        setSelectedCategory(nextChecked.length > 0 ? nextChecked[0] : 'ALL');
+        setSelectedCategory(activeMainCat || activeRootCat || (nextChecked.length > 0 ? nextChecked[0] : 'ALL'));
       }
     } else {
-      const nextChecked = [...checkedCategories, catName];
+      // Select exclusively for Level 3: keep Level 1 and Level 2, replace previous Level 3 items
+      const remainingUpper = checkedCategories.filter(c => !allSubCategoryNames.includes(c));
+      const nextChecked = [...remainingUpper, catName];
       setCheckedCategories(nextChecked);
       setSelectedCategory(catName);
     }
@@ -263,10 +310,6 @@ export default function Home() {
     }
   }, [categoryTrack, activeRootCat]);
 
-  // Actually, to correctly identify main categories, we check if their parent has NO parent.
-  // Root categories have NO parent.
-  const rootCategoryNames = useMemo(() => (allCategories || []).filter(c => c.type === 'main_category').map(c => c.name), [allCategories]);
-  
   const mainCategoryList = useMemo(() => {
     const mains = (allCategories || []).filter(c => c.type === 'category' && rootCategoryNames.includes(c.main_category));
     if (!activeRootCat) return mains;
@@ -354,8 +397,10 @@ export default function Home() {
                   </span>
                   <button 
                     onClick={() => {
-                      setCheckedCategories(prev => prev.filter(c => !rootCategoryNames.includes(c)));
-                      if (rootCategoryNames.includes(selectedCategory)) setSelectedCategory('ALL');
+                      setCheckedCategories([]);
+                      setSelectedCategory('ALL');
+                      setActiveRootCat(null);
+                      setActiveMainCat(null);
                     }}
                     className="text-[10px] font-bold text-zinc-500 hover:text-[#e11d48] uppercase tracking-wider px-2.5 py-1.5 bg-zinc-100 hover:bg-rose-50 rounded-lg transition-colors"
                   >
@@ -372,8 +417,7 @@ export default function Home() {
                       <div
                         key={idx}
                         onClick={() => {
-                          setActiveRootCat(cat.categoryRef);
-                          handleToggleCategoryCircle(cat.categoryRef);
+                          handleSelectRootCategory(cat.categoryRef);
                         }}
                         data-aos="zoom-in"
                         data-aos-delay={idx * 50}
@@ -414,9 +458,14 @@ export default function Home() {
                     </span>
                     <button 
                       onClick={() => {
-                        const mainCatNames = mainCategoryList.map(c => c.name);
-                        setCheckedCategories(prev => prev.filter(c => !mainCatNames.includes(c)));
-                        if (mainCatNames.includes(selectedCategory)) setSelectedCategory('ALL');
+                        const nextChecked = checkedCategories.filter(c => 
+                          !allMainCategoryNames.includes(c) && !allSubCategoryNames.includes(c)
+                        );
+                        setCheckedCategories(nextChecked);
+                        if (allMainCategoryNames.includes(selectedCategory) || allSubCategoryNames.includes(selectedCategory)) {
+                          setSelectedCategory(activeRootCat || (nextChecked.length > 0 ? nextChecked[0] : 'ALL'));
+                        }
+                        setActiveMainCat(null);
                       }}
                       className="text-[10px] font-bold text-zinc-500 hover:text-indigo-600 uppercase tracking-wider px-2.5 py-1.5 bg-zinc-100 hover:bg-indigo-50 rounded-lg transition-colors"
                     >
@@ -435,8 +484,7 @@ export default function Home() {
                         <div
                           key={cat.id || idx}
                           onClick={() => {
-                            setActiveMainCat(cat.name);
-                            handleToggleCategoryCircle(cat.name);
+                            handleSelectMainCategory(cat.name);
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
@@ -480,9 +528,11 @@ export default function Home() {
                     </span>
                     <button 
                       onClick={() => {
-                        const subCatNames = subCategoryList.map(c => c.name);
-                        setCheckedCategories(prev => prev.filter(c => !subCatNames.includes(c)));
-                        if (subCatNames.includes(selectedCategory)) setSelectedCategory('ALL');
+                        const nextChecked = checkedCategories.filter(c => !allSubCategoryNames.includes(c));
+                        setCheckedCategories(nextChecked);
+                        if (allSubCategoryNames.includes(selectedCategory)) {
+                          setSelectedCategory(activeMainCat || activeRootCat || (nextChecked.length > 0 ? nextChecked[0] : 'ALL'));
+                        }
                       }}
                       className="text-[10px] font-bold text-zinc-500 hover:text-teal-600 uppercase tracking-wider px-2.5 py-1.5 bg-zinc-100 hover:bg-teal-50 rounded-lg transition-colors"
                     >
@@ -501,7 +551,7 @@ export default function Home() {
                         <div
                           key={cat.id || idx}
                           onClick={() => {
-                            handleToggleCategoryCircle(cat.name, handleScrollToShop);
+                            handleSelectSubCategory(cat.name, handleScrollToShop);
                           }}
                           data-aos="zoom-in"
                           data-aos-delay={(idx % 10) * 50}
