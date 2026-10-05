@@ -281,7 +281,7 @@ export function StoreProvider({ children }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSubcategory, setSelectedSubcategory] = useState('ALL');
   const [checkedCategories, setCheckedCategories] = useState([]);
-  const [priceRange, setPriceRange] = useState(5000);
+  const [priceRange, setPriceRange] = useState(30000);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [sortBy, setSortBy] = useState('DEFAULT');
@@ -391,7 +391,7 @@ export function StoreProvider({ children }) {
     setSelectedCategory('ALL');
     setSelectedSubcategory('ALL');
     setCheckedCategories([]);
-    setPriceRange(5000);
+    setPriceRange(30000);
     setSelectedColor('');
     setSelectedSize('');
     setSortBy('DEFAULT');

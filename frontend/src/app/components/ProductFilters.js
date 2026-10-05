@@ -270,7 +270,7 @@ export default function ProductFilters() {
             <input
               type="range"
               min="100"
-              max="5000"
+              max="30000"
               step="100"
               value={priceRange}
               onChange={(e) => setPriceRange(Number(e.target.value))}
@@ -279,14 +279,14 @@ export default function ProductFilters() {
             <div className="flex justify-between text-xs sm:text-sm text-zinc-450 font-normal">
               <span>{formatINR(100)}</span>
               <span className="bg-rose-50 text-[#e11d48] px-2.5 py-0.5 rounded-md font-semibold">{formatINR(priceRange)}</span>
-              <span>{formatINR(5000)}</span>
+              <span>{formatINR(30000)}</span>
             </div>
 
             {/* Quick Filter Buttons */}
             <div className="flex flex-wrap gap-2 pt-1">
-              {[100, 500, 1000, 5000].map((val) => {
+              {[100, 500, 1000, 5000, 30000].map((val) => {
                 const isActive = priceRange === val;
-                const label = val === 5000 ? 'All' : formatINR(val);
+                const label = val === 30000 ? 'All' : formatINR(val);
                 return (
                   <button
                     key={val}
