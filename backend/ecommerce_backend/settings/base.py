@@ -176,7 +176,6 @@ if redis_url.startswith('redis://'):
         pass
 
 if _check_redis_port(redis_host, redis_port):
-    print("[OK] Redis is running on {}:{}. Using Redis Cache...".format(redis_host, redis_port))
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
@@ -187,7 +186,6 @@ if _check_redis_port(redis_host, redis_port):
         }
     }
 else:
-    print("[WARNING] Redis is NOT running on {}:{}. Falling back to In-Memory Cache (LocMemCache)...".format(redis_host, redis_port))
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

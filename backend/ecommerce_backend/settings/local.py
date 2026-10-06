@@ -15,7 +15,6 @@ mysql_host = env.str('DB_HOST', '127.0.0.1')
 mysql_port = env.int('DB_PORT', 3306)
 
 if _check_db_port(mysql_host, mysql_port):
-    print("[OK] MySQL is running on {}:{}. Connecting to MySQL database...".format(mysql_host, mysql_port))
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -30,7 +29,6 @@ if _check_db_port(mysql_host, mysql_port):
         }
     }
 else:
-    print("[WARNING] MySQL is NOT running on {}:{}. Falling back to local SQLite database...".format(mysql_host, mysql_port))
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
