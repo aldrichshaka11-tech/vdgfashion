@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = env.str('SECRET_KEY', default=os.getenv('SECRET_KEY', 'django-insecure-t5u8-#3q%cj^u+w*qu@v9-^&203ln06=umd!%l!z!u@7h)jrae'))
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '*'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0', '*'])
 
 # Application definition
 INSTALLED_APPS = [
