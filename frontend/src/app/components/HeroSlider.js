@@ -58,7 +58,8 @@ function SliderInstance({ banners, aspectClass, hiddenClass, onShopClick }) {
           alt={banners[currentIndex].alt}
           fill
           className="object-cover w-full h-full transition-all duration-700 ease-in-out transform scale-100"
-          priority
+          priority={currentIndex === 0}
+          loading={currentIndex === 0 ? 'eager' : 'lazy'}
         />
       </div>
 

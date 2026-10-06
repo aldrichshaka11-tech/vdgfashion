@@ -636,7 +636,7 @@ export default function Home() {
                               data-aos="fade-up"
                               data-aos-delay={(idx % 4) * 80}
                             >
-                              <ProductCard product={prod} />
+                              <ProductCard product={prod} priority={idx < 4} />
                             </div>
                           ))}
                         </div>

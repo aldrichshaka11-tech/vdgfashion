@@ -22,7 +22,7 @@ const safeBtnColor = (color) => {
   return colorsMap[color] || 'bg-[#e11d48] hover:bg-[#be123c]';
 };
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, priority = false }) {
   const { addToCart, toggleWishlist, isWishlisted, setSelectedProduct } = useStore();
 
   const isLiked = isWishlisted(product.id);
@@ -107,10 +107,13 @@ export default function ProductCard({ product }) {
                 alt={product.name}
                 fill
                 className="object-cover"
-                priority
+                priority={priority}
+                loading={priority ? 'eager' : 'lazy'}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
               />
             ) : null}
           </div>
+
 
           {/* Rating tag bottom left */}
           <div className="absolute bottom-3 left-3 z-10 bg-white/95 px-2.5 py-1 rounded-full text-xs font-bold text-zinc-800 border border-zinc-150 flex items-center gap-1 shadow-xs">

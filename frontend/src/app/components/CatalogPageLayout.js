@@ -113,8 +113,8 @@ export default function CatalogPageLayout({ title, subtitle, type }) {
                       </p>
                     </div>
                   ) : (
-                    paginatedProducts.map((product) => (
-                      <ProductCard key={product.id} product={product} />
+                    paginatedProducts.map((product, idx) => (
+                      <ProductCard key={product.id} product={product} priority={idx < 4} />
                     ))
                   )}
                 </section>
