@@ -152,36 +152,17 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Redis Caching with LocMemCache fallback
-import socket
+# Redis Caching with LocMemCache fallback via REDIS_URL
+REDIS_URL = env.str('REDIS_URL', 'redis://127.0.0.1:6379/1')
 
-def _check_redis_port(host, port):
-    try:
-        with socket.create_connection((host, port), timeout=1.0) as sock:
-            return True
-    except Exception:
-        return False
-
-redis_url = env.str('REDIS_URL', 'redis://127.0.0.1:6379/1')
-redis_host = '127.0.0.1'
-redis_port = 6379
-
-if redis_url.startswith('redis://'):
-    try:
-        parts = redis_url[8:].split('/')[0].split(':')
-        redis_host = parts[0]
-        if len(parts) > 1:
-            redis_port = int(parts[1])
-    except Exception:
-        pass
-
-if _check_redis_port(redis_host, redis_port):
+if REDIS_URL and REDIS_URL.startswith('redis://'):
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': redis_url,
+            'LOCATION': REDIS_URL,
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'IGNORE_EXCEPTIONS': True,
             }
         }
     }

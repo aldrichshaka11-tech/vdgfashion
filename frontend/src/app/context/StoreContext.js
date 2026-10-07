@@ -142,9 +142,15 @@ export function StoreProvider({ children }) {
     setSettings(newSettings);
     localStorage.setItem('vdgfashion_settings', JSON.stringify(newSettings));
     try {
+      const token = localStorage.getItem('vgd_user_token') || 
+                    (typeof window !== 'undefined' && sessionStorage.getItem('access_token')) || 
+                    user?.token;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       await fetch(`${API_BASE}/api/settings/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(newSettings)
       });
     } catch (e) {
