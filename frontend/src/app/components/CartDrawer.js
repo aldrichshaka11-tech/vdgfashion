@@ -22,7 +22,7 @@ export default function CartDrawer() {
     settings
   } = useStore();
 
-  const freeShipThreshold = parseFloat(settings?.freeShippingThreshold || 3000);
+  const freeShipThreshold = parseFloat(settings?.freeShippingThreshold || 999);
   const remainingForFreeShipping = Math.max(0, freeShipThreshold - cartSubtotal);
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);

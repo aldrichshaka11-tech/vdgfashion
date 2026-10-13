@@ -8,7 +8,8 @@ import {
   UserCheck, ClipboardList, Search, Bell, Moon, Sun, ChevronRight, ChevronDown,
   ArrowUpRight, RefreshCcw, CheckCircle, Database, Trash2, Edit, Plus, Upload, X,
   ShoppingBag, Wallet, Menu, LogOut, Filter,
-  Clock, Truck, MapPin, XCircle, Heart, Percent
+  Clock, Truck, MapPin, XCircle, Heart, Percent,
+  Copy, Check, Sparkles
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { API_BASE, mediaUrl } from '../../lib/api';
@@ -524,6 +525,24 @@ function DashboardPortal({ onLogout, adminUser }) {
     is_active: true
   });
 
+  // Coupons Management State
+  const [coupons, setCoupons] = useState([]);
+  const [couponSearchQuery, setCouponSearchQuery] = useState('');
+  const [couponFilterStatus, setCouponFilterStatus] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [couponModalMode, setCouponModalMode] = useState('add'); // 'add' | 'edit'
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [copiedCouponCode, setCopiedCouponCode] = useState(null);
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    discount_type: 'percentage', // 'percentage' | 'fixed'
+    discount_value: '10',
+    min_order_amount: '999',
+    max_discount_amount: '',
+    description: '',
+    is_active: true
+  });
+
   const [loadingData, setLoadingData] = useState(false);
 
   // Store context settings and forms
@@ -536,8 +555,8 @@ function DashboardPortal({ onLogout, adminUser }) {
     contactEmail: '',
     storeAddress: '',
     aboutText: '',
-    freeShippingThreshold: 3000,
-    shippingFee: 99,
+    freeShippingThreshold: 999,
+    shippingFee: 50,
     activePromoCode: 'TREND10',
     activePromoDiscount: 10,
     isStoreOpen: true,
@@ -553,8 +572,8 @@ function DashboardPortal({ onLogout, adminUser }) {
         contactEmail: settings.contactEmail || '',
         storeAddress: settings.storeAddress || '',
         aboutText: settings.aboutText || '',
-        freeShippingThreshold: settings.freeShippingThreshold !== undefined ? settings.freeShippingThreshold : 3000,
-        shippingFee: settings.shippingFee !== undefined ? settings.shippingFee : 99,
+        freeShippingThreshold: settings.freeShippingThreshold !== undefined ? settings.freeShippingThreshold : 999,
+        shippingFee: settings.shippingFee !== undefined ? settings.shippingFee : 50,
         activePromoCode: settings.activePromoCode || 'TREND10',
         activePromoDiscount: settings.activePromoDiscount !== undefined ? settings.activePromoDiscount : 10,
         isStoreOpen: settings.isStoreOpen !== undefined ? settings.isStoreOpen : true,
@@ -1088,6 +1107,8 @@ function DashboardPortal({ onLogout, adminUser }) {
       if (revRes.ok) setReviews(await revRes.json());
       const usersRes = await fetch(`${API_BASE}/api/auth/users/`, { headers: authHeader });
       if (usersRes.ok) setUsersList(await usersRes.json());
+      const coupRes = await fetch(`${API_BASE}/api/coupons/`);
+      if (coupRes.ok) setCoupons(await coupRes.json());
 
     } catch (e) {
       showToast('Failed to sync with backend REST API!', 'warning');
@@ -1200,6 +1221,155 @@ function DashboardPortal({ onLogout, adminUser }) {
       showToast('Network error saving offer details.', 'warning');
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  // Coupons Management Actions
+  const handleGenerateCouponCode = (prefix = 'VDG') => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let codeStr = '';
+    for (let i = 0; i < 4; i++) {
+      codeStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const val = couponForm.discount_value ? `${couponForm.discount_value}` : '50';
+    const newCode = `${prefix}${val}${codeStr}`.toUpperCase();
+    setCouponForm(prev => ({ ...prev, code: newCode }));
+  };
+
+  const handleOpenCouponModal = (mode = 'add', coupon = null) => {
+    setCouponModalMode(mode);
+    setSelectedCoupon(coupon);
+    if (mode === 'edit' && coupon) {
+      setCouponForm({
+        code: coupon.code || '',
+        discount_type: coupon.discount_type || 'percentage',
+        discount_value: coupon.discount_value || '',
+        min_order_amount: coupon.min_order_amount !== undefined ? coupon.min_order_amount : '999',
+        max_discount_amount: coupon.max_discount_amount || '',
+        description: coupon.description || '',
+        is_active: coupon.is_active !== undefined ? coupon.is_active : true
+      });
+    } else {
+      const randomSuffix = Math.floor(100 + Math.random() * 900);
+      setCouponForm({
+        code: `VDG${randomSuffix}`,
+        discount_type: 'percentage',
+        discount_value: '10',
+        min_order_amount: '999',
+        max_discount_amount: '',
+        description: 'Special 10% discount on orders above ₹999',
+        is_active: true
+      });
+    }
+    setIsCouponModalOpen(true);
+  };
+
+  const handleSaveCoupon = async (e) => {
+    if (e) e.preventDefault();
+    if (!couponForm.code.trim()) {
+      showToast('Please enter a coupon code', 'warning');
+      return;
+    }
+    if (!couponForm.discount_value || parseFloat(couponForm.discount_value) <= 0) {
+      showToast('Please enter a valid discount value', 'warning');
+      return;
+    }
+
+    setLoadingData(true);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const payload = {
+        code: couponForm.code.trim().toUpperCase(),
+        discount_type: couponForm.discount_type,
+        discount_value: parseFloat(couponForm.discount_value),
+        min_order_amount: parseFloat(couponForm.min_order_amount || 0),
+        max_discount_amount: couponForm.max_discount_amount ? parseFloat(couponForm.max_discount_amount) : null,
+        description: couponForm.description,
+        is_active: couponForm.is_active
+      };
+
+      const url = couponModalMode === 'edit' && selectedCoupon
+        ? `${API_BASE}/api/coupons/${selectedCoupon.id}/`
+        : `${API_BASE}/api/coupons/`;
+      const method = couponModalMode === 'edit' && selectedCoupon ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeader
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showSuccessPopup(
+          couponModalMode === 'edit' ? 'Coupon Updated!' : 'Coupon Created!',
+          `Coupon code "${payload.code}" has been successfully ${couponModalMode === 'edit' ? 'updated' : 'saved and activated'}.`
+        );
+        setIsCouponModalOpen(false);
+        syncData();
+      } else {
+        const err = await res.json();
+        showToast(err.code?.[0] || err.detail || 'Failed to save coupon', 'warning');
+      }
+    } catch (err) {
+      showToast('Network error while saving coupon', 'warning');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const handleToggleCouponStatus = async (coupon) => {
+    try {
+      const token = sessionStorage.getItem('access_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/api/coupons/${coupon.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeader
+        },
+        body: JSON.stringify({ is_active: !coupon.is_active })
+      });
+      if (res.ok) {
+        showToast(`Coupon "${coupon.code}" is now ${!coupon.is_active ? 'Active' : 'Disabled'}`, 'success');
+        syncData();
+      } else {
+        showToast('Failed to update coupon status', 'warning');
+      }
+    } catch {
+      showToast('Network error updating coupon', 'warning');
+    }
+  };
+
+  const handleDeleteCoupon = async (coupon) => {
+    if (!confirm(`Are you sure you want to delete coupon "${coupon.code}"?`)) return;
+    try {
+      const token = sessionStorage.getItem('access_token');
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/api/coupons/${coupon.id}/`, {
+        method: 'DELETE',
+        headers: authHeader
+      });
+      if (res.ok) {
+        showDeletePopup('Coupon Deleted!', `Coupon "${coupon.code}" has been permanently removed.`);
+        syncData();
+      } else {
+        showToast('Failed to delete coupon', 'warning');
+      }
+    } catch {
+      showToast('Network error deleting coupon', 'warning');
+    }
+  };
+
+  const handleCopyCouponCode = (code) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+      setCopiedCouponCode(code);
+      showToast(`Coupon "${code}" copied to clipboard!`, 'success');
+      setTimeout(() => setCopiedCouponCode(null), 2500);
     }
   };
 
@@ -2899,6 +3069,7 @@ function DashboardPortal({ onLogout, adminUser }) {
           <NavItem theme={theme} icon={<Megaphone size={20} />} label="Index Banners" active={activePage === 'hero-banners'} onClick={() => handlePageChange('hero-banners')} />
           <NavItem theme={theme} icon={<Megaphone size={20} />} label="Marketing Banners" active={activePage === 'marketing-banners'} onClick={() => handlePageChange('marketing-banners')} />
           <NavItem theme={theme} icon={<Percent size={20} />} label="Offers" active={activePage === 'offers'} onClick={() => handlePageChange('offers')} />
+          <NavItem theme={theme} icon={<Ticket size={20} />} label="Coupons" active={activePage === 'coupons'} onClick={() => handlePageChange('coupons')} />
           <NavItem theme={theme} icon={<Settings size={20} />} label="Settings" active={activePage === 'settings'} onClick={() => handlePageChange('settings')} />
 
           <hr className="border-dashed my-2 opacity-50 border-zinc-200 dark:border-[#1e293b]" />
@@ -3642,8 +3813,8 @@ function DashboardPortal({ onLogout, adminUser }) {
                       }`}
                   >
                     <option value="all" className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>All Categories</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>{c.name}</option>
+                    {Array.from(new Map(categories.map((c, index) => [c.name, { ...c, uniqueKey: c.unique_id || `${c.type || 'cat'}_${c.id}_${index}` }])).values()).map((c) => (
+                      <option key={c.uniqueKey} value={c.name} className={theme === "dark" ? "bg-[#0f1626] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>{c.name}</option>
                     ))}
                   </select>
 
@@ -5808,6 +5979,250 @@ function DashboardPortal({ onLogout, adminUser }) {
             </div>
           )}
 
+          {activePage === 'coupons' && (
+            <div className="space-y-6 text-left animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className={`text-2xl font-normal tracking-tight ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>Coupons & Voucher Management</h2>
+                  <p className="text-xs text-zinc-500 font-normal mt-1">Dashboard &gt; Coupons &gt; Promotional Discount Vouchers</p>
+                </div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <button
+                    onClick={() => {
+                      handleOpenCouponModal('add');
+                      handleGenerateCouponCode('VDG');
+                    }}
+                    className="py-2.5 px-4 rounded-xl border border-dashed border-indigo-400 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <Sparkles size={15} />
+                    <span>⚡ Quick Auto-Generate</span>
+                  </button>
+                  <button
+                    onClick={() => handleOpenCouponModal('add')}
+                    className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-500/20 active:scale-95"
+                  >
+                    <Plus size={16} />
+                    <span>Create Custom Coupon</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Summary Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'}`}>
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20">
+                    <Ticket className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Total Coupons</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{coupons.length}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'}`}>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Active Codes</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>{coupons.filter(c => c.is_active).length}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'}`}>
+                  <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-teal-500/20">
+                    <Truck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Free Delivery Above</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>₹{settingsForm.freeShippingThreshold || 999}</h3>
+                  </div>
+                </div>
+
+                <div className={`p-5 rounded-3xl border transition-all flex items-center gap-4 ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-black/40' : 'bg-white border-zinc-200 text-zinc-800 shadow-3xs'}`}>
+                  <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-500/20">
+                    <Percent className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-zinc-400 text-[11px] font-normal uppercase tracking-wider">Standard Shipping</p>
+                    <h3 className={`text-2xl font-normal leading-none mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>₹{settingsForm.shippingFee || 50}</h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coupons List & Filters */}
+              <div className={`p-6 rounded-3xl border ${theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white' : 'bg-white border-zinc-200 shadow-3xs'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-zinc-100 dark:border-[#1e293b]">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="Search coupons by code or description..."
+                      value={couponSearchQuery}
+                      onChange={(e) => setCouponSearchQuery(e.target.value)}
+                      className={`w-full pl-10 pr-4 py-2.5 text-xs font-normal border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all ${
+                        theme === 'dark'
+                          ? 'bg-[#172033] border-[#1e293b] text-zinc-100 placeholder-zinc-550 focus:border-indigo-500'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-indigo-500'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCouponFilterStatus('all')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${couponFilterStatus === 'all' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'}`}
+                    >
+                      All ({coupons.length})
+                    </button>
+                    <button
+                      onClick={() => setCouponFilterStatus('active')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${couponFilterStatus === 'active' ? 'bg-emerald-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'}`}
+                    >
+                      Active ({coupons.filter(c => c.is_active).length})
+                    </button>
+                    <button
+                      onClick={() => setCouponFilterStatus('inactive')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${couponFilterStatus === 'inactive' ? 'bg-zinc-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'}`}
+                    >
+                      Disabled ({coupons.filter(c => !c.is_active).length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Coupons Cards Grid */}
+                {(() => {
+                  const filtered = coupons.filter(c => {
+                    const matchesSearch = c.code.toLowerCase().includes(couponSearchQuery.toLowerCase()) ||
+                      (c.description && c.description.toLowerCase().includes(couponSearchQuery.toLowerCase()));
+                    const matchesStatus = couponFilterStatus === 'all' ||
+                      (couponFilterStatus === 'active' && c.is_active) ||
+                      (couponFilterStatus === 'inactive' && !c.is_active);
+                    return matchesSearch && matchesStatus;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-12 space-y-3">
+                        <Ticket className="h-12 w-12 text-zinc-300 dark:text-zinc-600 mx-auto" strokeWidth={1.5} />
+                        <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">No coupons found</h4>
+                        <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                          {couponSearchQuery ? 'Try adjusting your search criteria.' : 'Create your first customizable coupon to offer discounts to customers.'}
+                        </p>
+                        <button
+                          onClick={() => handleOpenCouponModal('add')}
+                          className="mt-2 py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <Plus size={14} /> Create Coupon
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                      {filtered.map(coupon => {
+                        const isCopied = copiedCouponCode === coupon.code;
+                        const isPercent = coupon.discount_type === 'percentage';
+                        const discountDisplay = isPercent ? `${coupon.discount_value}% OFF` : `₹${coupon.discount_value} FLAT OFF`;
+
+                        return (
+                          <div
+                            key={coupon.id}
+                            className={`rounded-2xl border p-5 relative overflow-hidden transition-all flex flex-col justify-between ${
+                              theme === 'dark'
+                                ? 'bg-[#172033]/50 border-[#1e293b] hover:border-indigo-500/50'
+                                : 'bg-gradient-to-br from-white to-zinc-50 border-zinc-200 hover:border-indigo-300 shadow-xs'
+                            }`}
+                          >
+                            {/* Top row: Code badge + Copy button + Status */}
+                            <div>
+                              <div className="flex items-center justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="px-3 py-1.5 rounded-xl border border-dashed border-indigo-400 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono font-bold text-sm tracking-wider flex items-center gap-2">
+                                    <span>{coupon.code}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyCouponCode(coupon.code)}
+                                      className="p-1 hover:bg-indigo-500/20 rounded-md transition-colors cursor-pointer"
+                                      title="Copy code"
+                                    >
+                                      {isCopied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCouponStatus(coupon)}
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase transition-all cursor-pointer ${
+                                    coupon.is_active
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800'
+                                      : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700'
+                                  }`}
+                                  title="Click to toggle status"
+                                >
+                                  {coupon.is_active ? '● Active' : '○ Disabled'}
+                                </button>
+                              </div>
+
+                              {/* Discount highlight */}
+                              <div className="mb-3">
+                                <div className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                  {discountDisplay}
+                                </div>
+                                <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-0.5 line-clamp-2">
+                                  {coupon.description || 'Valid for all catalog purchases'}
+                                </p>
+                              </div>
+
+                              {/* Rule Badges */}
+                              <div className="space-y-1.5 py-3 border-y border-zinc-100 dark:border-[#1e293b]/70 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                <div className="flex items-center justify-between">
+                                  <span>Minimum Order Spend:</span>
+                                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                                    {parseFloat(coupon.min_order_amount) > 0 ? `₹${coupon.min_order_amount}` : 'None (Any Amount)'}
+                                  </span>
+                                </div>
+                                {isPercent && coupon.max_discount_amount && (
+                                  <div className="flex items-center justify-between">
+                                    <span>Maximum Discount Limit:</span>
+                                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">₹{coupon.max_discount_amount}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                  <span>Discount Type:</span>
+                                  <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">{coupon.discount_type}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Card Footer actions */}
+                            <div className="flex items-center justify-end gap-2 pt-3 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCouponModal('edit', coupon)}
+                                className="px-3 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                              >
+                                <Edit size={13} /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCoupon(coupon)}
+                                className="px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {activePage === 'users' && (
             <div className="space-y-6 text-left animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -6174,9 +6589,9 @@ function DashboardPortal({ onLogout, adminUser }) {
                           className={`w-full p-3 rounded-xl border transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-3xs cursor-pointer ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500' : 'bg-white border-zinc-200 text-zinc-800 focus:border-indigo-500 focus:bg-white'
                             }`}
                         >
-                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
+                          <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-850 font-normal"}>Select Category...</option>
                           {rootCategories.map((c) => (
-                            <option key={c.id} value={c.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                            <option key={c.unique_id || `root_${c.id}`} value={c.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                           ))}
                         </select>
                       </div>
@@ -6197,7 +6612,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             return mainCategories
                               .filter(mc => mc.main_category === selectedMainCatName)
                               .map(mc => (
-                                <option key={mc.id} value={mc.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{mc.name}</option>
+                                <option key={mc.unique_id || `mc_${mc.id}`} value={mc.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{mc.name}</option>
                               ));
                           })()}
                         </select>
@@ -6222,7 +6637,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                             return subCategories
                               .filter(sc => sc.category === selectedCatName)
                               .map(sc => (
-                                <option key={sc.id} value={sc.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
+                                <option key={sc.unique_id || `sc_${sc.id}`} value={sc.id} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{sc.name}</option>
                               ));
                           })()}
                         </select>
@@ -6495,7 +6910,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     >
                       <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                       {rootCategories.map((c) => (
-                        <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                        <option key={c.unique_id || `root_${c.id}`} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                       ))}
                     </select>
                   </div>
@@ -6668,7 +7083,7 @@ function DashboardPortal({ onLogout, adminUser }) {
                     >
                       <option value="" className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>Select Category...</option>
                       {mainCategories.map((c) => (
-                        <option key={c.id} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
+                        <option key={c.unique_id || `main_${c.id}`} value={c.name} className={theme === "dark" ? "bg-[#172033] text-white font-normal" : "bg-white text-zinc-800 font-normal"}>{c.name}</option>
                       ))}
                     </select>
                   </div>
@@ -7202,6 +7617,270 @@ function DashboardPortal({ onLogout, adminUser }) {
                   className={`py-2.5 px-5 rounded-xl cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 text-white bg-gradient-to-r from-[#4F38FF] via-[#A633FF] to-[#FF1A8C] hover:opacity-90 shadow-purple-500/20`}
                 >
                   Apply Offer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Customizable Coupon Generation & Edit Modal */}
+      {isCouponModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
+          <div className={`w-full max-w-[540px] rounded-[2rem] border p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all transform scale-100 max-h-[92vh] overflow-y-auto ${
+            theme === 'dark' ? 'bg-[#0f1626] border-[#1e293b] text-white shadow-purple-500/5' : 'bg-white border-zinc-200 text-[#0f172a]'
+          }`}>
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-zinc-150 dark:border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-pink-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                  <Ticket size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">
+                    {couponModalMode === 'edit' ? 'Edit Coupon' : 'Create Customizable Coupon'}
+                  </h3>
+                  <p className="text-xs text-zinc-400 font-normal">Configure promo code rules, discounts, and order limits</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCouponModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-[#172033] cursor-pointer text-zinc-400 hover:text-zinc-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCoupon} className="space-y-4 text-left text-xs">
+              {/* Coupon Code Input with Random Generator */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Coupon Code <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-zinc-400">Presets:</span>
+                    {['VDG', 'SAVE', 'FEST', 'SUPER'].map(prefix => (
+                      <button
+                        key={prefix}
+                        type="button"
+                        onClick={() => handleGenerateCouponCode(prefix)}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 hover:bg-indigo-100 dark:bg-zinc-800 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 cursor-pointer transition-colors"
+                      >
+                        {prefix}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={couponForm.code}
+                    onChange={(e) => setCouponForm(prev => ({ ...prev, code: e.target.value.toUpperCase().replace(/\s+/g, '') }))}
+                    placeholder="e.g. VDG50, FESTIVE10"
+                    className={`flex-1 p-3 rounded-xl border font-mono font-bold tracking-wider uppercase text-sm outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateCouponCode('VDG')}
+                    className="px-3.5 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 font-semibold text-xs border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+                    title="Click to generate random unique code"
+                  >
+                    <Sparkles size={14} />
+                    <span>⚡ Generate</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Discount Type: Percentage vs Fixed */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Discount Type <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm(prev => ({ ...prev, discount_type: 'percentage' }))}
+                    className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                      couponForm.discount_type === 'percentage'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-500/20'
+                        : 'bg-zinc-50 dark:bg-[#172033] border-zinc-200 dark:border-[#1e293b] text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    <Percent size={14} /> Percentage (%) Off
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm(prev => ({ ...prev, discount_type: 'fixed' }))}
+                    className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                      couponForm.discount_type === 'fixed'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-500/20'
+                        : 'bg-zinc-50 dark:bg-[#172033] border-zinc-200 dark:border-[#1e293b] text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    <span>₹ Flat Amount Off</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Discount Value */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    {couponForm.discount_type === 'percentage' ? 'Discount Percentage (%)' : 'Flat Discount Amount (₹)'} <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {couponForm.discount_type === 'percentage'
+                      ? ['5', '10', '15', '20', '25', '50'].map(val => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setCouponForm(prev => ({ ...prev, discount_value: val }))}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer transition-colors ${
+                              couponForm.discount_value === val ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                            }`}
+                          >
+                            {val}%
+                          </button>
+                        ))
+                      : ['50', '100', '150', '200', '500'].map(val => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setCouponForm(prev => ({ ...prev, discount_value: val }))}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer transition-colors ${
+                              couponForm.discount_value === val ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                            }`}
+                          >
+                            ₹{val}
+                          </button>
+                        ))}
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max={couponForm.discount_type === 'percentage' ? '100' : '10000'}
+                  step="any"
+                  value={couponForm.discount_value}
+                  onChange={(e) => setCouponForm(prev => ({ ...prev, discount_value: e.target.value }))}
+                  placeholder={couponForm.discount_type === 'percentage' ? 'e.g. 10' : 'e.g. 50'}
+                  className={`w-full p-3 rounded-xl border text-sm font-semibold outline-none transition-all ${
+                    theme === 'dark'
+                      ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500'
+                  }`}
+                />
+              </div>
+
+              {/* Order limits grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Minimum Order Spend (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={couponForm.min_order_amount}
+                    onChange={(e) => setCouponForm(prev => ({ ...prev, min_order_amount: e.target.value }))}
+                    placeholder="e.g. 999"
+                    className={`w-full p-3 rounded-xl border text-xs outline-none transition-all ${
+                      theme === 'dark'
+                        ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500'
+                    }`}
+                  />
+                  <p className="text-[10px] text-zinc-400">Cart subtotal must be at least this value</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Max Discount Cap (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    disabled={couponForm.discount_type !== 'percentage'}
+                    value={couponForm.max_discount_amount}
+                    onChange={(e) => setCouponForm(prev => ({ ...prev, max_discount_amount: e.target.value }))}
+                    placeholder={couponForm.discount_type === 'percentage' ? 'e.g. 500 (Optional)' : 'N/A for flat amount'}
+                    className={`w-full p-3 rounded-xl border text-xs outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                      theme === 'dark'
+                        ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500'
+                    }`}
+                  />
+                  <p className="text-[10px] text-zinc-400">Leave blank for no upper discount cap</p>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Coupon Description / Offer Note
+                </label>
+                <textarea
+                  rows={2}
+                  value={couponForm.description}
+                  onChange={(e) => setCouponForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="e.g. Get ₹50 off on orders above ₹999 across all categories"
+                  className={`w-full p-3 rounded-xl border text-xs outline-none transition-all ${
+                    theme === 'dark'
+                      ? 'bg-[#172033] border-[#1e293b] text-white focus:border-indigo-500'
+                      : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500'
+                  }`}
+                />
+              </div>
+
+              {/* Active Toggle Switch */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                theme === 'dark' ? 'bg-[#172033]/60 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <div>
+                  <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Coupon Active Status</p>
+                  <p className="text-[11px] text-zinc-400">When enabled, customers can apply this code during checkout</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={couponForm.is_active}
+                    onChange={(e) => setCouponForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-zinc-150 dark:border-zinc-800 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsCouponModalOpen(false)}
+                  className={`py-2.5 px-4 border rounded-xl font-medium transition-all active:scale-95 cursor-pointer text-xs ${
+                    theme === 'dark'
+                      ? 'bg-[#172033] border-[#1e293b] hover:bg-[#1e293b] text-zinc-300'
+                      : 'bg-zinc-100 border-transparent hover:bg-zinc-200 text-zinc-700'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingData}
+                  className="py-2.5 px-6 rounded-xl cursor-pointer flex items-center gap-2 transition-all active:scale-95 text-white font-semibold text-xs bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 shadow-md shadow-indigo-500/20 disabled:opacity-50"
+                >
+                  {loadingData ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                  <span>{couponModalMode === 'edit' ? 'Update Coupon' : 'Save & Publish Coupon'}</span>
                 </button>
               </div>
             </form>

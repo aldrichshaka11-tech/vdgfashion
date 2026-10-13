@@ -618,8 +618,8 @@ def seed_database():
             "facebook_url": "https://www.facebook.com/fashionvdg/",
             "instagram_url": "https://www.instagram.com/vdgfashion/",
             "youtube_url": "https://www.youtube.com/channel/UCLLKwEMo4FManOeDUO3jaKw",
-            "free_shipping_threshold": 3000.00,
-            "shipping_fee": 99.00,
+            "free_shipping_threshold": 999.00,
+            "shipping_fee": 50.00,
             "active_promo_code": "TREND10",
             "active_promo_discount": 10,
             "is_store_open": True

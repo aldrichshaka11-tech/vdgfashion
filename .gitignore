@@ -10,11 +10,11 @@ node_modules/
 **/*.pyc
 **/*.pyo
 **/*.pyd
-.pytest_cache/
-.venv/
-venv/
-ENV/
-env/
+**/.pytest_cache/
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
 
 # IDE / System files
 .DS_Store

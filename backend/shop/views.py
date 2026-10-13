@@ -10,11 +10,11 @@ import re
 import os
 import time
 import csv
-from .models import MainCategory, Category, SubCategory, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
+from .models import MainCategory, Category, SubCategory, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress, Coupon
 from .serializers import (
     MainCategorySerializer, CategorySerializer, SubCategorySerializer, ProductSerializer, OrderCreateSerializer,
     HeroBannerSerializer, MobileBannerSerializer, CategoryItemSerializer, MarketingBannerSerializer,
-    PaymentSerializer, ReviewSerializer, SiteSettingsSerializer, UserAddressSerializer
+    PaymentSerializer, ReviewSerializer, SiteSettingsSerializer, UserAddressSerializer, CouponSerializer
 )
 
 
@@ -870,8 +870,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             
             if calc_subtotal > 0:
                 site_settings = SiteSettings.objects.first()
-                free_thresh = float(site_settings.free_shipping_threshold) if site_settings else 3000.0
-                ship_fee = float(site_settings.shipping_fee) if site_settings else 99.0
+                free_thresh = float(site_settings.free_shipping_threshold) if site_settings else 999.0
+                ship_fee = float(site_settings.shipping_fee) if site_settings else 50.0
                 calc_shipping = 0.0 if calc_subtotal >= free_thresh else ship_fee
                 raw_discount = float(request.data.get('discount_amount', 0.0) or 0.0)
                 calc_discount = min(max(0.0, raw_discount), calc_subtotal)
@@ -1090,5 +1090,62 @@ class UserAddressViewSet(viewsets.ModelViewSet):
         if is_default:
             UserAddress.objects.filter(user=self.request.user).update(is_default=False)
         serializer.save()
+
+
+class CouponViewSet(viewsets.ModelViewSet):
+    queryset = Coupon.objects.all().order_by('-created_at')
+    serializer_class = CouponSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'validate']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def validate(self, request):
+        code = request.data.get('code', '').strip().upper()
+        cart_total = float(request.data.get('subtotal') or request.data.get('cart_subtotal') or 0.0)
+
+        if not code:
+            return Response({'valid': False, 'message': 'Coupon code is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            coupon = Coupon.objects.get(code__iexact=code, is_active=True)
+        except Coupon.DoesNotExist:
+            site_settings = SiteSettings.objects.first()
+            if site_settings and site_settings.active_promo_code and site_settings.active_promo_code.upper() == code:
+                discount_pct = float(site_settings.active_promo_discount or 10)
+                discount_amount = round(cart_total * (discount_pct / 100.0), 2)
+                return Response({
+                    'valid': True,
+                    'code': code,
+                    'discount_type': 'percentage',
+                    'discount_value': discount_pct,
+                    'discount_amount': discount_amount,
+                    'message': f'Coupon applied! {int(discount_pct)}% off'
+                })
+            return Response({'valid': False, 'message': 'Invalid or expired coupon code'}, status=status.HTTP_404_NOT_FOUND)
+
+        if coupon.min_order_amount and cart_total < float(coupon.min_order_amount):
+            return Response({
+                'valid': False,
+                'message': f'Minimum cart value of ₹{coupon.min_order_amount} required for this coupon'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if coupon.discount_type == 'percentage':
+            discount_amount = round(cart_total * (float(coupon.discount_value) / 100.0), 2)
+            if coupon.max_discount_amount:
+                discount_amount = min(discount_amount, float(coupon.max_discount_amount))
+        else:
+            discount_amount = min(float(coupon.discount_value), cart_total)
+
+        return Response({
+            'valid': True,
+            'code': coupon.code,
+            'discount_type': coupon.discount_type,
+            'discount_value': float(coupon.discount_value),
+            'discount_amount': discount_amount,
+            'message': f'Coupon {coupon.code} applied successfully!'
+        })
 
 

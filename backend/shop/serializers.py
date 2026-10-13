@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import MainCategory, Category, SubCategory, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress
+from .models import MainCategory, Category, SubCategory, Product, ProductColor, ProductSize, ProductFeature, ProductDetail, Order, OrderItem, Payment, HeroBanner, MobileBanner, CategoryItem, MarketingBanner, Review, SiteSettings, UserAddress, Coupon
 
 
 class MainCategorySerializer(serializers.ModelSerializer):
@@ -259,8 +259,8 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
         # Get SiteSettings for shipping fee & promo rules
         site_settings = SiteSettings.objects.first()
-        free_thresh = float(site_settings.free_shipping_threshold) if site_settings else 3000.0
-        ship_fee = float(site_settings.shipping_fee) if site_settings else 99.0
+        free_thresh = float(site_settings.free_shipping_threshold) if site_settings else 999.0
+        ship_fee = float(site_settings.shipping_fee) if site_settings else 50.0
 
         calc_shipping_fee = 0.0 if (calc_subtotal == 0.0 or calc_subtotal >= free_thresh) else ship_fee
         
@@ -425,6 +425,17 @@ class UserAddressSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'label', 'recipient_name', 'phone', 'street_address', 
             'city', 'state', 'pin_code', 'is_default', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = [
+            'id', 'code', 'discount_type', 'discount_value',
+            'min_order_amount', 'max_discount_amount',
+            'description', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

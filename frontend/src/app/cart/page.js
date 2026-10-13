@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { formatINR } from '../utils/currency';
 
-const FREE_SHIPPING_THRESHOLD = 3000;
 const DISCOUNT_AMOUNT = 140;
 
 function getColorName(product, selectedColor) {
@@ -47,6 +46,7 @@ export default function CartPage() {
     settings
   } = useStore();
 
+  const freeShipThreshold = parseFloat(settings?.freeShippingThreshold || 999);
   const [couponInput, setCouponInput] = useState('');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -65,8 +65,8 @@ export default function CartPage() {
 
   const discountValue = couponDiscount;
   const finalTotal = cartTotal;
-  const freeShippingLeft = Math.max(0, 3000 - cartSubtotal);
-  const progressWidth = Math.min(100, (cartSubtotal / 3000) * 100);
+  const freeShippingLeft = Math.max(0, freeShipThreshold - cartSubtotal);
+  const progressWidth = Math.min(100, (cartSubtotal / freeShipThreshold) * 100);
 
   const acceptCards = useMemo(() => ['VISA', 'Mastercard', 'AMEX', 'PayPal'], []);
 
@@ -130,7 +130,7 @@ export default function CartPage() {
                         ? `You are ${formatINR(freeShippingLeft)} away from free shipping!`
                         : 'Yay! You get FREE shipping.'}
                     </p>
-                    <span className="text-zinc-600">{formatINR(cartSubtotal)} / {formatINR(FREE_SHIPPING_THRESHOLD)}</span>
+                    <span className="text-zinc-600">{formatINR(cartSubtotal)} / {formatINR(freeShipThreshold)}</span>
                   </div>
                   <div className="h-2 rounded-full bg-emerald-100 mt-2 overflow-hidden">
                     <div
@@ -230,8 +230,8 @@ export default function CartPage() {
               {appliedCoupon ? (
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 flex items-center justify-between" data-aos="fade-up" data-aos-delay="120">
                   <p className="text-xs sm:text-sm font-semibold text-emerald-800 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-bounce" />
-                    Code <span className="text-[#7c3aed] font-black">{appliedCoupon}</span> applied successfully! {settings?.activePromoDiscount || 10}% OFF added.
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Coupon <span className="text-[#7c3aed] font-black">{appliedCoupon}</span> applied successfully!
                   </p>
                   <button 
                     onClick={() => removeCoupon()}
@@ -242,29 +242,44 @@ export default function CartPage() {
                 </div>
               ) : (
                 <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in" data-aos="fade-up" data-aos-delay="120">
-                  <p className="text-xs sm:text-sm font-normal text-zinc-650 flex items-center gap-2">
+                  <p className="text-xs sm:text-sm font-semibold text-zinc-700 flex items-center gap-2">
                     <BadgePercent className="h-4.5 w-4.5 text-[#7c3aed]" />
-                    Use code <span className="text-[#7c3aed] font-semibold">{settings?.activePromoCode || 'TREND10'}</span> to get {settings?.activePromoDiscount || 10}% OFF on your order!
+                    Have a coupon code?
                   </p>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <input 
                       type="text"
-                      placeholder="Enter Coupon"
+                      placeholder="Enter Coupon Code"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
-                      className="px-3 py-1.5 border border-zinc-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#7c3aed] w-28 uppercase text-black"
-                    />
-                    <button 
-                      onClick={() => {
-                        const codeToApply = couponInput.trim() || settings?.activePromoCode || 'TREND10';
-                        const res = applyCoupon(codeToApply);
-                        if (!res.success) {
-                          alert(res.message);
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          const code = couponInput.trim();
+                          if (!code) return;
+                          const res = await applyCoupon(code);
+                          if (!res.success) alert(res.message);
+                          else setCouponInput('');
                         }
                       }}
-                      className="text-xs sm:text-sm font-semibold bg-[#7c3aed] text-white hover:bg-[#6d28d9] px-4 py-2 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-98"
+                      className="px-3.5 py-2 border border-zinc-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#7c3aed] w-full sm:w-44 uppercase text-black"
+                    />
+                    <button 
+                      onClick={async () => {
+                        const codeToApply = couponInput.trim();
+                        if (!codeToApply) {
+                          alert('Please enter a coupon code.');
+                          return;
+                        }
+                        const res = await applyCoupon(codeToApply);
+                        if (!res.success) {
+                          alert(res.message);
+                        } else {
+                          setCouponInput('');
+                        }
+                      }}
+                      className="text-xs sm:text-sm font-semibold bg-[#7c3aed] text-white hover:bg-[#6d28d9] px-4 py-2 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-98 shrink-0"
                     >
-                      Apply Code
+                      Apply
                     </button>
                   </div>
                 </div>
@@ -280,8 +295,8 @@ export default function CartPage() {
                     <span className="font-normal text-zinc-800">{formatINR(cartSubtotal)}</span>
                   </div>
                   <div className="flex items-center justify-between text-zinc-650 font-normal">
-                    <span>Discount ({appliedCoupon || 'TREND10'})</span>
-                    <span className="font-normal text-rose-600">- {formatINR(discountValue)}</span>
+                    <span>Discount {appliedCoupon ? `(${appliedCoupon})` : ''}</span>
+                    <span className="font-normal text-rose-600">{discountValue > 0 ? `- ${formatINR(discountValue)}` : formatINR(0)}</span>
                   </div>
                   <div className="flex items-center justify-between text-zinc-650 font-normal">
                     <span>Shipping</span>
@@ -330,7 +345,7 @@ export default function CartPage() {
               <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-3" data-aos="fade-left" data-aos-delay="160">
                 <div className="flex items-start gap-2">
                   <Truck className="h-4 w-4 text-[#7c3aed] mt-0.5" />
-                  <p className="text-xs text-zinc-600"><span className="font-black text-zinc-900">Free Shipping</span><br />On orders over {formatINR(FREE_SHIPPING_THRESHOLD)}</p>
+                  <p className="text-xs text-zinc-600"><span className="font-black text-zinc-900">Free Shipping</span><br />On orders over {formatINR(freeShipThreshold)}</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <Headphones className="h-4 w-4 text-[#7c3aed] mt-0.5" />

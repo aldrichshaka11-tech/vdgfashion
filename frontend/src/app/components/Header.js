@@ -64,7 +64,7 @@ export default function Header({ onMobileMenuToggle }) {
                 </span>
                 {matchedCategories.map((category) => (
                   <button
-                    key={category.id}
+                    key={category.unique_id || `${category.type || 'cat'}_${category.id}`}
                     onClick={() => {
                       setSelectedCategory(category.name);
                       if (setCheckedCategories) {

@@ -121,8 +121,8 @@ export function StoreProvider({ children }) {
     contactEmail: 'gouthamraj@vdgfashion.com',
     storeAddress: '61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001',
     aboutText: 'Trendy looks for every vibe. Stay stylish, every day.',
-    freeShippingThreshold: 3000,
-    shippingFee: 99,
+    freeShippingThreshold: 999,
+    shippingFee: 50,
     activePromoCode: 'TREND10',
     activePromoDiscount: 10,
     isStoreOpen: true,
@@ -293,6 +293,7 @@ export function StoreProvider({ children }) {
   const [sortBy, setSortBy] = useState('DEFAULT');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [couponDetails, setCouponDetails] = useState(null);
   const [showOnlyOffers, setShowOnlyOffers] = useState(false);
 
   useEffect(() => { setSelectedSubcategory('ALL'); }, [selectedCategory]);
@@ -376,22 +377,73 @@ export function StoreProvider({ children }) {
 
     return subtotal;
   })();
-  const freeShipThreshold = parseFloat(settings.freeShippingThreshold || 3000);
-  const shippingFee = cartSubtotal === 0 || cartSubtotal > freeShipThreshold ? 0 : parseFloat(settings.shippingFee || 99);
-  const couponDiscount = appliedCoupon === settings.activePromoCode
-    ? Math.round(cartSubtotal * (parseFloat(settings.activePromoDiscount || 10) / 100)) : 0;
+  const freeShipThreshold = parseFloat(settings.freeShippingThreshold || 999);
+  const shippingFee = cartSubtotal === 0 || cartSubtotal >= freeShipThreshold ? 0 : parseFloat(settings.shippingFee || 50);
+  
+  const couponDiscount = (() => {
+    if (!appliedCoupon) return 0;
+    if (couponDetails) {
+      if (couponDetails.discount_type === 'flat') {
+        return Math.min(cartSubtotal, parseFloat(couponDetails.discount_value || 0));
+      } else {
+        const pct = parseFloat(couponDetails.discount_value || 10) / 100;
+        let disc = Math.round(cartSubtotal * pct);
+        if (couponDetails.max_discount_amount) {
+          disc = Math.min(disc, parseFloat(couponDetails.max_discount_amount));
+        }
+        return Math.min(cartSubtotal, disc);
+      }
+    }
+    // Fallback to activePromoCode in settings
+    if (appliedCoupon.toUpperCase() === (settings.activePromoCode || 'TREND10').toUpperCase()) {
+      return Math.round(cartSubtotal * (parseFloat(settings.activePromoDiscount || 10) / 100));
+    }
+    return 0;
+  })();
+
   const cartTotal = Math.max(0, cartSubtotal - couponDiscount + shippingFee);
 
   // ─── Coupon ──────────────────────────────────────────────────
-  const applyCoupon = (code) => {
-    const promoCode = (settings.activePromoCode || 'TREND10').trim().toUpperCase();
-    if (code.trim().toUpperCase() === promoCode) {
-      setAppliedCoupon(promoCode);
-      return { success: true, message: `Coupon applied! ${settings.activePromoDiscount || 10}% discount added.` };
+  const applyCoupon = async (code) => {
+    const trimmed = (code || '').trim().toUpperCase();
+    if (!trimmed) {
+      return { success: false, message: 'Please enter a coupon code' };
     }
-    return { success: false, message: 'Invalid coupon code!' };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/coupons/validate/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed, subtotal: cartSubtotal })
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setAppliedCoupon(data.code);
+        setCouponDetails(data);
+        return { success: true, message: data.message || `Coupon ${data.code} applied successfully!` };
+      } else {
+        return { success: false, message: data.message || 'Invalid or expired coupon code!' };
+      }
+    } catch (e) {
+      // Local fallback to settings.activePromoCode if network fails
+      const promoCode = (settings.activePromoCode || 'TREND10').trim().toUpperCase();
+      if (trimmed === promoCode) {
+        setAppliedCoupon(promoCode);
+        setCouponDetails({
+          code: promoCode,
+          discount_type: 'percentage',
+          discount_value: settings.activePromoDiscount || 10
+        });
+        return { success: true, message: `Coupon applied! ${settings.activePromoDiscount || 10}% discount added.` };
+      }
+      return { success: false, message: 'Invalid coupon code!' };
+    }
   };
-  const removeCoupon = () => setAppliedCoupon('');
+
+  const removeCoupon = () => {
+    setAppliedCoupon('');
+    setCouponDetails(null);
+  };
 
   const resetFilters = () => {
     setSelectedCategory('ALL');

@@ -408,8 +408,8 @@ class SiteSettings(models.Model):
     contact_email = models.EmailField(default="gouthamraj@vdgfashion.com")
     store_address = models.TextField(default="61/1,First floor, VDG Fashion Narayana complex, opp. burma hotel, Sivagami Puram, Virudhunagar, Tamil Nadu 626001")
     about_text = models.TextField(default="Trendy looks for every vibe. Stay stylish, every day.")
-    free_shipping_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=3000.00)
-    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=99.00)
+    free_shipping_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=999.00)
+    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=50.00)
     active_promo_code = models.CharField(max_length=100, default="TREND10")
     active_promo_discount = models.IntegerField(default=10)
     is_store_open = models.BooleanField(default=True)
@@ -447,5 +447,30 @@ class UserAddress(models.Model):
 
     def __str__(self):
         return f"{self.recipient_name} - {self.city}"
+
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    discount_type = models.CharField(
+        max_length=20,
+        choices=[('percentage', 'Percentage (%)'), ('flat', 'Flat Amount (₹)')],
+        default='percentage'
+    )
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, default=10.00)
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    max_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    description = models.CharField(max_length=255, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Coupon"
+        verbose_name_plural = "Coupons"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        symbol = '%' if self.discount_type == 'percentage' else '₹'
+        return f"{self.code} ({self.discount_value}{symbol})"
 
 

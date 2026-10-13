@@ -89,18 +89,22 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # If the identifier looks like an email, resolve to username first
+        # If the identifier looks like an email, authenticate across matching accounts
         if '@' in identifier:
-            try:
-                user_obj = User.objects.get(email__iexact=identifier)
-                identifier = user_obj.username
-            except User.DoesNotExist:
+            user_candidates = User.objects.filter(email__iexact=identifier)
+            if not user_candidates.exists():
                 return Response(
                     {'detail': 'No active account found with the given credentials.'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-
-        user = authenticate(request, username=identifier, password=password)
+            user = None
+            for candidate in user_candidates:
+                matched = authenticate(request, username=candidate.username, password=password)
+                if matched:
+                    user = matched
+                    break
+        else:
+            user = authenticate(request, username=identifier, password=password)
 
         if user is None:
             return Response(
@@ -188,9 +192,8 @@ class ForgotPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
             return Response(
                 {'detail': 'No registered account found with this email.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -233,9 +236,8 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
             return Response(
                 {'detail': 'User not found.'},
                 status=status.HTTP_404_NOT_FOUND
