@@ -393,6 +393,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Enforce 6 MB max file size restriction (6 * 1024 * 1024 bytes)
+        max_size_bytes = 6 * 1024 * 1024
+        if file_obj.size > max_size_bytes:
+            file_size_mb = round(file_obj.size / (1024 * 1024), 2)
+            return Response({
+                'error': f'Image file size ({file_size_mb} MB) exceeds the 6 MB limit. Please upload an image under 6 MB.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         path = _save_file(file_obj, 'products')
         return Response({
             'success': True,

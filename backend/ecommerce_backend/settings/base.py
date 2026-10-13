@@ -248,3 +248,8 @@ DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 # Razorpay Configuration
 RAZORPAY_KEY_ID = env.str('RAZORPAY_KEY_ID', '')
 RAZORPAY_KEY_SECRET = env.str('RAZORPAY_KEY_SECRET', '')
+
+# File upload size limits (allows up to 10MB to accommodate 6MB product photos)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+

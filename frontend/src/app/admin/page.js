@@ -1015,6 +1015,16 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleBulkImageUpload = async (e, index) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Enforce 6 MB maximum file size restriction (6 * 1024 * 1024 bytes)
+    const MAX_FILE_SIZE = 6 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      showToast(`Image ${index + 1} (${fileSizeMB} MB) exceeds the 6 MB limit. Please select an image under 6 MB.`, 'warning');
+      e.target.value = '';
+      return;
+    }
+
     setUploadingBulkImages(prev => ({ ...prev, [index]: true }));
     const formData = new FormData();
     formData.append('file', file);
@@ -2107,6 +2117,15 @@ function DashboardPortal({ onLogout, adminUser }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Enforce 6 MB maximum file size restriction (6 * 1024 * 1024 bytes)
+    const MAX_FILE_SIZE = 6 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      showToast(`Image size (${fileSizeMB} MB) exceeds the 6 MB limit. Please select an image under 6 MB.`, 'warning');
+      e.target.value = '';
+      return;
+    }
 
     setUploadingImage(true);
     const formData = new FormData();
@@ -6535,32 +6554,77 @@ function DashboardPortal({ onLogout, adminUser }) {
                   {/* 1. Featured Image Section */}
                   <div className={`p-5 rounded-2xl border space-y-4 transition-colors ${theme === 'dark' ? 'bg-[#172033]/50 border-[#1e293b]' : 'bg-zinc-50 border-zinc-200/80 shadow-3xs'
                     }`}>
-                    <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                      <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
-                      Media Assets
-                    </h4>
-                    <div className="space-y-1.5">
-                      <label className={`text-xs sm:text-sm font-normal ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Upload local file</label>
-                      <div className="relative flex items-center justify-center">
-                        <label className={`w-full flex flex-col items-center justify-center p-3 h-[46px] rounded-xl border border-dashed cursor-pointer transition-all ${theme === 'dark'
-                            ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40'
-                            : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
-                          }`}>
-                          <div className="flex items-center gap-2">
-                            {uploadingImage ? (
-                              <Upload size={14} className="animate-spin text-indigo-500" />
-                            ) : productForm.image ? (
-                              <CheckCircle size={14} className="text-emerald-500" />
-                            ) : (
-                              <Upload size={14} className="animate-pulse text-zinc-400" />
-                            )}
-                            <span className="text-[10.5px] font-normal tracking-wide">
-                              {uploadingImage ? 'Uploading...' : productForm.image ? 'File Linked' : 'Choose Local File'}
-                            </span>
-                          </div>
-                          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <div className="flex items-center justify-between">
+                      <h4 className={`text-[13px] font-semibold flex items-center gap-2.5 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                        <span className="flex items-center justify-center w-5.5 h-5.5 rounded-xl bg-indigo-600 text-white font-normal text-[11px] shadow-sm shadow-indigo-600/25 shrink-0 select-none">1</span>
+                        Product Photo
+                      </h4>
+                      <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                        Max 6 MB Limit
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className={`text-xs font-medium ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                          Upload product image (JPG, PNG, WEBP)
                         </label>
+                        <span className="text-[10.5px] text-zinc-400">File size must be under 6 MB</span>
                       </div>
+
+                      {productForm.image ? (
+                        <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${theme === 'dark' ? 'bg-[#172033] border-[#1e293b]' : 'bg-white border-zinc-200'}`}>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img
+                              src={getImageUrl(productForm.image)}
+                              alt="Preview"
+                              className="w-12 h-12 rounded-lg object-contain bg-zinc-50 border border-zinc-200 dark:border-zinc-700 p-0.5 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
+                                <CheckCircle size={13} /> Photo Linked Successfully
+                              </p>
+                              <p className="text-[10px] text-zinc-400 truncate max-w-[260px] font-mono">{productForm.image}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <label className="px-2.5 py-1.5 rounded-lg border text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 cursor-pointer transition-colors">
+                              Change
+                              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setProductForm(prev => ({ ...prev, image: '' }))}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer transition-colors"
+                              title="Remove photo"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative flex items-center justify-center">
+                          <label className={`w-full flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all ${theme === 'dark'
+                              ? 'bg-[#172033] border-[#1e293b] hover:bg-[#202736] text-zinc-355 hover:border-indigo-500/40'
+                              : 'bg-white border-zinc-300 hover:bg-zinc-100 text-zinc-650 hover:border-indigo-500/40 shadow-3xs'
+                            }`}>
+                            <div className="flex flex-col items-center gap-1 text-center">
+                              {uploadingImage ? (
+                                <Upload size={18} className="animate-spin text-indigo-500" />
+                              ) : (
+                                <Upload size={18} className="text-zinc-400 group-hover:text-indigo-500" />
+                              )}
+                              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-1">
+                                {uploadingImage ? 'Uploading Image...' : 'Click to Choose Product Photo'}
+                              </span>
+                              <span className="text-[10.5px] text-zinc-400">
+                                Supports PNG, JPG, JPEG, WEBP (Maximum 6 MB)
+                              </span>
+                            </div>
+                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
 
